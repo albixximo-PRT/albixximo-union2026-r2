@@ -1,0 +1,20 @@
+[
+  {
+    "pilot": "CrigrammoDaPlug",
+    "code": "P14",
+    "lap": "06",
+    "timing": "10:27",
+    "reason": "Cambio di traiettoria improvviso o in fase di frenata",
+    "sanction": "+15 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "CrigrammoDaPlug",
+    "code": "P21",
+    "lap": "01",
+    "timing": "00:12",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  }
+]

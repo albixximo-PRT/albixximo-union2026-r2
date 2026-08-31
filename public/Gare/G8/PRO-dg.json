@@ -1,0 +1,74 @@
+[
+  {
+    "pilot": "giannivir64",
+    "code": "P21",
+    "lap": "01",
+    "timing": "00:13",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "giannivir64",
+    "code": "P21",
+    "lap": "01",
+    "timing": "01:01",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "giannivir64",
+    "code": "P21",
+    "lap": "01",
+    "timing": "01:18",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "giannivir64",
+    "code": "P31",
+    "lap": "-",
+    "timing": "--:--",
+    "reason": "Raggiunte 3 ammonizioni",
+    "sanction": "+15 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "Tommyx_Tommyx",
+    "code": "P03",
+    "lap": "01",
+    "timing": "01:52",
+    "reason": "Contatto con perdita di posizioni (3-4)",
+    "sanction": "+10 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "Tommyx_Tommyx",
+    "code": "P10",
+    "lap": "01",
+    "timing": "01:52",
+    "reason": "In aggiunta da P01 a P07 non restituendo posizione",
+    "sanction": "+15 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "zio_zero7",
+    "code": "P02",
+    "lap": "01",
+    "timing": "01:18",
+    "reason": "Contatto con perdita di posizioni (1-2)",
+    "sanction": "+5 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "Sign_Manson",
+    "code": "P21",
+    "lap": "01",
+    "timing": "00:30",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  }
+]

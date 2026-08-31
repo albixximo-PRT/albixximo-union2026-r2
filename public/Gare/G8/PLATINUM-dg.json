@@ -1,0 +1,29 @@
+[
+  {
+    "pilot": "sissibabu",
+    "code": "P02",
+    "lap": "01",
+    "timing": "01:47",
+    "reason": "Contatto con perdita di posizioni (1-2)",
+    "sanction": "+5 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "sissibabu",
+    "code": "P08",
+    "lap": "01",
+    "timing": "01:47",
+    "reason": "In aggiunta da P01 a P07 con danni ridotti",
+    "sanction": "+5 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "sissibabu",
+    "code": "P10",
+    "lap": "01",
+    "timing": "01:47",
+    "reason": "In aggiunta da P01 a P07 non restituendo posizione",
+    "sanction": "+15 secondi",
+    "type": "time"
+  }
+]

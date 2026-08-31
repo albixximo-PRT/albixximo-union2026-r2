@@ -1,0 +1,20 @@
+[
+  {
+    "pilot": "M_Apex__",
+    "code": "P06",
+    "lap": "02",
+    "timing": "05:39",
+    "reason": "Contatto con perdita di posizioni (9-10)",
+    "sanction": "+25 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "M_Apex__",
+    "code": "P10",
+    "lap": "02",
+    "timing": "05:39",
+    "reason": "In aggiunta da P01 a P07 non restituendo posizione",
+    "sanction": "+15 secondi",
+    "type": "time"
+  }
+]

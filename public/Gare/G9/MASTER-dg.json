@@ -1,0 +1,20 @@
+[
+  {
+    "pilot": "The-Knipex",
+    "code": "P01",
+    "lap": "08",
+    "timing": "22:54",
+    "reason": "Contatto con perdita di posizioni (0)",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "The-Knipex",
+    "code": "P08",
+    "lap": "08",
+    "timing": "22:54",
+    "reason": "In aggiunta da P01 a P07 con danni ridotti",
+    "sanction": "+5 secondi",
+    "type": "time"
+  }
+]

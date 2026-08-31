@@ -1,0 +1,47 @@
+[
+  {
+    "pilot": "Bestiaccia72",
+    "code": "P13",
+    "lap": "19",
+    "timing": "34:21",
+    "reason": "Effettuare più di un cambio di traiettoria difensiva in rettilineo",
+    "sanction": "+5 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "Bestiaccia72",
+    "code": "P21",
+    "lap": "21",
+    "timing": "38:04",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "Maverickblaze",
+    "code": "P21",
+    "lap": "02",
+    "timing": "02:30",
+    "reason": "Guida scorretta generica",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "Maverickblaze",
+    "code": "P03",
+    "lap": "03",
+    "timing": "04:09",
+    "reason": "Contatto con perdita di posizioni (3-4)",
+    "sanction": "+10 secondi",
+    "type": "time"
+  },
+  {
+    "pilot": "Maverickblaze",
+    "code": "P08",
+    "lap": "03",
+    "timing": "04:09",
+    "reason": "In aggiunta da P01 a P07 con danni ridotti",
+    "sanction": "+5 secondi",
+    "type": "time"
+  }
+]

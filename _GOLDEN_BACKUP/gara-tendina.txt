@@ -1,0 +1,3 @@
+let selectedRacePng = "6";
+
+da modificare semoree

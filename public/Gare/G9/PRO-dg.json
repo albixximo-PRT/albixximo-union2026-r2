@@ -1,0 +1,20 @@
+[
+  {
+    "pilot": "GaboCasper85",
+    "code": "P01",
+    "lap": "01",
+    "timing": "40:00",
+    "reason": "Contatto con perdita di posizioni (0)",
+    "sanction": "Ammonizione",
+    "type": "ammonition"
+  },
+  {
+    "pilot": "GaboCasper85",
+    "code": "P08",
+    "lap": "01",
+    "timing": "40:00",
+    "reason": "In aggiunta da P01 a P07 con danni ridotti",
+    "sanction": "+5 secondi",
+    "type": "time"
+  }
+]
