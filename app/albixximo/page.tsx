@@ -32,7 +32,27 @@ type UnionMeta = {
   lega: string
 }
 
-type ChampionshipLeagueKey = "ELITE" | "PLATINUM" | "MASTER" | "PRO" | "GT"
+const UNION_RANKS = [
+  "STAR",
+  "ELITE",
+  "PRO GOLD",
+  "PRO SILVER",
+  "PRO AMA",
+  "AMA",
+] as const
+
+type UnionRankKey = typeof UNION_RANKS[number]
+
+const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
+  STAR: "STAR",
+  ELITE: "ELITE",
+  "PRO GOLD": "PRO GOLD",
+  "PRO SILVER": "PRO SILVER",
+  "PRO AMA": "PRO AMA",
+  AMA: "AMA",
+}
+
+type ChampionshipLeagueKey = UnionRankKey
 
 type SavedLeagueSnapshot = {
   savedAt: string
@@ -172,32 +192,6 @@ const PRT_RACE_OPTIONS = [
   { value: 12, label: "Gara 12" },
   { value: 13, label: "Gara 13 • Finale di Campionato" },
 ] as const
-
-const PRT_LEAGUES = ["ELITE", "PLATINUM", "MASTER", "PRO", "GT"] as const
-
-type PrtLeague = typeof PRT_LEAGUES[number]
-
-type PrtSavedLeagueSnapshot = {
-  savedAt: string
-  league: PrtLeague
-  raceNumber: number
-  finalRows: DisplayRow[]
-  csv: string
-  unionMeta: UnionMeta
-  penalties: PenaltyMap
-  lapOverrides: Record<string, string>
-  dnfOverrides: DnfOverrideMap
-  manualPilotOverrides: Record<number, string>
-  manualAutoOverrides: Record<number, string>
-  manualDistaccoOverrides: Record<number, string>
-  bestQuali: string
-  bestRaceLap: string
-  winner: string
-}
-
-type PrtSavedRaceState = Partial<Record<PrtLeague, SavedLeagueSnapshot>>
-
-type PrtChampionshipSnapshot = Partial<Record<number, SavedRaceState>>
 
 type PenaltyEffect = "time" | "ammonition" | "dsq" | "other"
 
@@ -753,11 +747,12 @@ function getPrtRowStableKey(sourcePosGara: number) {
 function normalizeLeagueKey(value: string): ChampionshipLeagueKey | null {
   const v = String(value || "").trim().toUpperCase()
 
+  if (v === "STAR") return "STAR"
   if (v === "ELITE") return "ELITE"
-  if (v === "PLATINUM") return "PLATINUM"
-  if (v === "MASTER") return "MASTER"
-  if (v === "PRO") return "PRO"
-  if (v === "GT") return "GT"
+  if (v === "PRO GOLD") return "PRO GOLD"
+  if (v === "PRO SILVER") return "PRO SILVER"
+  if (v === "PRO AMA") return "PRO AMA"
+  if (v === "AMA") return "AMA"
 
   return null
 }
@@ -1009,7 +1004,7 @@ function parseCsvRows(csv: string): ExtractRow[] {
 }
 
 function buildCsvFromRows(rows: ExtractRow[], unionMeta: UnionMeta) {
-  const header = ["#", "Nome pilota", "Auto", "Distacchi", "-PP-", "-GV-", "Gara", "Lobby", "Lega"]
+  const header = ["#", "Nome pilota", "Auto", "Distacchi", "-PP-", "-GV-", "Gara", "Lobby", "Rank"]
 
   const bestRaceLapMs = rows.reduce<number | null>((best, r) => {
     const ms = parseMmSsMmm((r.migliorGiroGara || "").trim())
@@ -1973,7 +1968,7 @@ function SummaryStrip({
           {showMeta && (
             <>
               <Separator exporting={exporting} />
-              <HeaderBadge label="LEGA" value={unionMeta.lega} variant="gold" exporting={exporting} />
+              <HeaderBadge label="RANK" value={unionMeta.lega} variant="gold" exporting={exporting} />
             </>
           )}
 
@@ -3555,11 +3550,12 @@ const rowStyle = getPrtTableRowStyle(
 }
 
 const CHAMPIONSHIP_LEAGUES: ChampionshipLeagueKey[] = [
+  "STAR",
   "ELITE",
-  "PLATINUM",
-  "MASTER",
-  "PRO",
-  "GT",
+  "PRO GOLD",
+  "PRO SILVER",
+  "PRO AMA",
+  "AMA",
 ]
 
 const RACE_OPTIONS = Array.from({ length: 13 }, (_, i) => ({
@@ -3627,53 +3623,59 @@ const [manualRace12Draft, setManualRace12Draft] = useState<
   Record<string, { g1: string; g2: string }>
 >({})
 const [drawerBulkDrafts, setDrawerBulkDrafts] = useState<Record<ChampionshipLeagueKey, string>>({
+  STAR: "",
   ELITE: "",
-  PLATINUM: "",
-  MASTER: "",
-  PRO: "",
-  GT: "",
+  "PRO GOLD": "",
+  "PRO SILVER": "",
+  "PRO AMA": "",
+  AMA: "",
 })
+
 const [drawerDrafts, setDrawerDrafts] = useState<Record<ChampionshipLeagueKey, string>>({
+  STAR: "",
   ELITE: "",
-  PLATINUM: "",
-  MASTER: "",
-  PRO: "",
-  GT: "",
+  "PRO GOLD": "",
+  "PRO SILVER": "",
+  "PRO AMA": "",
+  AMA: "",
 })
+
 const [driverLeagueMap, setDriverLeagueMap] = useState<DriverLeagueMap>({
+  STAR: [],
   ELITE: [],
-  PLATINUM: [],
-  MASTER: [],
-  PRO: [],
-  GT: [],
+  "PRO GOLD": [],
+  "PRO SILVER": [],
+  "PRO AMA": [],
+  AMA: [],
 })
 
 const [workbenchDriverLeagueMap, setWorkbenchDriverLeagueMap] = useState<DriverLeagueMap>({
+  STAR: [],
   ELITE: [],
-  PLATINUM: [],
-  MASTER: [],
-  PRO: [],
-  GT: [],
+  "PRO GOLD": [],
+  "PRO SILVER": [],
+  "PRO AMA": [],
+  AMA: [],
 })
 
 function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   return {
+    STAR: [...(source.STAR || [])],
     ELITE: [...(source.ELITE || [])],
-    PLATINUM: [...(source.PLATINUM || [])],
-    MASTER: [...(source.MASTER || [])],
-    PRO: [...(source.PRO || [])],
-    GT: [...(source.GT || [])],
+    "PRO GOLD": [...(source["PRO GOLD"] || [])],
+    "PRO SILVER": [...(source["PRO SILVER"] || [])],
+    "PRO AMA": [...(source["PRO AMA"] || [])],
+    AMA: [...(source.AMA || [])],
   }
 }
 
 const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
+  STAR: {},
   ELITE: {},
-  PLATINUM: {
-    focuss: "JM_focuss_71",
-  },
-  MASTER: {},
-  PRO: {},
-  GT: {},
+  "PRO GOLD": {},
+  "PRO SILVER": {},
+  "PRO AMA": {},
+  AMA: {},
 })
 
 const [driverRatingMap, setDriverRatingMap] = useState<Record<string, DriverRatingValue>>({})
@@ -3803,11 +3805,6 @@ const normalizedGaraForOutput = useMemo(() => {
   return raw
 }, [effectiveGara])
 
-const isSpecialGara7Platinum = useMemo(() => {
-  const league = normalizeLeagueKey(effectiveLega) || selectedLeague
-  return currentRace === 7 && league === "PLATINUM"
-}, [currentRace, effectiveLega, selectedLeague])
-
   const penaltyCodeOptions = useMemo(() => {
   const maxPenaltyCode = currentRace >= 8 ? 31 : currentRace >= 6 ? 32 : 39
 
@@ -3919,15 +3916,26 @@ useEffect(() => {
     }
 
     const rawDriverLeagueMap = window.localStorage.getItem(PRT_DRIVER_LEAGUE_MAP_STORAGE_KEY)
+
 if (rawDriverLeagueMap) {
-  const parsedDriverLeagueMap = JSON.parse(rawDriverLeagueMap)
+  const parsedDriverLeagueMap = JSON.parse(rawDriverLeagueMap) as Partial<
+    Record<ChampionshipLeagueKey, unknown>
+  >
+
   if (parsedDriverLeagueMap && typeof parsedDriverLeagueMap === "object") {
     const nextDriverLeagueMap: DriverLeagueMap = {
+      STAR: Array.isArray(parsedDriverLeagueMap.STAR) ? parsedDriverLeagueMap.STAR : [],
       ELITE: Array.isArray(parsedDriverLeagueMap.ELITE) ? parsedDriverLeagueMap.ELITE : [],
-      PLATINUM: Array.isArray(parsedDriverLeagueMap.PLATINUM) ? parsedDriverLeagueMap.PLATINUM : [],
-      MASTER: Array.isArray(parsedDriverLeagueMap.MASTER) ? parsedDriverLeagueMap.MASTER : [],
-      PRO: Array.isArray(parsedDriverLeagueMap.PRO) ? parsedDriverLeagueMap.PRO : [],
-      GT: Array.isArray(parsedDriverLeagueMap.GT) ? parsedDriverLeagueMap.GT : [],
+      "PRO GOLD": Array.isArray(parsedDriverLeagueMap["PRO GOLD"])
+        ? parsedDriverLeagueMap["PRO GOLD"]
+        : [],
+      "PRO SILVER": Array.isArray(parsedDriverLeagueMap["PRO SILVER"])
+        ? parsedDriverLeagueMap["PRO SILVER"]
+        : [],
+      "PRO AMA": Array.isArray(parsedDriverLeagueMap["PRO AMA"])
+        ? parsedDriverLeagueMap["PRO AMA"]
+        : [],
+      AMA: Array.isArray(parsedDriverLeagueMap.AMA) ? parsedDriverLeagueMap.AMA : [],
     }
 
     setDriverLeagueMap(nextDriverLeagueMap)
@@ -3940,12 +3948,22 @@ if (rawDriverAliasMap) {
   const parsedDriverAliasMap = JSON.parse(rawDriverAliasMap)
   if (parsedDriverAliasMap && typeof parsedDriverAliasMap === "object") {
     setDriverAliasMap({
-      ELITE: parsedDriverAliasMap.ELITE && typeof parsedDriverAliasMap.ELITE === "object" ? parsedDriverAliasMap.ELITE : {},
-      PLATINUM: parsedDriverAliasMap.PLATINUM && typeof parsedDriverAliasMap.PLATINUM === "object" ? parsedDriverAliasMap.PLATINUM : {},
-      MASTER: parsedDriverAliasMap.MASTER && typeof parsedDriverAliasMap.MASTER === "object" ? parsedDriverAliasMap.MASTER : {},
-      PRO: parsedDriverAliasMap.PRO && typeof parsedDriverAliasMap.PRO === "object" ? parsedDriverAliasMap.PRO : {},
-      GT: parsedDriverAliasMap.GT && typeof parsedDriverAliasMap.GT === "object" ? parsedDriverAliasMap.GT : {},
-    })
+  STAR: parsedDriverAliasMap.STAR && typeof parsedDriverAliasMap.STAR === "object" ? parsedDriverAliasMap.STAR : {},
+  ELITE: parsedDriverAliasMap.ELITE && typeof parsedDriverAliasMap.ELITE === "object" ? parsedDriverAliasMap.ELITE : {},
+  "PRO GOLD":
+    parsedDriverAliasMap["PRO GOLD"] && typeof parsedDriverAliasMap["PRO GOLD"] === "object"
+      ? parsedDriverAliasMap["PRO GOLD"]
+      : {},
+  "PRO SILVER":
+    parsedDriverAliasMap["PRO SILVER"] && typeof parsedDriverAliasMap["PRO SILVER"] === "object"
+      ? parsedDriverAliasMap["PRO SILVER"]
+      : {},
+  "PRO AMA":
+    parsedDriverAliasMap["PRO AMA"] && typeof parsedDriverAliasMap["PRO AMA"] === "object"
+      ? parsedDriverAliasMap["PRO AMA"]
+      : {},
+  AMA: parsedDriverAliasMap.AMA && typeof parsedDriverAliasMap.AMA === "object" ? parsedDriverAliasMap.AMA : {},
+})
   }
 }
 
@@ -6423,14 +6441,11 @@ return {
   pilota: resolvedPilot,
   auto: (manualAutoOverrides[r.sourcePosGara] ?? r.auto ?? "").trim(),
 
-  tempoTotaleGara:
-    isSpecialGara7Platinum && r.posGara === 1 && manualDistaccoValue
-      ? manualDistaccoValue
-      : r.tempoTotaleGara,
+  tempoTotaleGara: r.tempoTotaleGara,
 
-  distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
+distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
 
-  migliorGiroGara: isSpecialGara7Platinum ? "" : r.migliorGiroGara,
+migliorGiroGara: r.migliorGiroGara,
 
   tempoQualifica: (() => {
   const value = (
@@ -6512,7 +6527,6 @@ return {
   driverAliasMap,
   selectedLeague,
   dismissedUnknownDrivers,
-  isSpecialGara7Platinum,
   currentRace,
   championshipState,
 ])
@@ -6639,7 +6653,6 @@ const maxSourcePos = rowsWithPole.reduce(
   }, [displayRows])
 
   const bestRaceLap = useMemo(() => {
-      if (isSpecialGara7Platinum) return "NO TIME"
     let bestMs: number | null = null
     let bestTime = ""
     let bestPilot = ""
@@ -6656,7 +6669,7 @@ const maxSourcePos = rowsWithPole.reduce(
     }
 
     return bestTime ? `${bestPilot || "?"}  ${bestTime}` : ""
-  }, [displayRows, isSpecialGara7Platinum])
+  }, [displayRows])
 
     
 
@@ -7326,12 +7339,13 @@ function confirmPendingMovementWithBase() {
 function applySingleMovementToDrawer(entry: LeagueMovementEntry) {
   setWorkbenchDriverLeagueMap((prev) => {
     const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  STAR: [...prev.STAR],
+  ELITE: [...prev.ELITE],
+  "PRO GOLD": [...prev["PRO GOLD"]],
+  "PRO SILVER": [...prev["PRO SILVER"]],
+  "PRO AMA": [...prev["PRO AMA"]],
+  AMA: [...prev.AMA],
+}
 
     const normalizedDriver = normalizeDriverNameForChampionship(entry.driverName)
     const normalizedTarget = normalizeDriverNameForChampionship(entry.targetDriverName || "")
@@ -7439,12 +7453,13 @@ function applyCurrentRoundMovementsToDrawer() {
 
   setWorkbenchDriverLeagueMap((prev) => {
     const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  STAR: [...prev.STAR],
+  ELITE: [...prev.ELITE],
+  "PRO GOLD": [...prev["PRO GOLD"]],
+  "PRO SILVER": [...prev["PRO SILVER"]],
+  "PRO AMA": [...prev["PRO AMA"]],
+  AMA: [...prev.AMA],
+}
 
     for (const league of CHAMPIONSHIP_LEAGUES) {
   const entries = getRoundMovementsForLeague(league)
@@ -7574,11 +7589,12 @@ const savedLeagueInCurrentRace = useMemo(() => {
 
 const savedLeagueStatus = useMemo(() => {
   return {
+    STAR: !!currentRaceSnapshot.STAR,
     ELITE: !!currentRaceSnapshot.ELITE,
-    PLATINUM: !!currentRaceSnapshot.PLATINUM,
-    MASTER: !!currentRaceSnapshot.MASTER,
-    PRO: !!currentRaceSnapshot.PRO,
-    GT: !!currentRaceSnapshot.GT,
+    "PRO GOLD": !!currentRaceSnapshot["PRO GOLD"],
+    "PRO SILVER": !!currentRaceSnapshot["PRO SILVER"],
+    "PRO AMA": !!currentRaceSnapshot["PRO AMA"],
+    AMA: !!currentRaceSnapshot.AMA,
   }
 }, [currentRaceSnapshot])
 
@@ -7603,11 +7619,12 @@ const driverChampionship = useMemo<DriverChampionshipRow[]>(() => {
   const officialLeagueByDriver = new Map<string, ChampionshipLeagueKey>()
 
   const savedRaceNumbersByLeague: Record<ChampionshipLeagueKey, number[]> = {
+  STAR: [],
   ELITE: [],
-  PLATINUM: [],
-  MASTER: [],
-  PRO: [],
-  GT: [],
+  "PRO GOLD": [],
+  "PRO SILVER": [],
+  "PRO AMA": [],
+  AMA: [],
 }
 
 for (let raceNumber = 3; raceNumber <= currentRace; raceNumber++) {
@@ -7727,17 +7744,7 @@ if (currentRace < entryRace) continue
   snapshot.bestRaceLap || ""
 )
 
-const isSpecialGara7PlatinumPoints =
-  raceNumber === 7 && league === "PLATINUM"
-
-const snapshotPointsMap = isSpecialGara7PlatinumPoints
-  ? Object.fromEntries(
-      Object.entries(snapshotPointsMapRaw).map(([pilot, points]) => [
-        pilot,
-        Math.ceil(Number(points || 0) / 2),
-      ])
-    )
-  : snapshotPointsMapRaw
+const snapshotPointsMap = snapshotPointsMapRaw
 
     for (const row of snapshot.finalRows) {
       const pilotName = String(row.pilota || "").trim()
@@ -8088,11 +8095,12 @@ const championshipRacesIncludedLabel = useMemo(() => {
 
 const driverChampionshipByLeague = useMemo(() => {
   return {
+    STAR: driverChampionship.filter((driver) => driver.league === "STAR"),
     ELITE: driverChampionship.filter((driver) => driver.league === "ELITE"),
-    PLATINUM: driverChampionship.filter((driver) => driver.league === "PLATINUM"),
-    MASTER: driverChampionship.filter((driver) => driver.league === "MASTER"),
-    PRO: driverChampionship.filter((driver) => driver.league === "PRO"),
-    GT: driverChampionship.filter((driver) => driver.league === "GT"),
+    "PRO GOLD": driverChampionship.filter((driver) => driver.league === "PRO GOLD"),
+    "PRO SILVER": driverChampionship.filter((driver) => driver.league === "PRO SILVER"),
+    "PRO AMA": driverChampionship.filter((driver) => driver.league === "PRO AMA"),
+    AMA: driverChampionship.filter((driver) => driver.league === "AMA"),
   }
 }, [driverChampionship])
 
@@ -8579,11 +8587,12 @@ const movementSummaryByLeague: Record<
   ChampionshipLeagueKey,
   LeagueMovementSummary
 > = {
+  STAR: createEmptyMovementSummary(),
   ELITE: createEmptyMovementSummary(),
-  PLATINUM: createEmptyMovementSummary(),
-  MASTER: createEmptyMovementSummary(),
-  PRO: createEmptyMovementSummary(),
-  GT: createEmptyMovementSummary(),
+  "PRO GOLD": createEmptyMovementSummary(),
+  "PRO SILVER": createEmptyMovementSummary(),
+  "PRO AMA": createEmptyMovementSummary(),
+  AMA: createEmptyMovementSummary(),
 }
 
   if (isMovementRoundForHtml) {
@@ -10263,7 +10272,7 @@ try {
     const pages = ${pagesJson};
     const movementSummaryByLeague = ${movementSummaryJson};
     const isMovementRoundForHtml = ${isMovementRoundForHtml ? "true" : "false"};
-    const orderedLeagues = ["ELITE", "PLATINUM", "MASTER", "PRO", "GT"];
+    const orderedLeagues = ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"];
 
     const tabs = document.getElementById("tabs");
     const frame = document.getElementById("leagueFrame");
@@ -10344,8 +10353,8 @@ function renderRacePngTabs() {
   racePngTabs.innerHTML = "";
 
   const raceLeagues =
-    selectedRacePng === "1"
-      ? ["ELITE", "PLATINUM", "MASTER", "PRO", "GT", "AMA"]
+  selectedRacePng === "1"
+    ? ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"]
       : orderedLeagues;
 
   raceLeagues.forEach(function(league) {
@@ -11223,27 +11232,29 @@ async function importLeagueHtmlFiles(filesList: FileList | File[]) {
   const next: Partial<Record<ChampionshipLeagueKey, string>> = {}
 
   for (const file of filesArray) {
-    try {
-      const text = await file.text()
-      const upperName = file.name.toUpperCase()
+  try {
+    const text = await file.text()
+    const upperName = file.name.toUpperCase()
 
-      let detectedLeague: ChampionshipLeagueKey | null = null
+    let detectedLeague: ChampionshipLeagueKey | null = null
 
-      if (upperName.includes("ELITE")) detectedLeague = "ELITE"
-      else if (upperName.includes("PLATINUM")) detectedLeague = "PLATINUM"
-      else if (upperName.includes("MASTER")) detectedLeague = "MASTER"
-      else if (upperName.includes("PRO")) detectedLeague = "PRO"
-      else if (upperName.includes("GT")) detectedLeague = "GT"
+    if (upperName.includes("STAR")) detectedLeague = "STAR"
+    else if (upperName.includes("ELITE")) detectedLeague = "ELITE"
+    else if (upperName.includes("PRO GOLD")) detectedLeague = "PRO GOLD"
+    else if (upperName.includes("PRO SILVER")) detectedLeague = "PRO SILVER"
+    else if (upperName.includes("PRO AMA")) detectedLeague = "PRO AMA"
+    else if (upperName.includes("AMA")) detectedLeague = "AMA"
 
-      if (!detectedLeague) {
-        const htmlUpper = text.toUpperCase()
+    if (!detectedLeague) {
+      const htmlUpper = text.toUpperCase()
 
-        if (htmlUpper.includes("LEGA ELITE")) detectedLeague = "ELITE"
-        else if (htmlUpper.includes("LEGA PLATINUM")) detectedLeague = "PLATINUM"
-        else if (htmlUpper.includes("LEGA MASTER")) detectedLeague = "MASTER"
-        else if (htmlUpper.includes("LEGA PRO")) detectedLeague = "PRO"
-        else if (htmlUpper.includes("LEGA GT")) detectedLeague = "GT"
-      }
+      if (htmlUpper.includes("RANK STAR")) detectedLeague = "STAR"
+      else if (htmlUpper.includes("RANK ELITE")) detectedLeague = "ELITE"
+      else if (htmlUpper.includes("RANK PRO GOLD")) detectedLeague = "PRO GOLD"
+      else if (htmlUpper.includes("RANK PRO SILVER")) detectedLeague = "PRO SILVER"
+      else if (htmlUpper.includes("RANK PRO AMA")) detectedLeague = "PRO AMA"
+      else if (htmlUpper.includes("RANK AMA")) detectedLeague = "AMA"
+    }
 
       if (detectedLeague) {
         next[detectedLeague] = text
@@ -11306,18 +11317,32 @@ setManualRace12Draft(
 const importedDriverLeagueMap: DriverLeagueMap =
   parsed.driverLeagueMap && typeof parsed.driverLeagueMap === "object"
     ? {
-        ELITE: Array.isArray(parsed.driverLeagueMap.ELITE) ? parsed.driverLeagueMap.ELITE : [],
-        PLATINUM: Array.isArray(parsed.driverLeagueMap.PLATINUM) ? parsed.driverLeagueMap.PLATINUM : [],
-        MASTER: Array.isArray(parsed.driverLeagueMap.MASTER) ? parsed.driverLeagueMap.MASTER : [],
-        PRO: Array.isArray(parsed.driverLeagueMap.PRO) ? parsed.driverLeagueMap.PRO : [],
-        GT: Array.isArray(parsed.driverLeagueMap.GT) ? parsed.driverLeagueMap.GT : [],
+        STAR: Array.isArray(parsed.driverLeagueMap.STAR)
+          ? parsed.driverLeagueMap.STAR
+          : [],
+        ELITE: Array.isArray(parsed.driverLeagueMap.ELITE)
+          ? parsed.driverLeagueMap.ELITE
+          : [],
+        "PRO GOLD": Array.isArray(parsed.driverLeagueMap["PRO GOLD"])
+          ? parsed.driverLeagueMap["PRO GOLD"]
+          : [],
+        "PRO SILVER": Array.isArray(parsed.driverLeagueMap["PRO SILVER"])
+          ? parsed.driverLeagueMap["PRO SILVER"]
+          : [],
+        "PRO AMA": Array.isArray(parsed.driverLeagueMap["PRO AMA"])
+          ? parsed.driverLeagueMap["PRO AMA"]
+          : [],
+        AMA: Array.isArray(parsed.driverLeagueMap.AMA)
+          ? parsed.driverLeagueMap.AMA
+          : [],
       }
     : {
+        STAR: [],
         ELITE: [],
-        PLATINUM: [],
-        MASTER: [],
-        PRO: [],
-        GT: [],
+        "PRO GOLD": [],
+        "PRO SILVER": [],
+        "PRO AMA": [],
+        AMA: [],
       }
 
 setDriverLeagueMap(importedDriverLeagueMap)
@@ -11326,18 +11351,49 @@ setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(importedDriverLeagueMap))
 setDriverAliasMap(
   parsed.driverAliasMap && typeof parsed.driverAliasMap === "object"
     ? {
-        ELITE: parsed.driverAliasMap.ELITE && typeof parsed.driverAliasMap.ELITE === "object" ? parsed.driverAliasMap.ELITE : {},
-        PLATINUM: parsed.driverAliasMap.PLATINUM && typeof parsed.driverAliasMap.PLATINUM === "object" ? parsed.driverAliasMap.PLATINUM : {},
-        MASTER: parsed.driverAliasMap.MASTER && typeof parsed.driverAliasMap.MASTER === "object" ? parsed.driverAliasMap.MASTER : {},
-        PRO: parsed.driverAliasMap.PRO && typeof parsed.driverAliasMap.PRO === "object" ? parsed.driverAliasMap.PRO : {},
-        GT: parsed.driverAliasMap.GT && typeof parsed.driverAliasMap.GT === "object" ? parsed.driverAliasMap.GT : {},
+        STAR:
+          parsed.driverAliasMap.STAR &&
+          typeof parsed.driverAliasMap.STAR === "object"
+            ? parsed.driverAliasMap.STAR
+            : {},
+
+        ELITE:
+          parsed.driverAliasMap.ELITE &&
+          typeof parsed.driverAliasMap.ELITE === "object"
+            ? parsed.driverAliasMap.ELITE
+            : {},
+
+        "PRO GOLD":
+          parsed.driverAliasMap["PRO GOLD"] &&
+          typeof parsed.driverAliasMap["PRO GOLD"] === "object"
+            ? parsed.driverAliasMap["PRO GOLD"]
+            : {},
+
+        "PRO SILVER":
+          parsed.driverAliasMap["PRO SILVER"] &&
+          typeof parsed.driverAliasMap["PRO SILVER"] === "object"
+            ? parsed.driverAliasMap["PRO SILVER"]
+            : {},
+
+        "PRO AMA":
+          parsed.driverAliasMap["PRO AMA"] &&
+          typeof parsed.driverAliasMap["PRO AMA"] === "object"
+            ? parsed.driverAliasMap["PRO AMA"]
+            : {},
+
+        AMA:
+          parsed.driverAliasMap.AMA &&
+          typeof parsed.driverAliasMap.AMA === "object"
+            ? parsed.driverAliasMap.AMA
+            : {},
       }
     : {
+        STAR: {},
         ELITE: {},
-        PLATINUM: {},
-        MASTER: {},
-        PRO: {},
-        GT: {},
+        "PRO GOLD": {},
+        "PRO SILVER": {},
+        "PRO AMA": {},
+        AMA: {},
       }
 )
 
@@ -11401,13 +11457,14 @@ function applyBulkPilotsToLeagueDrawer(league: ChampionshipLeagueKey) {
   }
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     const incomingSet = new Set(
       uniquePilots.map((pilot) => normalizeDriverNameForChampionship(pilot))
@@ -11439,13 +11496,14 @@ function addPilotToLeagueDrawer(league: ChampionshipLeagueKey) {
   const normalized = normalizeDriverNameForChampionship(rawName)
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     for (const currentLeague of CHAMPIONSHIP_LEAGUES) {
       next[currentLeague] = next[currentLeague].filter(
@@ -11472,13 +11530,14 @@ function removePilotFromLeagueDrawer(
   const target = normalizeDriverNameForChampionship(pilotName)
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     next[league] = next[league].filter(
       (pilot) =>
@@ -11499,13 +11558,14 @@ function removeDsqDriversFromDrawer() {
   )
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     for (const league of CHAMPIONSHIP_LEAGUES) {
       next[league] = next[league].filter(
@@ -11527,13 +11587,14 @@ function addPilotToLeagueDrawerDirect(league: ChampionshipLeagueKey, pilotName: 
   const normalized = normalizeDriverNameForChampionship(rawName)
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     for (const currentLeague of CHAMPIONSHIP_LEAGUES) {
       next[currentLeague] = next[currentLeague].filter(
@@ -11585,13 +11646,14 @@ function renamePilotInsideLeagueDrawer(
   const oldNorm = normalizeDriverNameForChampionship(cleanOld)
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     next[league] = next[league]
       .map((pilot) =>
@@ -11642,13 +11704,14 @@ function swapPilotsBetweenLeagues(
   const toNorm = normalizeDriverNameForChampionship(targetPilotName)
 
   setWorkbenchDriverLeagueMap((prev) => {
-    const next: DriverLeagueMap = {
-      ELITE: [...prev.ELITE],
-      PLATINUM: [...prev.PLATINUM],
-      MASTER: [...prev.MASTER],
-      PRO: [...prev.PRO],
-      GT: [...prev.GT],
-    }
+  const next: DriverLeagueMap = {
+    STAR: [...prev.STAR],
+    ELITE: [...prev.ELITE],
+    "PRO GOLD": [...prev["PRO GOLD"]],
+    "PRO SILVER": [...prev["PRO SILVER"]],
+    "PRO AMA": [...prev["PRO AMA"]],
+    AMA: [...prev.AMA],
+  }
 
     // rimuovo entrambi
     next[fromLeague] = next[fromLeague].filter(
@@ -12171,7 +12234,7 @@ const lastCreatedMovementText = useMemo(() => {
       {showMeta && (
         <>
           <Separator />
-          <HeaderBadge label="LEGA" value={effectiveLega} variant="gold" />
+          <HeaderBadge label="RANK" value={effectiveLega} variant="gold" />
         </>
       )}
 
@@ -12820,7 +12883,7 @@ const lastCreatedMovementText = useMemo(() => {
           ["PP", matchSummary.fields.pp],
           ["GV", matchSummary.fields.gv],
           ["Gara", matchSummary.fields.gara],
-          ["Lega", matchSummary.fields.lega],
+          ["Rank", matchSummary.fields.lega],
           ...(unionMode
             ? ([["Lobby", matchSummary.fields.lobby]] as [string, MatchFieldStatus][])
             : []),
