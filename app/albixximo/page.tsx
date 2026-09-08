@@ -206,20 +206,12 @@ type PenaltyMap = Record<string, PenaltyEntry[]>
 type DnfOverrideValue = "DNF" | "DNF-I" | "DNFV"
 type DnfOverrideMap = Record<string, DnfOverrideValue>
 
-const PRT_RACE_OPTIONS = [
+const UNION_RACE_OPTIONS = [
   { value: 1, label: "Gara 1" },
   { value: 2, label: "Gara 2" },
   { value: 3, label: "Gara 3" },
   { value: 4, label: "Gara 4" },
   { value: 5, label: "Gara 5" },
-  { value: 6, label: "Gara 6" },
-  { value: 7, label: "Gara 7" },
-  { value: 8, label: "Gara 8" },
-  { value: 9, label: "Gara 9" },
-  { value: 10, label: "Gara 10" },
-  { value: 11, label: "Gara 11" },
-  { value: 12, label: "Gara 12" },
-  { value: 13, label: "Gara 13 • Finale di Campionato" },
 ] as const
 
 type PenaltyEffect = "time" | "ammonition" | "dsq" | "other"
@@ -3587,10 +3579,7 @@ const CHAMPIONSHIP_LEAGUES: ChampionshipLeagueKey[] = [
   "AMA",
 ]
 
-const RACE_OPTIONS = Array.from({ length: 13 }, (_, i) => ({
-  value: i + 1,
-  label: i === 12 ? `Gara ${i + 1} - Finale` : `Gara ${i + 1}`,
-}))
+const RACE_OPTIONS = UNION_RACE_OPTIONS
 const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v1"
 const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
 const PRT_SELECTED_LEAGUE_STORAGE_KEY = "albixximo_prt_selected_league"
@@ -3924,9 +3913,9 @@ useEffect(() => {
   try {
     const rawRace = window.localStorage.getItem(UNION_CURRENT_RACE_STORAGE_KEY)
     const parsedRace = Number(rawRace)
-    if (Number.isFinite(parsedRace) && parsedRace >= 1 && parsedRace <= 13) {
-      setCurrentRace(parsedRace)
-    }
+    if (Number.isFinite(parsedRace) && parsedRace >= 1 && parsedRace <= 5) {
+  setCurrentRace(parsedRace)
+}
 
     const rawLeague = window.localStorage.getItem(PRT_SELECTED_LEAGUE_STORAGE_KEY)
     if (CHAMPIONSHIP_LEAGUES.includes(rawLeague as ChampionshipLeagueKey)) {
@@ -5886,23 +5875,15 @@ setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRa
   const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
   const championshipCircuits: Record<
-    number,
-    { name: string; flagSrc: string; isLogo?: boolean }
-  > = {
-    1: { name: "Lago Maggiore", flagSrc: "/flags/it.png" },
-    2: { name: "Blue Moon Bay", flagSrc: "/flags/us.png" },
-    3: { name: "Barcelona", flagSrc: "/flags/es.png" },
-    4: { name: "Le Mans", flagSrc: "/flags/fr.png" },
-    5: { name: "Alsace", flagSrc: "/flags/fr.png" },
-    6: { name: "Sardegna B", flagSrc: "/flags/it.png" },
-    7: { name: "Monza", flagSrc: "/flags/it.png" },
-    8: { name: "Gilles Villeneuve", flagSrc: "/flags/ca.png" },
-    9: { name: "Saint Croix", flagSrc: "/flags/fr.png" },
-    10: { name: "Dragon Trail", flagSrc: "/flags/hr.png" },
-    11: { name: "Yas Marina", flagSrc: "/flags/ae.png" },
-    12: { name: "Watkins Glen", flagSrc: "/flags/us.png" },
-    13: { name: "?", flagSrc: "/flags/13.png" },
-  }
+  number,
+  { name: string; flagSrc: string; isLogo?: boolean }
+> = {
+  1: { name: "Red Bull Ring", flagSrc: "/flags/at.png" },
+  2: { name: "Watkins Glen", flagSrc: "/flags/us.png" },
+  3: { name: "Suzuka Circuit", flagSrc: "/flags/jp.png" },
+  4: { name: "Autopolis", flagSrc: "/flags/jp.png" },
+  5: { name: "Nürburgring GP", flagSrc: "/flags/de.png" },
+}
 
   function renderRaceHeaderCell(raceNumber: number) {
     const circuit = championshipCircuits[raceNumber]
@@ -7665,15 +7646,25 @@ const savedLeagueInCurrentRace = useMemo(() => {
 }, [currentRaceSnapshot, selectedLeague, selectedLobby])
 
 const savedLeagueStatus = useMemo(() => {
-  return {
-    STAR: !!currentRaceSnapshot.STAR,
-    ELITE: !!currentRaceSnapshot.ELITE,
-    "PRO GOLD": !!currentRaceSnapshot["PRO GOLD"],
-    "PRO SILVER": !!currentRaceSnapshot["PRO SILVER"],
-    "PRO AMA": !!currentRaceSnapshot["PRO AMA"],
-    AMA: !!currentRaceSnapshot.AMA,
-  }
-}, [currentRaceSnapshot])
+  return Object.fromEntries(
+    CHAMPIONSHIP_LEAGUES.map((league) => {
+      const expectedLobbies =
+        championshipState.expectedDrivers?.[currentRace]?.[league] || {}
+
+      const activeLobbies = Object.entries(expectedLobbies)
+        .filter(([, drivers]) => (drivers || []).length > 0)
+        .map(([lobby]) => lobby)
+
+      const isComplete =
+        activeLobbies.length > 0 &&
+        activeLobbies.every(
+          (lobby) => !!currentRaceSnapshot[league]?.[lobby]
+        )
+
+      return [league, isComplete]
+    })
+  ) as Record<ChampionshipLeagueKey, boolean>
+}, [championshipState.expectedDrivers, currentRace, currentRaceSnapshot])
 
 const availableImportLeagues = useMemo(() => {
   return CHAMPIONSHIP_LEAGUES.filter((league) => !savedLeagueStatus[league])
@@ -7688,8 +7679,10 @@ const readyLeagueHtmlCount = useMemo(() => {
 const canExportGeneralHtml = readyLeagueHtmlCount >= 3
 
 const isCurrentRaceComplete = useMemo(() => {
-  return CHAMPIONSHIP_LEAGUES.every((league) => !!currentRaceSnapshot[league])
-}, [currentRaceSnapshot])
+  return CHAMPIONSHIP_LEAGUES.every(
+    (league) => savedLeagueStatus[league]
+  )
+}, [savedLeagueStatus])
 
 const driverChampionship = useMemo<DriverChampionshipRow[]>(() => {
   const map = new Map<string, DriverChampionshipRow>()
@@ -11352,9 +11345,9 @@ async function importChampionshipBackup(file: File) {
     }
 
     const race = Number(parsed.currentRace)
-    if (!race || race < 1 || race > 13) {
-      throw new Error("Numero gara non valido nel backup")
-    }
+    if (!race || race < 1 || race > 5) {
+  throw new Error("Numero gara non valido nel backup")
+}
 
     const league = normalizeLeagueKey(parsed.selectedLeague)
     if (!league) {
@@ -12831,8 +12824,10 @@ const lastCreatedMovementText = useMemo(() => {
     </div>
 
     <div style={{ fontSize: 12, opacity: 0.72 }}>
-      {isCurrentRaceComplete ? "Gara completa" : "Gara non completa"}
-    </div>
+  {savedLeagueStatus[selectedLeague]
+    ? `${selectedLeague} completato`
+    : `${selectedLeague} non completato`}
+</div>
   </div>
 
   <div style={{ display: "grid", gap: 14 }}>
