@@ -2,6 +2,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { toPng } from "html-to-image"
+import {
+  UNION_DRIVER_NAMES_BY_RANK,
+  getUnionDriverTeamCode,
+} from "./data/unionDrivers"
 
 type ExtractRow = {
   posGara: number
@@ -41,6 +45,15 @@ const UNION_RANKS = [
   "AMA",
 ] as const
 
+const UNION_LOBBIES_BY_RANK = {
+  STAR: ["A1", "A5", "A10", "A17", "A29", "A34"],
+  ELITE: ["A2", "A8", "A12", "A18", "A30", "A35"],
+  "PRO GOLD": ["A3", "A14", "A21", "A24", "A28", "A31"],
+  "PRO SILVER": ["A4", "A9", "A13", "A22", "A25", "A36"],
+  "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
+  AMA: ["A7", "A11", "A19", "A23", "A27", "A33"],
+} as const
+
 type UnionRankKey = typeof UNION_RANKS[number]
 
 const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
@@ -58,6 +71,7 @@ type SavedLeagueSnapshot = {
   savedAt: string
   league: ChampionshipLeagueKey
   raceNumber: number
+  expectedDrivers: string[]
   csv: string
   rows: ExtractRow[]
   finalRows: DisplayRow[]
@@ -76,11 +90,26 @@ type SavedLeagueSnapshot = {
   winner: string
 }
 
-type SavedRaceState = Partial<Record<ChampionshipLeagueKey, SavedLeagueSnapshot>>
+type SavedLobbyState = Partial<Record<string, SavedLeagueSnapshot>>
+
+type SavedRaceState = Partial<Record<ChampionshipLeagueKey, SavedLobbyState>>
+
+type ExpectedDriversByLobby = Partial<
+  Record<
+    number,
+    Partial<
+      Record<
+        ChampionshipLeagueKey,
+        Partial<Record<string, string[]>>
+      >
+    >
+  >
+>
 
 type ChampionshipState = {
   races: Partial<Record<number, SavedRaceState>>
   roundMovements: Partial<Record<number, RoundMovementState>>
+  expectedDrivers: ExpectedDriversByLobby
 }
 
 type DriverBaselineEntry = {
@@ -112,7 +141,7 @@ type DriverChampionshipRow = {
 }
 
 type DriverLeagueMap = Record<ChampionshipLeagueKey, string[]>
-
+type UnionDriverTeamOverrideMap = Record<string, string>
 type DriverAliasMap = Record<ChampionshipLeagueKey, Record<string, string>>
 type DriverRatingPenalty =
   | "Sospeso per 1 gara"
@@ -3562,12 +3591,14 @@ const RACE_OPTIONS = Array.from({ length: 13 }, (_, i) => ({
   value: i + 1,
   label: i === 12 ? `Gara ${i + 1} - Finale` : `Gara ${i + 1}`,
 }))
-const PRT_CHAMPIONSHIP_STORAGE_KEY = "albixximo_prt_championship_state"
-const PRT_CURRENT_RACE_STORAGE_KEY = "albixximo_prt_current_race"
+const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v1"
+const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
 const PRT_SELECTED_LEAGUE_STORAGE_KEY = "albixximo_prt_selected_league"
 const PRT_DRIVER_BASELINES_STORAGE_KEY = "albixximo_prt_driver_baselines"
 const PRT_MANUAL_RACE12_STORAGE_KEY = "albixximo_prt_manual_race12"
-const PRT_DRIVER_LEAGUE_MAP_STORAGE_KEY = "albixximo_prt_driver_league_map"
+const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v1"
+const UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY =
+  "albixximo_union2026_driver_team_override_v1"
 const PRT_DRIVER_ALIAS_MAP_STORAGE_KEY = "albixximo_prt_driver_alias_map"
 const PRT_DRIVER_RATING_MAP_STORAGE_KEY = "albixximo_prt_driver_rating_map"
 
@@ -3608,14 +3639,21 @@ export default function Page() {
   const [manualPilotOverrides, setManualPilotOverrides] = useState<Record<number, string>>({})
   const [manualAutoOverrides, setManualAutoOverrides] = useState<Record<number, string>>({})
   const [manualDistaccoOverrides, setManualDistaccoOverrides] = useState<Record<number, string>>({})
-  const [currentRace, setCurrentRace] = useState<number>(3)
+  const [currentRace, setCurrentRace] = useState<number>(1)
 
 
 const [selectedLeague, setSelectedLeague] = useState<ChampionshipLeagueKey>("ELITE")
+const [selectedLobby, setSelectedLobby] = useState<string>(
+  UNION_LOBBIES_BY_RANK.ELITE[0]
+)
+
+const [expectedLobbyDrivers, setExpectedLobbyDrivers] = useState<string[]>([])
+const [expectedLobbyDriversDraft, setExpectedLobbyDriversDraft] = useState("")
 
 const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   races: {},
   roundMovements: {},
+  expectedDrivers: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
 const [driverBaselines, setDriverBaselines] = useState<DriverBaselineEntry[]>([])
@@ -3640,23 +3678,23 @@ const [drawerDrafts, setDrawerDrafts] = useState<Record<ChampionshipLeagueKey, s
   AMA: "",
 })
 
-const [driverLeagueMap, setDriverLeagueMap] = useState<DriverLeagueMap>({
-  STAR: [],
-  ELITE: [],
-  "PRO GOLD": [],
-  "PRO SILVER": [],
-  "PRO AMA": [],
-  AMA: [],
-})
+const [driverLeagueMap, setDriverLeagueMap] = useState<DriverLeagueMap>(() => ({
+  STAR: [...UNION_DRIVER_NAMES_BY_RANK.STAR],
+  ELITE: [...UNION_DRIVER_NAMES_BY_RANK.ELITE],
+  "PRO GOLD": [...UNION_DRIVER_NAMES_BY_RANK["PRO GOLD"]],
+  "PRO SILVER": [...UNION_DRIVER_NAMES_BY_RANK["PRO SILVER"]],
+  "PRO AMA": [...UNION_DRIVER_NAMES_BY_RANK["PRO AMA"]],
+  AMA: [...UNION_DRIVER_NAMES_BY_RANK.AMA],
+}))
 
-const [workbenchDriverLeagueMap, setWorkbenchDriverLeagueMap] = useState<DriverLeagueMap>({
-  STAR: [],
-  ELITE: [],
-  "PRO GOLD": [],
-  "PRO SILVER": [],
-  "PRO AMA": [],
-  AMA: [],
-})
+const [workbenchDriverLeagueMap, setWorkbenchDriverLeagueMap] = useState<DriverLeagueMap>(() => ({
+  STAR: [...UNION_DRIVER_NAMES_BY_RANK.STAR],
+  ELITE: [...UNION_DRIVER_NAMES_BY_RANK.ELITE],
+  "PRO GOLD": [...UNION_DRIVER_NAMES_BY_RANK["PRO GOLD"]],
+  "PRO SILVER": [...UNION_DRIVER_NAMES_BY_RANK["PRO SILVER"]],
+  "PRO AMA": [...UNION_DRIVER_NAMES_BY_RANK["PRO AMA"]],
+  AMA: [...UNION_DRIVER_NAMES_BY_RANK.AMA],
+}))
 
 function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   return {
@@ -3669,7 +3707,17 @@ function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   }
 }
 
-const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
+const [driverTeamOverrides, setDriverTeamOverrides] =
+  useState<UnionDriverTeamOverrideMap>({})
+
+const [driverTeamOverridesHydrated, setDriverTeamOverridesHydrated] =
+  useState(false)
+
+const [editingDriverTeam, setEditingDriverTeam] = useState<string | null>(null)
+
+const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
+
+  const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
   ELITE: {},
   "PRO GOLD": {},
@@ -3874,7 +3922,7 @@ useEffect(() => {
   if (typeof window === "undefined") return
 
   try {
-    const rawRace = window.localStorage.getItem(PRT_CURRENT_RACE_STORAGE_KEY)
+    const rawRace = window.localStorage.getItem(UNION_CURRENT_RACE_STORAGE_KEY)
     const parsedRace = Number(rawRace)
     if (Number.isFinite(parsedRace) && parsedRace >= 1 && parsedRace <= 13) {
       setCurrentRace(parsedRace)
@@ -3885,17 +3933,21 @@ useEffect(() => {
       setSelectedLeague(rawLeague as ChampionshipLeagueKey)
     }
 
-    const rawState = window.localStorage.getItem(PRT_CHAMPIONSHIP_STORAGE_KEY)
+    const rawState = window.localStorage.getItem(UNION_CHAMPIONSHIP_STORAGE_KEY)
     if (rawState) {
       const parsedState = JSON.parse(rawState)
       if (parsedState && typeof parsedState === "object" && typeof parsedState.races === "object") {
   setChampionshipState({
-    races: parsedState.races || {},
-    roundMovements:
-      parsedState.roundMovements && typeof parsedState.roundMovements === "object"
-        ? parsedState.roundMovements
-        : {},
-  })
+  races: parsedState.races || {},
+  roundMovements:
+    parsedState.roundMovements && typeof parsedState.roundMovements === "object"
+      ? parsedState.roundMovements
+      : {},
+  expectedDrivers:
+    parsedState.expectedDrivers && typeof parsedState.expectedDrivers === "object"
+      ? parsedState.expectedDrivers
+      : {},
+})
 }
     }
 
@@ -3915,7 +3967,7 @@ useEffect(() => {
       }
     }
 
-    const rawDriverLeagueMap = window.localStorage.getItem(PRT_DRIVER_LEAGUE_MAP_STORAGE_KEY)
+    const rawDriverLeagueMap = window.localStorage.getItem(UNION_DRIVER_RANK_MAP_STORAGE_KEY)
 
 if (rawDriverLeagueMap) {
   const parsedDriverLeagueMap = JSON.parse(rawDriverLeagueMap) as Partial<
@@ -3938,8 +3990,14 @@ if (rawDriverLeagueMap) {
       AMA: Array.isArray(parsedDriverLeagueMap.AMA) ? parsedDriverLeagueMap.AMA : [],
     }
 
-    setDriverLeagueMap(nextDriverLeagueMap)
-    setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(nextDriverLeagueMap))
+    const hasSavedDrivers = Object.values(nextDriverLeagueMap).some(
+      (drivers) => drivers.length > 0
+    )
+
+    if (hasSavedDrivers) {
+      setDriverLeagueMap(nextDriverLeagueMap)
+      setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(nextDriverLeagueMap))
+    }
   }
 }
 
@@ -3967,6 +4025,24 @@ if (rawDriverAliasMap) {
   }
 }
 
+const rawDriverTeamOverrides = window.localStorage.getItem(
+  UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY
+)
+
+if (rawDriverTeamOverrides) {
+  const parsedDriverTeamOverrides = JSON.parse(rawDriverTeamOverrides)
+
+  if (
+    parsedDriverTeamOverrides &&
+    typeof parsedDriverTeamOverrides === "object" &&
+    !Array.isArray(parsedDriverTeamOverrides)
+  ) {
+    setDriverTeamOverrides(parsedDriverTeamOverrides)
+  }
+}
+
+setDriverTeamOverridesHydrated(true)
+
 const rawDriverRatingMap = window.localStorage.getItem(PRT_DRIVER_RATING_MAP_STORAGE_KEY)
 if (rawDriverRatingMap) {
   const parsedDriverRatingMap = JSON.parse(rawDriverRatingMap)
@@ -3982,7 +4058,7 @@ if (rawDriverRatingMap) {
 
 useEffect(() => {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(PRT_CURRENT_RACE_STORAGE_KEY, String(currentRace))
+  window.localStorage.setItem(UNION_CURRENT_RACE_STORAGE_KEY, String(currentRace))
 }, [currentRace])
 
 useEffect(() => {
@@ -3993,7 +4069,7 @@ useEffect(() => {
 useEffect(() => {
   if (typeof window === "undefined") return
   window.localStorage.setItem(
-    PRT_CHAMPIONSHIP_STORAGE_KEY,
+    UNION_CHAMPIONSHIP_STORAGE_KEY,
     JSON.stringify(championshipState)
   )
 }, [championshipState])
@@ -4017,9 +4093,9 @@ useEffect(() => {
 useEffect(() => {
   if (typeof window === "undefined") return
   window.localStorage.setItem(
-    PRT_DRIVER_LEAGUE_MAP_STORAGE_KEY,
-    JSON.stringify(workbenchDriverLeagueMap)
-  )
+  UNION_DRIVER_RANK_MAP_STORAGE_KEY,
+  JSON.stringify(workbenchDriverLeagueMap)
+)
 }, [workbenchDriverLeagueMap])
 
 useEffect(() => {
@@ -4029,6 +4105,16 @@ useEffect(() => {
     JSON.stringify(driverAliasMap)
   )
 }, [driverAliasMap])
+
+useEffect(() => {
+  if (typeof window === "undefined") return
+  if (!driverTeamOverridesHydrated) return
+
+  window.localStorage.setItem(
+    UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY,
+    JSON.stringify(driverTeamOverrides)
+  )
+}, [driverTeamOverrides, driverTeamOverridesHydrated])
 
 useEffect(() => {
   if (typeof window === "undefined") return
@@ -4043,19 +4129,31 @@ useEffect(() => {
 }, [uploadedLeagueHtmls])
 
 useEffect(() => {
-  const snapshot = championshipState.races[currentRace]?.[selectedLeague]
+  const lobbyState = championshipState.races[currentRace]?.[selectedLeague]
 
-  if (snapshot) {
-    reopenSavedLeague(selectedLeague)
+  if (lobbyState?.[selectedLobby]) {
+    reopenSavedLeague(selectedLeague, selectedLobby)
     return
   }
 
+    const savedExpectedDrivers =
+  championshipState.expectedDrivers?.[currentRace]?.[selectedLeague]?.[selectedLobby] || []
+
+setExpectedLobbyDrivers(savedExpectedDrivers)
+setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   clearCurrentWorkbench(false)
+
+  setUnionMeta((prev) => ({
+    ...prev,
+    lobby: selectedLobby,
+    lega: selectedLeague,
+  }))
+
   setManualLegaOverride(selectedLeague)
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
   setUnknownDriverSelections({})
   setDismissedUnknownDrivers({})
-}, [currentRace, selectedLeague, championshipState])
+}, [currentRace, selectedLeague, selectedLobby, championshipState])
 
 function normalizeDriverNameForChampionship(value: string) {
   return String(value || "")
@@ -6557,7 +6655,7 @@ const displayRows = useMemo<DisplayRow[]>(() => {
     pole: bestSourcePos != null && row.sourcePosGara === bestSourcePos ? "POLE" : "",
   }))
 
-  const officialLeaguePilots = (workbenchDriverLeagueMap[selectedLeague] || [])
+  const expectedLobbyPilots = expectedLobbyDrivers
   .map((name) => String(name || "").trim())
   .filter(Boolean)
 
@@ -6565,36 +6663,16 @@ const presentPilotKeys = new Set(
   rowsWithPole.map((row) => normalizeDriverNameForChampionship(row.pilota))
 )
 
-const roundMovementsForDnp =
-  championshipState.roundMovements?.[currentRace] || {}
-
-const incomingDriversAfterCurrentRace = new Set(
-  CHAMPIONSHIP_LEAGUES.flatMap((league) =>
-    (roundMovementsForDnp[league] || [])
-      .filter(
-        (entry) =>
-          entry.toLeague === selectedLeague &&
-          entry.fromLeague !== selectedLeague
-      )
-      .map((entry) =>
-        normalizeDriverNameForChampionship(entry.driverName)
-      )
-  )
-)
-
 const maxSourcePos = rowsWithPole.reduce(
     (max, row) => Math.max(max, Number(row.sourcePosGara) || 0),
     0
   )
 
-  const missingDnpRows: DisplayRow[] = officialLeaguePilots
+  const missingDnpRows: DisplayRow[] = expectedLobbyPilots
   .filter((pilot) => {
     const key = normalizeDriverNameForChampionship(pilot)
 
-    return (
-      !presentPilotKeys.has(key) &&
-      !incomingDriversAfterCurrentRace.has(key)
-    )
+    return !presentPilotKeys.has(key)
   })
   .map((pilot, index) => ({
     posGara: rowsWithPole.length + index + 1,
@@ -6609,12 +6687,11 @@ const maxSourcePos = rowsWithPole.reduce(
   }))
 
   return [...rowsWithPole, ...missingDnpRows]
+
 }, [
   leagueDriverResolution.baseRows,
-  workbenchDriverLeagueMap,
+  expectedLobbyDrivers,
   selectedLeague,
-  championshipState,
-  currentRace,
 ])
     const hasManualPilotOverrides = useMemo(() => {
     return Object.keys(manualPilotOverrides).length > 0
@@ -7584,8 +7661,8 @@ const hasCurrentRoundMovements = useMemo(() => {
 }, [currentRoundMovements])
 
 const savedLeagueInCurrentRace = useMemo(() => {
-  return !!currentRaceSnapshot[selectedLeague]
-}, [currentRaceSnapshot, selectedLeague])
+  return !!currentRaceSnapshot[selectedLeague]?.[selectedLobby]
+}, [currentRaceSnapshot, selectedLeague, selectedLobby])
 
 const savedLeagueStatus = useMemo(() => {
   return {
@@ -7736,7 +7813,10 @@ if (currentRace < entryRace) continue
   if (!raceState) continue
 
   for (const league of CHAMPIONSHIP_LEAGUES) {
-    const snapshot = raceState[league]
+  const lobbyState = raceState[league]
+  if (!lobbyState) continue
+
+  for (const snapshot of Object.values(lobbyState)) {
     if (!snapshot || !Array.isArray(snapshot.finalRows)) continue
 
     const snapshotPointsMapRaw = buildSnapshotRacePointsMap(
@@ -7810,7 +7890,7 @@ const existing = map.get(key)
         racePoints[raceNumber] = resolvedPoints
 raceResults[raceNumber] = cell
 
-        map.set(key, {
+                map.set(key, {
           pilota: pilotName,
           league: officialLeagueByDriver.get(key) || league,
           baselinePoints: 0,
@@ -7822,6 +7902,7 @@ raceResults[raceNumber] = cell
       }
     }
   }
+}
 }
 
 const activeRoundMovementByDriver = new Map<
@@ -8106,7 +8187,7 @@ const driverChampionshipByLeague = useMemo(() => {
 
 const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
   const raceLeague = normalizeLeagueKey(effectiveLega) || selectedLeague
-  const drawerPilots = workbenchDriverLeagueMap[raceLeague] || []
+  const expectedLobbyPilots = expectedLobbyDrivers
 
   const existingKeys = new Set(
     finalRows.map((row) => normalizeDriverNameForChampionship(row.pilota))
@@ -8143,28 +8224,13 @@ const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
       normalizeDriverNameForChampionship(row.pilota)
     ),
   ])
-
-  const incomingDriversThisRound = new Set(
-  CHAMPIONSHIP_LEAGUES.flatMap((league) =>
-    (currentRoundMovements[league] || [])
-      .filter(
-        (entry) =>
-          entry.toLeague === raceLeague &&
-          entry.fromLeague !== raceLeague
-      )
-      .map((entry) =>
-        normalizeDriverNameForChampionship(entry.driverName)
-      )
-  )
-)
   
-  const missingPilots = drawerPilots.filter((pilot) => {
+  const missingPilots = expectedLobbyPilots.filter((pilot) => {
   const key = normalizeDriverNameForChampionship(pilot)
 
   return (
     key &&
-    !existingKeysAfterDsq.has(key) &&
-    !incomingDriversThisRound.has(key)
+    !existingKeysAfterDsq.has(key)
   )
 })
 
@@ -8180,7 +8246,7 @@ const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
   finalRows,
   driverChampionship,
   currentRace,
-  workbenchDriverLeagueMap,
+  expectedLobbyDrivers,
   effectiveLega,
   selectedLeague,
   currentRoundMovements,
@@ -11423,13 +11489,19 @@ setUploadedLeagueHtmls(
 function handleSelectLeague(league: ChampionshipLeagueKey) {
   setUnknownDriverSelections({})
   setDismissedUnknownDrivers({})
+  const defaultLobby = UNION_LOBBIES_BY_RANK[league][0]
+setSelectedLobby(defaultLobby)
+setUnionMeta((prev) => ({
+  ...prev,
+  lobby: defaultLobby,
+  lega: league,
+}))
+  const lobbyState = currentRaceSnapshot[league]
 
-  const snapshot = currentRaceSnapshot[league]
-
-  if (snapshot) {
-    reopenSavedLeague(league)
-    return
-  }
+if (lobbyState?.[defaultLobby]) {
+  reopenSavedLeague(league, defaultLobby)
+  return
+}
 
   clearCurrentWorkbench(false)
 
@@ -11609,6 +11681,20 @@ function addPilotToLeagueDrawerDirect(league: ChampionshipLeagueKey, pilotName: 
   })
 }
 
+function saveDriverTeamOverride(pilot: string) {
+  const nextTeamCode = editingDriverTeamDraft.trim().toUpperCase()
+
+  if (!nextTeamCode) return
+
+  setDriverTeamOverrides((prev) => ({
+    ...prev,
+    [pilot]: nextTeamCode,
+  }))
+
+  setEditingDriverTeam(null)
+  setEditingDriverTeamDraft("")
+}
+
 function saveDriverAliasForLeague(
   league: ChampionshipLeagueKey,
   rawName: string,
@@ -11694,47 +11780,84 @@ function dismissUnknownDriver(league: ChampionshipLeagueKey, rawName: string) {
   }))
 }
 
-function swapPilotsBetweenLeagues(
-  fromLeague: ChampionshipLeagueKey,
-  toLeague: ChampionshipLeagueKey,
-  pilotName: string,
-  targetPilotName: string
-) {
-  const fromNorm = normalizeDriverNameForChampionship(pilotName)
-  const toNorm = normalizeDriverNameForChampionship(targetPilotName)
+function saveExpectedLobbyDrivers() {
+  const parsedDrivers = expectedLobbyDriversDraft
+    .split(/\r?\n/)
+    .map((driver) => driver.trim())
+    .filter(Boolean)
 
-  setWorkbenchDriverLeagueMap((prev) => {
-  const next: DriverLeagueMap = {
-    STAR: [...prev.STAR],
-    ELITE: [...prev.ELITE],
-    "PRO GOLD": [...prev["PRO GOLD"]],
-    "PRO SILVER": [...prev["PRO SILVER"]],
-    "PRO AMA": [...prev["PRO AMA"]],
-    AMA: [...prev.AMA],
+  const uniqueDrivers = Array.from(new Set(parsedDrivers))
+
+  const allowedDrivers = new Set(
+    (workbenchDriverLeagueMap[selectedLeague] || []).map((driver) =>
+      normalizeDriverNameForChampionship(driver)
+    )
+  )
+
+  const invalidDrivers = uniqueDrivers.filter(
+    (driver) =>
+      !allowedDrivers.has(normalizeDriverNameForChampionship(driver))
+  )
+
+  if (invalidDrivers.length > 0) {
+    window.alert(
+      `⚠️ Alcuni piloti non appartengono al Rank ${selectedLeague}:\n\n${invalidDrivers.join("\n")}`
+    )
+    return
   }
 
-    // rimuovo entrambi
-    next[fromLeague] = next[fromLeague].filter(
-      (p) => normalizeDriverNameForChampionship(p) !== fromNorm
-    )
+  setExpectedLobbyDrivers(uniqueDrivers)
 
-    next[toLeague] = next[toLeague].filter(
-      (p) => normalizeDriverNameForChampionship(p) !== toNorm
-    )
+setChampionshipState((prev) => ({
+  ...prev,
+  expectedDrivers: {
+    ...prev.expectedDrivers,
+    [currentRace]: {
+      ...(prev.expectedDrivers?.[currentRace] || {}),
+      [selectedLeague]: {
+        ...(prev.expectedDrivers?.[currentRace]?.[selectedLeague] || {}),
+        [selectedLobby]: uniqueDrivers,
+      },
+    },
+  },
+}))
+}
 
-    // li inserisco invertiti
-    next[fromLeague].push(targetPilotName)
-    next[toLeague].push(pilotName)
+function resetExpectedLobbyDrivers() {
+  const confirmed = window.confirm(
+    `Vuoi resettare i piloti previsti di Gara ${currentRace} · ${selectedLeague} · ${selectedLobby}?`
+  )
 
-    // sort
-    for (const league of CHAMPIONSHIP_LEAGUES) {
-      next[league].sort((a, b) =>
-        a.localeCompare(b, "it", { sensitivity: "base" })
-      )
+  if (!confirmed) return
+
+  setChampionshipState((prev) => {
+    const nextExpectedDrivers = { ...prev.expectedDrivers }
+
+    const raceData = { ...(nextExpectedDrivers[currentRace] || {}) }
+    const rankData = { ...(raceData[selectedLeague] || {}) }
+
+    delete rankData[selectedLobby]
+
+    if (Object.keys(rankData).length === 0) {
+      delete raceData[selectedLeague]
+    } else {
+      raceData[selectedLeague] = rankData
     }
 
-    return next
+    if (Object.keys(raceData).length === 0) {
+      delete nextExpectedDrivers[currentRace]
+    } else {
+      nextExpectedDrivers[currentRace] = raceData
+    }
+
+    return {
+      ...prev,
+      expectedDrivers: nextExpectedDrivers,
+    }
   })
+
+  setExpectedLobbyDrivers([])
+  setExpectedLobbyDriversDraft("")
 }
 
 function openConfirmSaveLeagueModal() {
@@ -11751,10 +11874,17 @@ function confirmSaveCurrentLeague() {
   const saveLeagueKey =
     normalizeLeagueKey(effectiveLega) || selectedLeague
 
-  const snapshot: SavedLeagueSnapshot = {
+  const saveLobbyKey = String(
+  selectedLobby || unionMeta.lobby || ""
+).trim().toUpperCase()
+
+if (!saveLobbyKey) return
+  
+    const snapshot: SavedLeagueSnapshot = {
     savedAt: new Date().toISOString(),
     league: saveLeagueKey,
     raceNumber: currentRace,
+    expectedDrivers: expectedLobbyDrivers,
     csv: finalCsv,
     rows,
     finalRows,
@@ -11781,9 +11911,12 @@ function confirmSaveCurrentLeague() {
       races: {
         ...prev.races,
         [currentRace]: {
-          ...prevRace,
-          [saveLeagueKey]: snapshot,
-        },
+  ...prevRace,
+  [saveLeagueKey]: {
+    ...(prevRace[saveLeagueKey] || {}),
+    [saveLobbyKey]: snapshot,
+  },
+},
       },
     }
   })
@@ -11798,11 +11931,19 @@ setManualAutoDraft({})
 setManualDistaccoDraft({})
 }
 
-function reopenSavedLeague(league: ChampionshipLeagueKey) {
-  const snapshot = currentRaceSnapshot[league]
-  if (!snapshot) return
+function reopenSavedLeague(
+  league: ChampionshipLeagueKey,
+  lobby: string
+) {
+  const lobbyState = currentRaceSnapshot[league]
+  if (!lobbyState) return
 
-  clearCurrentWorkbench(false)
+  const snapshot = lobbyState[lobby]
+if (!snapshot) return
+
+setSelectedLobby(lobby)
+
+clearCurrentWorkbench(false)
   setUnknownDriverSelections({})
   setDismissedUnknownDrivers({})
 
@@ -11843,6 +11984,15 @@ function reopenSavedLeague(league: ChampionshipLeagueKey) {
   setManualDistaccoOverrides(snapshot.manualDistaccoOverrides || {})
   setManualQualiOverrides(snapshot.manualQualiOverrides || {})
 
+  setExpectedLobbyDrivers(
+  Array.isArray(snapshot.expectedDrivers) ? snapshot.expectedDrivers : []
+)
+
+setExpectedLobbyDriversDraft(
+  Array.isArray(snapshot.expectedDrivers)
+    ? snapshot.expectedDrivers.join("\n")
+    : ""
+)
   setManualPilotDraft({})
   setManualAutoDraft({})
   setManualDistaccoDraft({})
@@ -11858,7 +12008,20 @@ function resetCurrentLeagueInRace() {
   setChampionshipState((prev) => {
     const currentRaceData = prev.races[currentRace] || {}
     const nextRaceData = { ...currentRaceData }
-    delete nextRaceData[selectedLeague]
+
+    const currentLobbyState = nextRaceData[selectedLeague]
+
+    if (currentLobbyState) {
+      const nextLobbyState = { ...currentLobbyState }
+
+      delete nextLobbyState[selectedLobby]
+
+      if (Object.keys(nextLobbyState).length === 0) {
+        delete nextRaceData[selectedLeague]
+      } else {
+        nextRaceData[selectedLeague] = nextLobbyState
+      }
+    }
 
     return {
       ...prev,
@@ -11870,6 +12033,13 @@ function resetCurrentLeagueInRace() {
   })
 
   clearCurrentWorkbench(false)
+
+  setUnionMeta((prev) => ({
+    ...prev,
+    lobby: selectedLobby,
+    lega: selectedLeague,
+  }))
+
   setManualLegaOverride(selectedLeague)
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
@@ -12719,7 +12889,156 @@ const lastCreatedMovementText = useMemo(() => {
   )
 })}
     </div>
+        <div style={{ display: "grid", gap: 8 }}>
+      <div
+        style={{
+          fontSize: 11,
+          opacity: 0.72,
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: 0.35,
+        }}
+      >
+        Lobby {selectedLeague}
+      </div>
 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+          gap: 10,
+        }}
+      >
+        {UNION_LOBBIES_BY_RANK[selectedLeague].map((lobby) => {
+          const isActiveLobby = selectedLobby === lobby
+          const lobbyState = currentRaceSnapshot[selectedLeague]
+          const isSavedLobby = !!lobbyState?.[lobby]
+
+          return (
+            <button
+              key={lobby}
+              onClick={() => {
+                setSelectedLobby(lobby)
+
+                if (isSavedLobby) {
+                  reopenSavedLeague(selectedLeague, lobby)
+                  return
+                }
+
+                clearCurrentWorkbench(false)
+
+                setUnionMeta((prev) => ({
+                  ...prev,
+                  lobby,
+                  lega: selectedLeague,
+                }))
+
+                setManualLegaOverride(selectedLeague)
+              }}
+              style={{
+                padding: "10px 8px",
+                borderRadius: 10,
+                border: isSavedLobby
+                  ? isActiveLobby
+                    ? "1px solid rgba(255,215,0,0.45)"
+                    : "1px solid rgba(34,197,94,0.35)"
+                  : isActiveLobby
+                    ? "1px solid rgba(255,215,0,0.35)"
+                    : "1px solid rgba(255,255,255,0.08)",
+                background: isSavedLobby
+                  ? isActiveLobby
+                    ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
+                    : "rgba(34,197,94,0.14)"
+                  : isActiveLobby
+                    ? "rgba(255,215,0,0.12)"
+                    : "rgba(255,255,255,0.03)",
+                color: "white",
+                cursor: "pointer",
+                fontWeight: 900,
+                fontSize: 11,
+                letterSpacing: 0.35,
+                textTransform: "uppercase",
+              }}
+            >
+              {lobby} {isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+        <div
+      style={{
+        display: "grid",
+        gap: 8,
+        padding: 12,
+        borderRadius: 12,
+        border: "1px solid rgba(255,215,0,0.18)",
+        background: "rgba(255,255,255,0.025)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: 0.4,
+              textTransform: "uppercase",
+            }}
+          >
+            Piloti previsti in questa Lobby
+          </div>
+
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 10,
+              opacity: 0.6,
+            }}
+          >
+            Gara {currentRace} · {selectedLeague} · {selectedLobby}
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 900,
+            opacity: 0.75,
+          }}
+        >
+          {expectedLobbyDrivers.length} piloti
+        </div>
+      </div>
+
+      <textarea
+        value={expectedLobbyDriversDraft}
+        onChange={(e) => setExpectedLobbyDriversDraft(e.target.value)}
+        placeholder={"Incolla un ID GT7 per riga...\nEsempio:\nPilota_01\nPilota_02\nPilota_03"}
+        rows={6}
+        style={{
+          width: "100%",
+          resize: "vertical",
+          minHeight: 120,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.10)",
+          background: "rgba(0,0,0,0.22)",
+          color: "white",
+          fontSize: 12,
+          lineHeight: 1.5,
+          boxSizing: "border-box",
+          outline: "none",
+        }}
+      />
+    </div>
     <div
       style={{
         height: 1,
@@ -12728,6 +13047,59 @@ const lastCreatedMovementText = useMemo(() => {
       }}
     />
 
+    <button
+  onClick={saveExpectedLobbyDrivers}
+  disabled={!expectedLobbyDriversDraft.trim()}
+  style={{
+    justifySelf: "start",
+    padding: "8px 12px",
+    borderRadius: 10,
+    border:
+      expectedLobbyDrivers.length > 0
+        ? "1px solid rgba(34,197,94,0.75)"
+        : "1px solid rgba(34,197,94,0.30)",
+    background:
+      expectedLobbyDrivers.length > 0
+        ? "rgba(34,197,94,0.30)"
+        : expectedLobbyDriversDraft.trim()
+          ? "rgba(34,197,94,0.16)"
+          : "rgba(255,255,255,0.06)",
+    color: "white",
+    cursor: expectedLobbyDriversDraft.trim()
+      ? "pointer"
+      : "not-allowed",
+    fontWeight: 900,
+    fontSize: 11,
+    letterSpacing: 0.35,
+    textTransform: "uppercase",
+  }}
+>
+  {expectedLobbyDrivers.length > 0
+    ? "✓ Piloti previsti salvati"
+    : "Salva piloti previsti"}
+</button>
+
+{expectedLobbyDrivers.length > 0 && (
+  <button
+    onClick={resetExpectedLobbyDrivers}
+    style={{
+      justifySelf: "start",
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid rgba(239,68,68,0.55)",
+      background: "rgba(239,68,68,0.14)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 900,
+      fontSize: 11,
+      letterSpacing: 0.35,
+      textTransform: "uppercase",
+    }}
+  >
+    Reset piloti lobby
+  </button>
+)}
+    
     <div
       style={{
         display: "grid",
@@ -12756,7 +13128,7 @@ const lastCreatedMovementText = useMemo(() => {
           boxSizing: "border-box",
         }}
       >
-        {savedLeagueInCurrentRace ? "Sovrascrivi lega" : "Salva lega"}
+        {savedLeagueInCurrentRace ? "Sovrascrivi lega" : "Salva lobby"}
       </button>
 
       <button
@@ -12777,7 +13149,7 @@ const lastCreatedMovementText = useMemo(() => {
           boxSizing: "border-box",
         }}
       >
-        Reset lega
+        Reset lobby
       </button>
 
       <button
@@ -13933,17 +14305,110 @@ const lastCreatedMovementText = useMemo(() => {
       }}
     >
       <div
-        style={{
-          fontSize: 12,
-          opacity: 0.88,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-        title={pilot}
-      >
-        • {pilot}
-      </div>
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  }}
+>
+  {editingDriverTeam === pilot ? (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      flexShrink: 0,
+    }}
+  >
+    <input
+      autoFocus
+      value={editingDriverTeamDraft}
+      onChange={(e) => setEditingDriverTeamDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          saveDriverTeamOverride(pilot)
+        }
+
+        if (e.key === "Escape") {
+          setEditingDriverTeam(null)
+          setEditingDriverTeamDraft("")
+        }
+      }}
+      maxLength={8}
+      style={{
+        width: 54,
+        padding: "3px 5px",
+        borderRadius: 6,
+        border: "1px solid rgba(255,215,0,0.45)",
+        background: "rgba(0,0,0,0.35)",
+        color: "white",
+        fontSize: 10,
+        fontWeight: 900,
+        textAlign: "center",
+        outline: "none",
+      }}
+    />
+
+    <button
+      onClick={() => saveDriverTeamOverride(pilot)}
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        border: "1px solid rgba(34,197,94,0.45)",
+        background: "rgba(34,197,94,0.16)",
+        color: "white",
+        cursor: "pointer",
+        fontWeight: 900,
+      }}
+      title="Salva Team"
+    >
+      ✓
+    </button>
+  </div>
+) : (
+  <button
+    onClick={() => {
+      setEditingDriverTeam(pilot)
+      setEditingDriverTeamDraft(
+        driverTeamOverrides[pilot] ||
+          getUnionDriverTeamCode(pilot) ||
+          ""
+      )
+    }}
+    style={{
+      minWidth: 42,
+      padding: "2px 6px",
+      borderRadius: 6,
+      border: "1px solid rgba(255,215,0,0.22)",
+      background: "rgba(255,215,0,0.08)",
+      color: "white",
+      fontSize: 10,
+      fontWeight: 900,
+      textAlign: "center",
+      flexShrink: 0,
+      cursor: "pointer",
+    }}
+    title={`Modifica Team di ${pilot}`}
+  >
+    {driverTeamOverrides[pilot] || getUnionDriverTeamCode(pilot) || "—"}
+  </button>
+)}
+
+  <div
+    style={{
+      fontSize: 12,
+      opacity: 0.88,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    }}
+    title={pilot}
+  >
+    {pilot}
+  </div>
+</div>
 
       <button
         onClick={() => removePilotFromLeagueDrawer(league, pilot)}
@@ -13964,46 +14429,6 @@ const lastCreatedMovementText = useMemo(() => {
         ×
       </button>
     </div>
-
-    {/* 👇 QUI LO SCAMBIO */}
-    <select
-      defaultValue=""
-      onChange={(e) => {
-        const selected = e.target.value
-        if (!selected) return
-
-        const targetLeague = CHAMPIONSHIP_LEAGUES.find((l) =>
-  workbenchDriverLeagueMap[l].includes(selected)
-)
-
-        if (!targetLeague) return
-
-        swapPilotsBetweenLeagues(league, targetLeague, pilot, selected)
-
-        e.currentTarget.value = ""
-      }}
-      style={{
-        width: "100%",
-        padding: "6px 8px",
-        borderRadius: 8,
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(0,0,0,0.24)",
-        color: "white",
-        fontSize: 11,
-      }}
-    >
-      <option value="">Scambia con...</option>
-
-      {CHAMPIONSHIP_LEAGUES.flatMap((l) =>
-        l === league
-          ? []
-          : (workbenchDriverLeagueMap[l] || []).map((p) => (
-              <option key={`${league}-${p}`} value={p}>
-                {p} ({l})
-              </option>
-            ))
-      )}
-    </select>
   </div>
 ))
           )}
@@ -14968,12 +15393,12 @@ const lastCreatedMovementText = useMemo(() => {
     >
       <div>
         <div style={{ fontSize: 20, fontWeight: 900 }}>
-          Resettare tutte le leghe della gara corrente?
+          Sei sicuro di voler cancellare tutte le Lobby di questa gara?
         </div>
         <div style={{ marginTop: 8, fontSize: 13, opacity: 0.78, lineHeight: 1.45 }}>
           <b>Gara:</b> {currentRace}
           <br />
-          Verranno eliminati tutti i salvataggi delle leghe relativi a questa gara.
+          Verranno eliminati tutti i salvataggi di tutti i Rank e di tutte le Lobby relativi a questa gara.
           <br />
           La schermata corrente tornerà pulita, come un reset locale.
         </div>
