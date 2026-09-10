@@ -112,12 +112,6 @@ type ChampionshipState = {
   expectedDrivers: ExpectedDriversByLobby
 }
 
-type DriverBaselineEntry = {
-  pilota: string
-  pointsAfterRace2: number
-  league: ChampionshipLeagueKey
-}
-
 type ChampionshipCellStatus = "DNF" | "DNF-I" | "DNFV" | "DNP" | "BOX" | "DSQ"
 
 type ChampionshipRaceCell = {
@@ -160,7 +154,6 @@ type LeagueMovementEntry = {
   type: MovementType
   drawerAction: MovementDrawerAction
   targetDriverName: string | null
-  basePointsOverride?: number | null
 }
 
 type RoundMovementState = Partial<Record<ChampionshipLeagueKey, LeagueMovementEntry[]>>
@@ -185,8 +178,7 @@ type BackupFile = {
     sideLabel: string
     subtitle: string
   }
-  driverBaselines: DriverBaselineEntry[]
-  manualRace12Draft: Record<string, { g1: string; g2: string }>
+  
   driverLeagueMap: DriverLeagueMap
   driverAliasMap: DriverAliasMap
   driverRatingMap: Record<string, DriverRatingValue>
@@ -453,22 +445,22 @@ const RACE8_PENALTY_DESCRIPTIONS: Record<string, string> = {
   P31: "Raggiunte 3 ammonizioni",
 }
 
-function getPointsForPrtRow(r: ExtractRow, bestRaceLap: string): number {
+function getPointsForUnionRow(r: ExtractRow, bestRaceLap: string): number {
   const basePointsMap: Record<number, number> = {
     1: 30,
-    2: 27,
-    3: 24,
-    4: 22,
-    5: 20,
-    6: 18,
-    7: 16,
-    8: 14,
-    9: 12,
-    10: 9,
-    11: 7,
-    12: 5,
-    13: 3,
-    14: 1,
+    2: 26,
+    3: 22,
+    4: 18,
+    5: 16,
+    6: 14,
+    7: 12,
+    8: 10,
+    9: 8,
+    10: 6,
+    11: 4,
+    12: 2,
+    13: 1,
+    14: 0,
   }
 
   const isPole = (r.pole || "").trim().toUpperCase() === "POLE"
@@ -776,16 +768,6 @@ function normalizeLeagueKey(value: string): ChampionshipLeagueKey | null {
   if (v === "AMA") return "AMA"
 
   return null
-}
-
-const DRIVER_ENTRY_RACE: Record<string, number> = {
-  krasam23: 7,
-  step87: 8,
-}
-
-function getDriverEntryRace(driverName: string) {
-  const key = normalizeDriverLookupName(driverName)
-  return DRIVER_ENTRY_RACE[key] ?? 3
 }
 
 function normalizeDriverLookupName(value: string) {
@@ -2043,26 +2025,9 @@ function renderPrtPointsCell({
   if (isZeroPointsStatus) {
     pointsValue = 0
   } else if (isDnf) {
-    const dnfBasePointsMap: Record<number, number> = {
-  1: 30,
-  2: 27,
-  3: 24,
-  4: 22,
-  5: 20,
-  6: 18,
-  7: 16,
-  8: 14,
-  9: 12,
-  10: 9,
-  11: 7,
-  12: 5,
-  13: 3,
-  14: 1,
-}
-
-pointsValue = (dnfBasePointsMap[row.posGara] ?? 0) + bonusPoints
-  } else {
-    pointsValue = getPointsForPrtRow(row, bestRaceLap)
+  pointsValue = bonusPoints
+} else {
+    pointsValue = getPointsForUnionRow(row, bestRaceLap)
   }
 
   const isP1 = row.posGara === 1
@@ -3583,8 +3548,6 @@ const RACE_OPTIONS = UNION_RACE_OPTIONS
 const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v1"
 const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
 const PRT_SELECTED_LEAGUE_STORAGE_KEY = "albixximo_prt_selected_league"
-const PRT_DRIVER_BASELINES_STORAGE_KEY = "albixximo_prt_driver_baselines"
-const PRT_MANUAL_RACE12_STORAGE_KEY = "albixximo_prt_manual_race12"
 const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v1"
 const UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY =
   "albixximo_union2026_driver_team_override_v1"
@@ -3645,10 +3608,7 @@ const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   expectedDrivers: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
-const [driverBaselines, setDriverBaselines] = useState<DriverBaselineEntry[]>([])
-const [manualRace12Draft, setManualRace12Draft] = useState<
-  Record<string, { g1: string; g2: string }>
->({})
+
 const [drawerBulkDrafts, setDrawerBulkDrafts] = useState<Record<ChampionshipLeagueKey, string>>({
   STAR: "",
   ELITE: "",
@@ -3740,28 +3700,9 @@ const [movementDraftTargetLeague, setMovementDraftTargetLeague] =
   useState<ChampionshipLeagueKey>("ELITE")
 const [movementDrawerAction, setMovementDrawerAction] =
   useState<MovementDrawerAction>("move")
-  const [pendingMovementEntry, setPendingMovementEntry] =
-  useState<LeagueMovementEntry | null>(null)
-
-const [showMovementBaseModal, setShowMovementBaseModal] =
-  useState(false)
-
-const [movementBaseMode, setMovementBaseMode] =
-  useState<"detected" | "manual">("detected")
-
-const [movementManualBasePoints, setMovementManualBasePoints] =
-  useState("")
-
-const [detectedMovementBasePoints, setDetectedMovementBasePoints] =
-  useState(0)
 
 const [movementDraftTargetDriver, setMovementDraftTargetDriver] = useState("")
-const [editingRaceCell, setEditingRaceCell] = useState<{
-  driverKey: string
-  race: 1 | 2
-} | null>(null)
-const [showBaselineModal, setShowBaselineModal] = useState(false)
-const [baselineDraft, setBaselineDraft] = useState<DriverBaselineEntry[]>([])
+
 const [showConfirmSaveLeagueModal, setShowConfirmSaveLeagueModal] = useState(false)
 const [showSaveLeagueSuccessModal, setShowSaveLeagueSuccessModal] = useState(false)
 const [showConfirmResetRaceModal, setShowConfirmResetRaceModal] = useState(false)
@@ -3940,22 +3881,6 @@ useEffect(() => {
 }
     }
 
-    const rawBaselines = window.localStorage.getItem(PRT_DRIVER_BASELINES_STORAGE_KEY)
-    if (rawBaselines) {
-      const parsedBaselines = JSON.parse(rawBaselines)
-      if (Array.isArray(parsedBaselines)) {
-        setDriverBaselines(parsedBaselines)
-      }
-    }
-
-    const rawManualRace12 = window.localStorage.getItem(PRT_MANUAL_RACE12_STORAGE_KEY)
-    if (rawManualRace12) {
-      const parsedManualRace12 = JSON.parse(rawManualRace12)
-      if (parsedManualRace12 && typeof parsedManualRace12 === "object") {
-        setManualRace12Draft(parsedManualRace12)
-      }
-    }
-
     const rawDriverLeagueMap = window.localStorage.getItem(UNION_DRIVER_RANK_MAP_STORAGE_KEY)
 
 if (rawDriverLeagueMap) {
@@ -4066,22 +3991,6 @@ useEffect(() => {
 useEffect(() => {
   if (typeof window === "undefined") return
   window.localStorage.setItem(
-    PRT_DRIVER_BASELINES_STORAGE_KEY,
-    JSON.stringify(driverBaselines)
-  )
-}, [driverBaselines])
-
-useEffect(() => {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(
-    PRT_MANUAL_RACE12_STORAGE_KEY,
-    JSON.stringify(manualRace12Draft)
-  )
-}, [manualRace12Draft])
-
-useEffect(() => {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(
   UNION_DRIVER_RANK_MAP_STORAGE_KEY,
   JSON.stringify(workbenchDriverLeagueMap)
 )
@@ -4153,7 +4062,7 @@ function normalizeDriverNameForChampionship(value: string) {
 }
 
 function isMovementRound(round: number) {
-  return round === 3 || round === 6 || round === 9 || round === 12
+  return round >= 1 && round <= 5
 }
 
 function getAdjacentLeagues(league: ChampionshipLeagueKey): ChampionshipLeagueKey[] {
@@ -4173,184 +4082,25 @@ function getAdjacentLeagues(league: ChampionshipLeagueKey): ChampionshipLeagueKe
   return result
 }
 
-function isAutomaticRecalculationRound(round: number) {
-  return round === 6 || round === 9 || round === 12
-}
-
-function getPreviousThreeRounds(round: number): number[] {
-  if (round === 3) return [1, 2]
-  if (round === 6) return [3, 4, 5]
-  if (round === 9) return [6, 7, 8]
-  if (round === 12) return [9, 10, 11]
-  return []
-}
-
-function getMovementMultiplier(type: MovementType): number {
-  if (type === "promote") return 0.6
-  if (type === "relegate") return 1.5
-  return 1
-}
-
-function roundUpPoints(value: number): number {
-  return Math.ceil(value)
-}
-
 function getPrtBasePointsByPosition(pos: number): number {
   const basePointsMap: Record<number, number> = {
-    1: 30,
-    2: 27,
-    3: 24,
-    4: 22,
-    5: 20,
-    6: 18,
-    7: 16,
-    8: 14,
-    9: 12,
-    10: 9,
-    11: 7,
-    12: 5,
-    13: 3,
-    14: 1,
-  }
+  1: 30,
+  2: 26,
+  3: 22,
+  4: 18,
+  5: 16,
+  6: 14,
+  7: 12,
+  8: 10,
+  9: 8,
+  10: 6,
+  11: 4,
+  12: 2,
+  13: 1,
+  14: 0,
+}
 
   return basePointsMap[pos] ?? 0
-}
-
-function normalizeChampionshipCellInput(value: string) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, " ")
-}
-
-function parseManualChampionshipCell(value: string): ChampionshipRaceCell | null {
-  const raw = normalizeChampionshipCellInput(value)
-  if (!raw) return null
-
-  const tokens = raw.split(" ").filter(Boolean)
-  if (tokens.length === 0) return null
-
-  const hasPp = tokens.includes("pp")
-  const hasGv = tokens.includes("gv")
-
-  const cleanedTokens = tokens.filter((token) => token !== "pp" && token !== "gv")
-  if (cleanedTokens.length !== 1) return null
-
-  let core = cleanedTokens[0]
-  let specialMovement: "promote" | "relegate" | null = null
-
-  if (core.endsWith("+")) {
-    specialMovement = "promote"
-    core = core.slice(0, -1).trim()
-  } else if (core.endsWith("-")) {
-    specialMovement = "relegate"
-    core = core.slice(0, -1).trim()
-  }
-
-  if (/^\d+$/.test(core)) {
-    const position = Number(core)
-    if (!Number.isFinite(position) || position <= 0) return null
-
-    let points = getPrtBasePointsByPosition(position)
-
-    if (specialMovement === "promote") {
-      points = Math.ceil(points * 0.6)
-    } else if (specialMovement === "relegate") {
-      points = Math.ceil(points * 1.5)
-    }
-
-    points += (hasPp ? 1 : 0) + (hasGv ? 1 : 0)
-
-    return {
-      position,
-      status: null,
-      pp: hasPp,
-      gv: hasGv,
-      points,
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  if (core === "dnf" || core === "dnf-i") {
-    return {
-      position: null,
-      status: core === "dnf-i" ? "DNF-I" : "DNF",
-      pp: hasPp,
-      gv: hasGv,
-      points: (hasPp ? 1 : 0) + (hasGv ? 1 : 0),
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  if (core === "dnfv" || core === "dnf-v") {
-  if (hasPp || hasGv) return null
-  return {
-    position: null,
-    status: "DNFV",
-    pp: false,
-    gv: false,
-    points: 0,
-    rawText: raw,
-    specialMovement,
-  }
-}
-
-  if (core === "dnp") {
-    if (hasPp || hasGv) return null
-    return {
-      position: null,
-      status: "DNP",
-      pp: false,
-      gv: false,
-      points: 0,
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  if (core === "box") {
-    if (hasPp || hasGv) return null
-    return {
-      position: null,
-      status: "BOX",
-      pp: false,
-      gv: false,
-      points: 0,
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  if (core === "dsq") {
-    if (hasPp || hasGv) return null
-    return {
-      position: null,
-      status: "DSQ",
-      pp: false,
-      gv: false,
-      points: 0,
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  if (core === "doppiato") {
-    if (hasPp || hasGv) return null
-    return {
-      position: null,
-      status: null,
-      pp: false,
-      gv: false,
-      points: 0,
-      rawText: raw,
-      specialMovement,
-    }
-  }
-
-  return null
 }
 
 function buildSavedRaceCell(row: DisplayRow, bestRaceLap: string): ChampionshipRaceCell {
@@ -4424,29 +4174,18 @@ function buildSnapshotRacePointsMap(
     pointsMap[row.pilota] = points
   }
 
-    let nextDnfPosition = arrivedRows.length + 1
+    for (const row of dnfRows) {
+  const isPole = (row.pole || "").trim().toUpperCase() === "POLE"
+  const isBestLap =
+    !!bestLapTime && (row.migliorGiroGara || "").trim() === bestLapTime
 
-  for (const row of dnfRows) {
-    const isPole = (row.pole || "").trim().toUpperCase() === "POLE"
-    const isBestLap =
-      !!bestLapTime && (row.migliorGiroGara || "").trim() === bestLapTime
+  let points = 0
 
-    const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
-    const isDnfI = rawTempo === "DNF-I"
+  if (isPole) points += 1
+  if (isBestLap) points += 1
 
-    let points = getPrtBasePointsByPosition(
-      isDnfI ? row.posGara : nextDnfPosition
-    )
-
-    if (isPole) points += 1
-    if (isBestLap) points += 1
-
-    pointsMap[row.pilota] = points
-
-    if (!isDnfI) {
-      nextDnfPosition += 1
-    }
-  }
+  pointsMap[row.pilota] = points
+}
 
   for (const row of dnfvRows) {
     pointsMap[row.pilota] = 0
@@ -5175,7 +4914,7 @@ function renderMovementWrapper(
             textShadow: "0 0 8px rgba(34,197,94,0.45)",
             pointerEvents: "none",
           }}
-          title="Promosso subito dopo Gara 1"
+          title="Promosso dopo questa gara"
         >
           ▲
         </span>
@@ -5194,7 +4933,7 @@ function renderMovementWrapper(
             textShadow: "0 0 8px rgba(239,68,68,0.45)",
             pointerEvents: "none",
           }}
-          title="Retrocesso subito dopo Gara 1"
+          title="Retrocesso dopo questa gara"
         >
           ▼
         </span>
@@ -5667,14 +5406,6 @@ function ChampionshipHtmlLegend() {
   )
 }
 
-function openBaselineModal() {
-  const nextDraft = [...driverBaselines].sort((a, b) =>
-    a.pilota.localeCompare(b.pilota, "it", { sensitivity: "base" })
-  )
-  setBaselineDraft(nextDraft)
-  setShowBaselineModal(true)
-}
-
 function renderExactRaceResultBadge({
   position,
   status,
@@ -5697,19 +5428,6 @@ function renderExactRaceResultBadge({
       exporting={exporting}
     />
   )
-}
-
-function applyBaselineDraft() {
-  const cleaned = baselineDraft
-    .map((entry) => ({
-      pilota: String(entry.pilota || "").trim(),
-      pointsAfterRace2: Number(entry.pointsAfterRace2) || 0,
-      league: entry.league,
-    }))
-    .filter((entry) => entry.pilota)
-
-  setDriverBaselines(cleaned)
-  setShowBaselineModal(false)
 }
 
 function getDriverRatingKey(pilota: string) {
@@ -5844,29 +5562,17 @@ function ChampionshipTableBlock({
   currentRace,
   championshipRacesIncludedLabel,
   driverChampionshipByLeague,
-  manualRace12Draft,
   driverRatingMap = {},
   setDriverRatingMap,
   exporting = false,
-  editingRaceCell,
-  setEditingRaceCell,
-  setManualRace12Draft,
 }: {
   selectedLeague: ChampionshipLeagueKey
   currentRace: number
   championshipRacesIncludedLabel: string
   driverChampionshipByLeague: Record<ChampionshipLeagueKey, DriverChampionshipRow[]>
-  manualRace12Draft: Record<string, { g1: string; g2: string }>
   driverRatingMap?: Record<string, DriverRatingValue>
-setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRatingValue>>>
+  setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRatingValue>>>
   exporting?: boolean
-  editingRaceCell?: { driverKey: string; race: 1 | 2 } | null
-  setEditingRaceCell?: React.Dispatch<
-    React.SetStateAction<{ driverKey: string; race: 1 | 2 } | null>
-  >
-  setManualRace12Draft?: React.Dispatch<
-    React.SetStateAction<Record<string, { g1: string; g2: string }>>
-  >
 }) {
   const leagueRows = driverChampionshipByLeague[selectedLeague] || []
 
@@ -5927,127 +5633,6 @@ setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRa
           }}
         />
       </div>
-    )
-  }
-
-  function updateManualRaceValue(
-    driverKey: string,
-    race: 1 | 2,
-    value: string
-  ) {
-    if (!setManualRace12Draft) return
-
-    setManualRace12Draft((prev) => {
-      const current = prev[driverKey] || { g1: "", g2: "" }
-      const nextValue = value.trim()
-
-      const nextEntry =
-        race === 1
-          ? { ...current, g1: nextValue }
-          : { ...current, g2: nextValue }
-
-      const isEmpty = !nextEntry.g1.trim() && !nextEntry.g2.trim()
-
-      if (isEmpty) {
-        const next = { ...prev }
-        delete next[driverKey]
-        return next
-      }
-
-      return {
-        ...prev,
-        [driverKey]: nextEntry,
-      }
-    })
-  }
-
-  function renderManualEditableCell(driver: DriverChampionshipRow, race: 1 | 2) {
-    const key = normalizeDriverNameForChampionship(driver.pilota)
-    const rawValue = manualRace12Draft[key]?.[race === 1 ? "g1" : "g2"] ?? ""
-    const parsed = parseManualChampionshipCell(rawValue)
-    const isEditing =
-      !exporting &&
-      !!editingRaceCell &&
-      editingRaceCell.driverKey === key &&
-      editingRaceCell.race === race
-
-    if (exporting || !setEditingRaceCell || !setManualRace12Draft) {
-      return (
-        <span
-          style={{
-            ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
-            fontWeight: exporting ? 700 : 600,
-          }}
-        >
-          {renderChampionshipRaceCell(parsed, exporting)}
-        </span>
-      )
-    }
-
-    if (isEditing) {
-      return (
-        <input
-          autoFocus
-          defaultValue={rawValue}
-          placeholder="Es. 5 / 5 pp / dnf / dnf-i / dnfv / dnp / box / dsq"
-          onBlur={(e) => {
-            updateManualRaceValue(key, race, e.target.value)
-            setEditingRaceCell(null)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              updateManualRaceValue(key, race, (e.target as HTMLInputElement).value)
-              setEditingRaceCell(null)
-            }
-
-            if (e.key === "Escape") {
-              setEditingRaceCell(null)
-            }
-          }}
-          style={{
-            width: 58,
-            height: exporting ? 30 : 28,
-            padding: "0 8px",
-            borderRadius: 10,
-            border: "1px solid rgba(160,90,255,0.35)",
-            background: "rgba(0,0,0,0.30)",
-            color: "white",
-            textAlign: "center",
-            fontSize: 12,
-            fontWeight: 700,
-            outline: "none",
-            boxShadow: "0 0 16px rgba(160,90,255,0.16)",
-          }}
-        />
-      )
-    }
-
-    return (
-      <button
-        onClick={() => setEditingRaceCell({ driverKey: key, race })}
-        title={`Modifica G${race}`}
-        style={{
-          border: "none",
-          background: "transparent",
-          padding: 0,
-          margin: 0,
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minWidth: 58,
-          minHeight: exporting ? 30 : 28,
-        }}
-      >
-        <span
-          style={{
-            ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
-            fontWeight: exporting ? 700 : 600,
-          }}
-        >
-          {renderChampionshipRaceCell(parsed, exporting)}
-        </span>
-      </button>
     )
   }
 
@@ -6320,22 +5905,44 @@ setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRa
                   </TableCell>
 
                   <TableCell
-                    align="center"
-                    style={{
-                      ...(exporting ? s.garaCellExport : s.garaCell),
-                    }}
-                  >
-                    {renderManualEditableCell(driver, 1)}
-                  </TableCell>
+  align="center"
+  style={{
+    ...(exporting ? s.garaCellExport : s.garaCell),
+  }}
+>
+  {1 <= currentRace ? (
+    <span
+      style={{
+        ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
+        fontWeight: exporting ? 700 : 600,
+      }}
+    >
+      {renderChampionshipRaceCell(driver.raceResults[1] ?? null, exporting)}
+    </span>
+  ) : (
+    "-"
+  )}
+</TableCell>
 
-                  <TableCell
-                    align="center"
-                    style={{
-                      ...(exporting ? s.garaCellExport : s.garaCell),
-                    }}
-                  >
-                    {renderManualEditableCell(driver, 2)}
-                  </TableCell>
+<TableCell
+  align="center"
+  style={{
+    ...(exporting ? s.garaCellExport : s.garaCell),
+  }}
+>
+  {2 <= currentRace ? (
+    <span
+      style={{
+        ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
+        fontWeight: exporting ? 700 : 600,
+      }}
+    >
+      {renderChampionshipRaceCell(driver.raceResults[2] ?? null, exporting)}
+    </span>
+  ) : (
+    "-"
+  )}
+</TableCell>
 
                   {Array.from({ length: 11 }).map((_, i) => {
                     const raceNumber = i + 3
@@ -6372,12 +5979,6 @@ setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRa
       </div>
     </div>
   )
-}
-
-function resetBaselineDraft() {
-  setBaselineDraft([])
-  setDriverBaselines([])
-  setShowBaselineModal(false)
 }
 
   const previewRows = useMemo<DisplayRow[]>(() => {
@@ -6437,21 +6038,8 @@ function resetBaselineDraft() {
 }, [previewRows])
 
   const leagueDriverResolution = useMemo(() => {
-  const roundMovementsForResolution =
-  championshipState.roundMovements?.[currentRace] || {}
-
-const outgoingDriversThisRound =
-  [3, 6, 9, 12].includes(currentRace)
-    ? CHAMPIONSHIP_LEAGUES.flatMap((league) =>
-        (roundMovementsForResolution[league] || [])
-          .filter((entry) => entry.fromLeague === selectedLeague)
-          .map((entry) => String(entry.driverName || "").trim())
-      )
-    : []
-
-const officialLeaguePilots = [
+  const officialLeaguePilots = [
   ...(workbenchDriverLeagueMap[selectedLeague] || []),
-  ...outgoingDriversThisRound,
 ]
   .map((name) => String(name || "").trim())
   .filter(Boolean)
@@ -7239,33 +6827,6 @@ function removeRoundMovementEntry(
   )
 }
 
-function clearRoundMovementsForLeague(league: ChampionshipLeagueKey) {
-  setChampionshipState((prev) => {
-    const currentRoundState = { ...(prev.roundMovements?.[currentRace] || {}) }
-    delete currentRoundState[league]
-
-    return {
-      ...prev,
-      roundMovements: {
-        ...prev.roundMovements,
-        [currentRace]: currentRoundState,
-      },
-    }
-  })
-}
-
-function clearAllRoundMovements(round: number) {
-  setChampionshipState((prev) => {
-    const nextRoundMovements = { ...(prev.roundMovements || {}) }
-    delete nextRoundMovements[round]
-
-    return {
-      ...prev,
-      roundMovements: nextRoundMovements,
-    }
-  })
-}
-
 function getAutoTargetLeague(
   fromLeague: ChampionshipLeagueKey,
   type: MovementType
@@ -7312,30 +6873,6 @@ useEffect(() => {
   }
 }, [movementDraftLeague, movementDraftDriverName, workbenchDriverLeagueMap])
 
-function getPreviousMovementCheckpoint(round: number) {
-  if (round === 6) return 3
-  if (round === 9) return 6
-  if (round === 12) return 9
-  return 0
-}
-
-function getDetectedBasePointsForMovement(driverName: string, movementRound: number) {
-  const checkpoint = getPreviousMovementCheckpoint(movementRound)
-  if (checkpoint <= 0) return 0
-
-  const driverKey = normalizeDriverNameForChampionship(driverName)
-  const driver = driverChampionship.find(
-    (item) => normalizeDriverNameForChampionship(item.pilota) === driverKey
-  )
-
-  if (!driver) return 0
-
-  return Object.entries(driver.racePoints).reduce((sum, [race, points]) => {
-    const raceNumber = Number(race)
-    return raceNumber <= checkpoint ? sum + points : sum
-  }, 0)
-}
-
 function submitMovementDraft() {
   const cleanDriverName = String(movementDraftDriverName || "").trim()
   if (!cleanDriverName) return
@@ -7347,51 +6884,13 @@ function submitMovementDraft() {
     type: movementDraftType,
     drawerAction: movementDrawerAction,
     targetDriverName: movementDraftTargetDriver || null,
-    basePointsOverride: null,
-  }
-
-  const previousCheckpoint = getPreviousMovementCheckpoint(currentRace)
-
-  if (previousCheckpoint > 0) {
-    const detectedBase = getDetectedBasePointsForMovement(cleanDriverName, currentRace)
-
-    setPendingMovementEntry(createdEntry)
-    setDetectedMovementBasePoints(detectedBase)
-    setMovementManualBasePoints(String(detectedBase))
-    setMovementBaseMode("detected")
-    setShowMovementBaseModal(true)
-    return
   }
 
   addRoundMovementEntry(movementDraftLeague, createdEntry)
-  setLastCreatedMovement(createdEntry)
+setLastCreatedMovement(createdEntry)
 
-  resetMovementDraft(movementDraftLeague)
-  setShowMovementCreatedModal(true)
-}
-
-function confirmPendingMovementWithBase() {
-  if (!pendingMovementEntry) return
-
-  const manualValue = Number(movementManualBasePoints)
-  const finalBase =
-    movementBaseMode === "manual" && Number.isFinite(manualValue)
-      ? manualValue
-      : detectedMovementBasePoints
-
-  const completedEntry: LeagueMovementEntry = {
-    ...pendingMovementEntry,
-    basePointsOverride: finalBase,
-  }
-
-  addRoundMovementEntry(completedEntry.fromLeague, completedEntry)
-  setLastCreatedMovement(completedEntry)
-
-  resetMovementDraft(completedEntry.fromLeague)
-
-  setPendingMovementEntry(null)
-  setShowMovementBaseModal(false)
-  setShowMovementCreatedModal(true)
+resetMovementDraft(movementDraftLeague)
+setShowMovementCreatedModal(true)
 }
 
 function applySingleMovementToDrawer(entry: LeagueMovementEntry) {
@@ -7697,7 +7196,7 @@ const driverChampionship = useMemo<DriverChampionshipRow[]>(() => {
   AMA: [],
 }
 
-for (let raceNumber = 3; raceNumber <= currentRace; raceNumber++) {
+for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
   const raceState = championshipState.races[raceNumber]
   if (!raceState) continue
 
@@ -7726,27 +7225,8 @@ for (let raceNumber = 3; raceNumber <= currentRace; raceNumber++) {
       const key = normalizeDriverNameForChampionship(cleanPilotName)
       if (!key || map.has(key)) continue
 
-      const entryRace = getDriverEntryRace(cleanPilotName)
-if (currentRace < entryRace) continue
-
-      const g1Raw = manualRace12Draft[key]?.g1 ?? ""
-      const g2Raw = manualRace12Draft[key]?.g2 ?? ""
-
-      const g1Parsed = parseManualChampionshipCell(g1Raw)
-      const g2Parsed = parseManualChampionshipCell(g2Raw)
-
       const racePoints: Record<number, number> = {}
-      const raceResults: Partial<Record<number, ChampionshipRaceCell>> = {}
-
-      if (g1Parsed) {
-        racePoints[1] = g1Parsed.points
-        raceResults[1] = g1Parsed
-      }
-
-      if (g2Parsed) {
-        racePoints[2] = g2Parsed.points
-        raceResults[2] = g2Parsed
-      }
+const raceResults: Partial<Record<number, ChampionshipRaceCell>> = {}
 
       map.set(key, {
         pilota: cleanPilotName,
@@ -7755,53 +7235,12 @@ if (currentRace < entryRace) continue
         racePoints,
         raceResults,
         totalPoints: 0,
-        racesCounted: (g1Parsed ? 1 : 0) + (g2Parsed ? 1 : 0),
+        racesCounted: 0,
       })
     }
   }
 
-  for (const entry of driverBaselines) {
-    const key = normalizeDriverNameForChampionship(entry.pilota)
-    if (!key) continue
-
-    const g1Raw = manualRace12Draft[key]?.g1 ?? ""
-    const g2Raw = manualRace12Draft[key]?.g2 ?? ""
-
-    const g1Parsed = parseManualChampionshipCell(g1Raw)
-    const g2Parsed = parseManualChampionshipCell(g2Raw)
-
-    const racePoints: Record<number, number> = {}
-    const raceResults: Partial<Record<number, ChampionshipRaceCell>> = {}
-
-    if (g1Parsed) {
-      racePoints[1] = g1Parsed.points
-      raceResults[1] = g1Parsed
-    }
-
-    if (g2Parsed) {
-      racePoints[2] = g2Parsed.points
-      raceResults[2] = g2Parsed
-    }
-
-    const existing = map.get(key)
-
-    if (existing) {
-      existing.pilota = entry.pilota
-      existing.league = officialLeagueByDriver.get(key) || entry.league
-    } else {
-      map.set(key, {
-        pilota: entry.pilota,
-        league: officialLeagueByDriver.get(key) || entry.league,
-        baselinePoints: 0,
-        racePoints,
-        raceResults,
-        totalPoints: 0,
-        racesCounted: (g1Parsed ? 1 : 0) + (g2Parsed ? 1 : 0),
-      })
-    }
-  }
-
-  for (let raceNumber = 3; raceNumber <= currentRace; raceNumber++) {
+  for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
   const raceState = championshipState.races[raceNumber]
   if (!raceState) continue
 
@@ -7861,24 +7300,13 @@ const existing = map.get(key)
         existing.racesCounted += 1
         existing.league = officialLeagueByDriver.get(key) || league
       } else {
-        const g1Raw = manualRace12Draft[key]?.g1 ?? ""
-        const g2Raw = manualRace12Draft[key]?.g2 ?? ""
+        const racePoints: Record<number, number> = {
+  [raceNumber]: resolvedPoints,
+}
 
-        const g1Parsed = parseManualChampionshipCell(g1Raw)
-        const g2Parsed = parseManualChampionshipCell(g2Raw)
-
-        const racePoints: Record<number, number> = {}
-        const raceResults: Partial<Record<number, ChampionshipRaceCell>> = {}
-
-        if (g1Parsed) {
-          racePoints[1] = g1Parsed.points
-          raceResults[1] = g1Parsed
-        }
-
-        if (g2Parsed) {
-          racePoints[2] = g2Parsed.points
-          raceResults[2] = g2Parsed
-        }
+const raceResults: Partial<Record<number, ChampionshipRaceCell>> = {
+  [raceNumber]: cell,
+}
 
         racePoints[raceNumber] = resolvedPoints
 raceResults[raceNumber] = cell
@@ -7890,7 +7318,7 @@ raceResults[raceNumber] = cell
           racePoints,
           raceResults,
           totalPoints: 0,
-          racesCounted: (g1Parsed ? 1 : 0) + (g2Parsed ? 1 : 0) + 1,
+          racesCounted: 1,
         })
       }
     }
@@ -7938,7 +7366,6 @@ for (const driver of map.values()) {
   const activeMovement = activeRoundMovementByDriver.get(driverKey)
 
   for (const raceNumber of savedRaceNumbersByLeague[currentLeague]) {
-    if (raceNumber < getDriverEntryRace(driver.pilota)) continue
 
     const movedIntoCurrentLeagueAfterThisRace =
       raceNumber === currentRace &&
@@ -7963,7 +7390,7 @@ for (const driver of map.values()) {
 }
 
   const activeMovement = (() => {
-  const movementRounds = [12, 9, 6, 3]
+  const movementRounds = [5, 4, 3, 2, 1]
 
   for (const movementRound of movementRounds) {
     if (currentRace < movementRound) continue
@@ -7990,105 +7417,45 @@ for (const driver of map.values()) {
 })()
 
 if (activeMovement) {
-  const movementType = activeMovement.entry.type
-  const movementRound = activeMovement.movementRound
-  const multiplier = movementType === "promote" ? 0.6 : 1.5
+  let totalPoints = 0
 
-  function getMovementForRound(round: number) {
-  const movementState = championshipState.roundMovements?.[round] || {}
+  for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
+    totalPoints += driver.racePoints[raceNumber] || 0
 
-  for (const league of CHAMPIONSHIP_LEAGUES) {
-    const entries = movementState[league] || []
+    const movementState =
+      championshipState.roundMovements?.[raceNumber] || {}
 
-    for (const entry of entries) {
-      const key = normalizeDriverNameForChampionship(entry.driverName)
+    let movementForRace: LeagueMovementEntry | null = null
 
-      if (key === driverKey) {
-        return entry
+    for (const league of CHAMPIONSHIP_LEAGUES) {
+      const entries = movementState[league] || []
+
+      const foundMovement = entries.find(
+        (entry) =>
+          normalizeDriverNameForChampionship(entry.driverName) === driverKey
+      )
+
+      if (foundMovement) {
+        movementForRace = foundMovement
+        break
       }
     }
-  }
 
-  return null
-}
-
-function getRacePoints(raceNumber: number) {
-  return driver.racePoints[raceNumber] || 0
-}
-
-function getCorrectTotalUntilRound(untilRound: number) {
-    
-  let total = 0
-  let previousCheckpoint = 0
-
-  for (const checkpoint of [3, 6, 9, 12]) {
-    if (checkpoint > untilRound) break
-
-    const movement = getMovementForRound(checkpoint)
-
-    const blockPoints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-      .filter((raceNumber) => raceNumber > previousCheckpoint && raceNumber <= checkpoint)
-      .reduce((sum, raceNumber) => sum + getRacePoints(raceNumber), 0)
-
-    if (movement) {
-      const multiplier = movement.type === "promote" ? 0.6 : 1.5
-      total += Math.ceil(blockPoints * multiplier)
-    } else {
-      total += blockPoints
-    }
-
-    previousCheckpoint = checkpoint
-  }
-
-  const remainingPoints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-    .filter((raceNumber) => raceNumber > previousCheckpoint && raceNumber <= untilRound)
-    .reduce((sum, raceNumber) => sum + getRacePoints(raceNumber), 0)
-
-  return total + remainingPoints
-}
-
-const baseUntilRace = movementRound - 3
-
-const basePoints =
-  activeMovement.entry.basePointsOverride != null
-    ? activeMovement.entry.basePointsOverride
-    : getCorrectTotalUntilRound(baseUntilRace)
-
-const recalculationPointsFull = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-  .filter((raceNumber) => raceNumber > baseUntilRace && raceNumber <= movementRound)
-  .reduce((sum, raceNumber) => sum + getRacePoints(raceNumber), 0)
-
-const afterMovementPoints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-  .filter((raceNumber) => raceNumber > movementRound)
-  .reduce((sum, raceNumber) => sum + getRacePoints(raceNumber), 0)
-
-if (movementType === "promote" && movementRound >= 9) {
-  const totalUntilMovement = basePoints + recalculationPointsFull
-
-  driver.totalPoints =
-    Math.ceil(totalUntilMovement * 0.6) +
-    afterMovementPoints
-} else {
-  driver.totalPoints =
-    basePoints +
-    Math.ceil(recalculationPointsFull * multiplier) +
-    afterMovementPoints
-}
-
-  const movementCell = driver.raceResults[movementRound]
-
-  if (movementCell) {
-    driver.raceResults[movementRound] = {
-      ...movementCell,
-      specialMovement: movementType,
+    if (movementForRace?.type === "promote") {
+      totalPoints = totalPoints * 0.5
     }
   }
+
+  driver.totalPoints = totalPoints
 } else {
-  driver.totalPoints = Object.values(driver.racePoints).reduce((a, b) => a + b, 0)
+  driver.totalPoints = Object.values(driver.racePoints).reduce(
+    (a, b) => a + b,
+    0
+  )
 }
 }
 // Frecce storiche promo/retro: solo grafica, non modifica punti
-for (const movementRound of [3, 6, 9, 12]) {
+for (const movementRound of [1, 2, 3, 4, 5]) {
   if (movementRound > currentRace) continue
 
   const historicalRoundMovementState =
@@ -8156,15 +7523,14 @@ return Array.from(map.values())
     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
     return a.pilota.localeCompare(b.pilota, "it", { sensitivity: "base" })
   })
-}, [driverBaselines, championshipState, currentRace, manualRace12Draft, workbenchDriverLeagueMap])
+}, [championshipState, currentRace, workbenchDriverLeagueMap])
 
 const championshipDriversCount = useMemo(() => {
   return driverChampionship.length
 }, [driverChampionship])
 
 const championshipRacesIncludedLabel = useMemo(() => {
-  if (currentRace < 3) return "Solo base dopo Gara 2"
-  return `Base dopo Gara 2 + Gare 3-${currentRace}`
+  return `Gare 1-${currentRace}`
 }, [currentRace])
 
 const driverChampionshipByLeague = useMemo(() => {
@@ -11253,8 +10619,6 @@ function exportChampionshipBackup() {
   currentRace,
   selectedLeague,
   exportTexts,
-  driverBaselines,
-  manualRace12Draft,
   driverLeagueMap: workbenchDriverLeagueMap,
   driverAliasMap,
   driverRatingMap,
@@ -11362,16 +10726,6 @@ setSelectedLeague(league)
 if (parsed.exportTexts) {
   setExportTexts(parsed.exportTexts)
 }
-
-setDriverBaselines(
-  Array.isArray(parsed.driverBaselines) ? parsed.driverBaselines : []
-)
-
-setManualRace12Draft(
-  parsed.manualRace12Draft && typeof parsed.manualRace12Draft === "object"
-    ? parsed.manualRace12Draft
-    : {}
-)
 
 const importedDriverLeagueMap: DriverLeagueMap =
   parsed.driverLeagueMap && typeof parsed.driverLeagueMap === "object"
@@ -14458,14 +13812,13 @@ const lastCreatedMovementText = useMemo(() => {
     >
       <div style={{ display: "grid", gap: 4 }}>
         <div style={{ fontWeight: 900, opacity: 0.96 }}>
-          Promo / Retro / Riempimento lobby
+          Promozioni / Retrocessioni Rank
         </div>
 
         <div style={{ fontSize: 12, opacity: 0.72, lineHeight: 1.45 }}>
-          Round di snodo attivo. Prima si gestiscono i riempimenti lobby, poi le
-          promo/retro sportive.
-          {currentRace === 3 ? " In Gara 3 il ricalcolo punti resterà manuale." : ""}
-        </div>
+  Gestione manuale dei cambi Rank. Promozioni e retrocessioni vengono
+  applicate solo quando stabilite dalla Direzione Gara.
+</div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -14879,13 +14232,9 @@ const lastCreatedMovementText = useMemo(() => {
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  manualRace12Draft={manualRace12Draft}
   driverRatingMap={driverRatingMap}
   setDriverRatingMap={setDriverRatingMap}
   exporting={false}
-  editingRaceCell={editingRaceCell}
-  setEditingRaceCell={setEditingRaceCell}
-  setManualRace12Draft={setManualRace12Draft}
 />
 
 {driverChampionshipByLeague[selectedLeague]?.length > 0 && (
@@ -15120,7 +14469,6 @@ const lastCreatedMovementText = useMemo(() => {
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  manualRace12Draft={manualRace12Draft}
   driverRatingMap={driverRatingMap}
   setDriverRatingMap={setDriverRatingMap}
   exporting={true}
@@ -16015,122 +15363,7 @@ const lastCreatedMovementText = useMemo(() => {
     </div>
   </div>
 )}
-      {showMovementBaseModal && pendingMovementEntry ? (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 9999,
-      background: "rgba(0,0,0,0.72)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 20,
-    }}
-  >
-    <div
-      style={{
-        width: "min(560px, 100%)",
-        borderRadius: 24,
-        border: "1px solid rgba(255,255,255,0.16)",
-        background: "linear-gradient(180deg, rgba(18,18,24,0.98), rgba(5,5,8,0.98))",
-        boxShadow: "0 24px 90px rgba(0,0,0,0.65)",
-        padding: 22,
-        color: "white",
-      }}
-    >
-      <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>
-        PROMOZIONE / RETROCESSIONE — Gara {currentRace}
-      </div>
-
-      <div style={{ lineHeight: 1.8, fontSize: 15 }}>
-        <div><b>Pilota:</b> {pendingMovementEntry.driverName}</div>
-        <div><b>Da:</b> {pendingMovementEntry.fromLeague}</div>
-        <div><b>A:</b> {pendingMovementEntry.toLeague}</div>
-      </div>
-
-      <div style={{ marginTop: 18, fontSize: 15 }}>
-        Totale consolidato dopo Gara {getPreviousMovementCheckpoint(currentRace)} rilevato:
-      </div>
-
-      <div
-        style={{
-          marginTop: 8,
-          padding: "12px 14px",
-          borderRadius: 14,
-          background: "rgba(255,255,255,0.08)",
-          border: "1px solid rgba(255,255,255,0.14)",
-          fontSize: 24,
-          fontWeight: 900,
-        }}
-      >
-        {detectedMovementBasePoints}
-      </div>
-
-      <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
-        <label>
-          <input
-            type="radio"
-            checked={movementBaseMode === "detected"}
-            onChange={() => setMovementBaseMode("detected")}
-          />{" "}
-          Sì, conferma
-        </label>
-
-        <label>
-          <input
-            type="radio"
-            checked={movementBaseMode === "manual"}
-            onChange={() => setMovementBaseMode("manual")}
-          />{" "}
-          No, inserisco manualmente
-        </label>
-      </div>
-
-      {movementBaseMode === "manual" ? (
-        <div style={{ marginTop: 14 }}>
-          <div style={{ marginBottom: 6, fontWeight: 800 }}>
-            Inserisci punteggio consolidato:
-          </div>
-          <input
-            value={movementManualBasePoints}
-            onChange={(e) => setMovementManualBasePoints(e.target.value)}
-            type="number"
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.20)",
-              background: "rgba(0,0,0,0.35)",
-              color: "white",
-              fontSize: 18,
-              fontWeight: 800,
-            }}
-          />
-        </div>
-      ) : null}
-
-      <div style={{ marginTop: 22, display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <button
-          type="button"
-          onClick={() => {
-            setPendingMovementEntry(null)
-            setShowMovementBaseModal(false)
-          }}
-        >
-          Annulla
-        </button>
-
-        <button
-          type="button"
-          onClick={confirmPendingMovementWithBase}
-        >
-          Conferma movimento
-        </button>
-      </div>
-    </div>
-  </div>
-) : null} 
+    
       {showApplyMovementsModal && (
   <div
     style={{
@@ -17415,7 +16648,6 @@ const changed = currentValue !== originalValue
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  manualRace12Draft={manualRace12Draft}
   driverRatingMap={driverRatingMap}
   setDriverRatingMap={setDriverRatingMap}
   exporting={true}
