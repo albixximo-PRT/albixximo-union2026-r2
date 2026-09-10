@@ -185,16 +185,7 @@ type BackupFile = {
   uploadedLeagueHtmls: Partial<Record<ChampionshipLeagueKey, string>>
 }
 
-
-type PenaltyEntry = {
-  id: string
-  code: string
-  lap: string
-  minute: string
-  second: string
-}
-
-type PenaltyMap = Record<string, PenaltyEntry[]>
+type PenaltyMap = Record<string, number>
 type DnfOverrideValue = "DNF" | "DNF-I" | "DNFV"
 type DnfOverrideMap = Record<string, DnfOverrideValue>
 
@@ -205,14 +196,6 @@ const UNION_RACE_OPTIONS = [
   { value: 4, label: "Gara 4" },
   { value: 5, label: "Gara 5" },
 ] as const
-
-type PenaltyEffect = "time" | "ammonition" | "dsq" | "other"
-
-type PenaltyRule = {
-  seconds: number
-  effect: PenaltyEffect
-  shortLabel: string
-}
 
 type MatchFieldStatus = "ok" | "warn" | "error"
 
@@ -288,161 +271,6 @@ function matchCellStyle(status: MatchFieldStatus): React.CSSProperties {
       boxShadow: "0 0 12px rgba(255,80,80,0.14)",
       color: "#fff1f1",
     }
-}
-
-const PENALTY_RULES: Record<string, PenaltyRule> = {
-  P01: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P02: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P03: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P04: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P05: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P06: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P07: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P08: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P09: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P10: { seconds: 25, effect: "time", shortLabel: "+25s" },
-  P11: { seconds: 25, effect: "time", shortLabel: "+25s" },
-  P12: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P13: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P14: { seconds: 35, effect: "time", shortLabel: "+35s" },
-  P15: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P16: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-  P17: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P18: { seconds: 45, effect: "time", shortLabel: "+45s" },
-  P19: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P20: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P21: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P22: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P23: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P24: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P25: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P26: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P27: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-  P28: { seconds: 0, effect: "other", shortLabel: "-" },
-  P29: { seconds: 60, effect: "time", shortLabel: "+60s" },
-  P30: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P31: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P32: { seconds: 60, effect: "time", shortLabel: "+60s" },
-  P33: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P34: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P35: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-  P36: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P37: { seconds: 0, effect: "other", shortLabel: "-" },
-  P38: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P39: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  DSQ: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-}
-
-const AMMONITION_CODES = new Set(["P01", "P25", "P31"])
-const DSQ_CODES = new Set(["P16", "P27", "P35", "DSQ"])
-
-const NEW_PENALTY_RULES: Record<string, PenaltyRule> = {
-  P01: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P02: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P03: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P04: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P05: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P06: { seconds: 25, effect: "time", shortLabel: "+25s" },
-  P07: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P08: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P09: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P10: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P11: { seconds: 0, effect: "dsq", shortLabel: "SQ CAMP." },
-  P12: { seconds: 40, effect: "time", shortLabel: "+40s" },
-  P13: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P14: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P15: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P16: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P17: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P18: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P19: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P20: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P21: { seconds: 0, effect: "other", shortLabel: "SQ QUAL." },
-  P22: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P23: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P24: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P25: { seconds: 0, effect: "dsq", shortLabel: "SQ CAMP." },
-  P26: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P27: { seconds: 60, effect: "time", shortLabel: "+60s" },
-  P28: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P29: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P30: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P31: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-  P32: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  DSQ: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-}
-
-const RACE8_PENALTY_RULES: Record<string, PenaltyRule> = {
-  P01: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P02: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P03: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P04: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P05: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P06: { seconds: 25, effect: "time", shortLabel: "+25s" },
-  P07: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P08: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P09: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P10: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P11: { seconds: 0, effect: "dsq", shortLabel: "SQ CAMP." },
-  P12: { seconds: 10, effect: "time", shortLabel: "+10s" },
-  P13: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P14: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P15: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P16: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P17: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P18: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P19: { seconds: 0, effect: "other", shortLabel: "SQ QUAL. SUCC." },
-  P20: { seconds: 20, effect: "time", shortLabel: "+20s" },
-  P21: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P22: { seconds: 30, effect: "time", shortLabel: "+30s" },
-  P23: { seconds: 0, effect: "dsq", shortLabel: "SQ CAMP." },
-  P24: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P25: { seconds: 60, effect: "time", shortLabel: "+60s" },
-  P26: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  P27: { seconds: 0, effect: "ammonition", shortLabel: "00:00.000" },
-  P28: { seconds: 5, effect: "time", shortLabel: "+5s" },
-  P29: { seconds: 0, effect: "dsq", shortLabel: "SQ LOBBY" },
-  P30: { seconds: 0, effect: "dsq", shortLabel: "SQ GARA" },
-  P31: { seconds: 15, effect: "time", shortLabel: "+15s" },
-  DSQ: { seconds: 0, effect: "dsq", shortLabel: "DSQ" },
-}
-
-const NEW_AMMONITION_CODES = new Set(["P01", "P23", "P26", "P29"])
-const NEW_DSQ_CODES = new Set(["P11", "P25", "P31", "DSQ"])
-const RACE8_AMMONITION_CODES = new Set(["P01", "P21", "P24", "P27"])
-const RACE8_DSQ_CODES = new Set(["P11", "P23", "P29", "P30", "DSQ"])
-const RACE8_PENALTY_DESCRIPTIONS: Record<string, string> = {
-  P01: "Contatto con perdita di posizioni (0)",
-  P02: "Contatto con perdita di posizioni (1-2)",
-  P03: "Contatto con perdita di posizioni (3-4)",
-  P04: "Contatto con perdita di posizioni (5-6)",
-  P05: "Contatto con perdita di posizioni (7-8)",
-  P06: "Contatto con perdita di posizioni (9-10)",
-  P07: "Contatto con perdita di posizioni (11-14)",
-  P08: "In aggiunta da P01 a P07 con danni ridotti",
-  P09: "In aggiunta da P01 a P07 con danni realistici",
-  P10: "In aggiunta da P01 a P07 non restituendo posizione",
-  P11: "Collisione volontaria",
-  P12: "In aggiunta da P01 a P10 per manovra aggressiva in Curva 1",
-  P13: "Effettuare più di un cambio di traiettoria difensiva in rettilineo",
-  P14: "Cambio di traiettoria improvviso o in fase di frenata",
-  P15: "Ottenimento della posizione mediante sorpasso scorretto",
-  P16: "Mancato rispetto delle bandiere blu",
-  P17: "Provocare bandiera gialla fissa",
-  P18: "Rientro in pista pericoloso con incidente o intralcio",
-  P19: "Velocità troppo bassa in pista",
-  P20: "Rallentamento ingiustificato su tratti ad alta velocità",
-  P21: "Guida scorretta generica",
-  P22: "Uso improprio della chat durante Qualifica/Gara",
-  P23: "Insulti in chat/party audio/canali Discord",
-  P24: "Rientro ai box tasto OPTION durante Qualifica senza ripartenza",
-  P25: "Rientro ai box tasto OPTION durante Qualifica con ripartenza",
-  P26: "Rientro in lobby dopo abbandono Gara (inclusi crash)",
-  P27: "Mancata pubblicazione screenshot Qualifiche/Gara e/o Replay Gara",
-  P28: "Errato o mancato utilizzo degli elementi grafici ufficiali PRT",
-  P29: "Restart della Lobby non previsto dal Regolamento",
-  P30: "Livree o adesivi offensivi - Comportamenti antisportivi",
-  P31: "Raggiunte 3 ammonizioni",
 }
 
 function getPointsForUnionRow(r: ExtractRow, bestRaceLap: string): number {
@@ -624,124 +452,6 @@ function formatPenaltyDisplay(seconds: number): string {
   const mm = Math.floor(safe / 60)
   const ss = safe % 60
   return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}.000`
-}
-
-function formatPenaltyOptionLabel(seconds: number): string {
-  if (seconds < 60) return `${seconds} secondi`
-
-  const mm = Math.floor(seconds / 60)
-  const ss = seconds % 60
-
-  if (ss === 0) {
-    return mm === 1 ? "1 minuto" : `${mm} minuti`
-  }
-
-  if (mm === 1) {
-    return `1 minuto e ${ss} secondi`
-  }
-
-  return `${mm} minuti e ${ss} secondi`
-}
-
-function getPenaltyRulesForRace(raceNumber: number) {
-  if (raceNumber >= 8) return RACE8_PENALTY_RULES
-  if (raceNumber >= 6) return NEW_PENALTY_RULES
-  return PENALTY_RULES
-}
-
-function getAmmonitionCodesForRace(raceNumber: number) {
-  if (raceNumber >= 8) return RACE8_AMMONITION_CODES
-  if (raceNumber >= 6) return NEW_AMMONITION_CODES
-  return AMMONITION_CODES
-}
-
-function getDsqCodesForRace(raceNumber: number) {
-  if (raceNumber >= 8) return RACE8_DSQ_CODES
-  if (raceNumber >= 6) return NEW_DSQ_CODES
-  return DSQ_CODES
-}
-
-function getPenaltyRule(code: string, raceNumber: number): PenaltyRule {
-  const rules = getPenaltyRulesForRace(raceNumber)
-  return rules[code] || { seconds: 0, effect: "other", shortLabel: "-" }
-}
-
-function penaltySecondsFromCode(code: string, raceNumber: number): number {
-  return getPenaltyRule(code, raceNumber).seconds
-}
-
-function hasDsqPenalty(entries: PenaltyEntry[] = [], raceNumber: number): boolean {
-  const dsqCodes = getDsqCodesForRace(raceNumber)
-  return entries.some((entry) => dsqCodes.has(entry.code))
-}
-
-function hasAmmonitionPenalty(entries: PenaltyEntry[] = [], raceNumber: number): boolean {
-  const ammonitionCodes = getAmmonitionCodesForRace(raceNumber)
-  return entries.some((entry) => ammonitionCodes.has(entry.code))
-}
-
-function totalPenaltySeconds(entries: PenaltyEntry[] = [], raceNumber: number): number {
-  return entries.reduce((sum, entry) => sum + penaltySecondsFromCode(entry.code, raceNumber), 0)
-}
-
-function createPenaltyEntry(): PenaltyEntry {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    code: "",
-    lap: "Lap 01",
-    minute: "00",
-    second: "00",
-  }
-}
-
-function formatPenaltyDetail(entry: PenaltyEntry): string {
-  if (entry.lap === "Lap -") {
-    return `${entry.code} Lap - --:--`
-  }
-
-  return `${entry.code} ${entry.lap} ${entry.minute}:${entry.second}`
-}
-
-function getPenaltyOptionText(code: string, raceNumber: number): string {
-  const rule = getPenaltyRule(code, raceNumber)
-
-  const sanction =
-    rule.effect === "ammonition"
-      ? "Ammonizione"
-      : rule.effect === "dsq" || rule.effect === "other"
-        ? rule.shortLabel
-        : `+${rule.seconds} sec`
-
-  if (raceNumber >= 8 && code !== "DSQ") {
-    const description = RACE8_PENALTY_DESCRIPTIONS[code]
-
-    if (description) {
-      return `${code} - ${description} - ${sanction}`
-    }
-  }
-
-  if (rule.effect === "ammonition") return `${code} (Ammonizione)`
-  if (rule.effect === "dsq") return `${code} (${rule.shortLabel})`
-  if (rule.effect === "other") return `${code} (${rule.shortLabel})`
-
-  return `${code} (${formatPenaltyOptionLabel(rule.seconds)})`
-}
-
-function getPenaltyMainDisplay(entries: PenaltyEntry[] = [], raceNumber: number): {
-  kind: "none" | "time" | "ammonition" | "dsq"
-  text: string
-} {
-  if (!entries.length) return { kind: "none", text: "-" }
-  if (hasDsqPenalty(entries, raceNumber)) return { kind: "dsq", text: "DSQ" }
-
-  const total = totalPenaltySeconds(entries, raceNumber)
-  if (total > 0) return { kind: "time", text: formatPenaltyDisplay(total) }
-
-  if (hasAmmonitionPenalty(entries, raceNumber)) {
-    return { kind: "ammonition", text: "00:00.000" }
-  }
-
-  return { kind: "none", text: "-" }
 }
 
 function tempoLikeGt7(r: ExtractRow) {
@@ -2419,9 +2129,6 @@ function renderPrtPenaltyCell({
   row,
   penalties,
   raceNumber,
-  exporting = false,
-  unionMode,
-  exportHasMultiPenalty,
   exportPenaltyTimeTextStyle,
 }: {
   row: DisplayRow
@@ -2429,467 +2136,27 @@ function renderPrtPenaltyCell({
   raceNumber: number
   exporting?: boolean
   unionMode: boolean
-  exportHasMultiPenalty: boolean
   exportPenaltyTimeTextStyle: React.CSSProperties
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
-  const penaltyEntries = penalties[key] || []
-  const penaltyMain = getPenaltyMainDisplay(penaltyEntries, raceNumber)
-  const isDsqRow = (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
-const isRecoveredDsqRow = row.sourcePosGara >= 9000
-const showPenaltyDetail = !(exporting && unionMode)
+const penaltySeconds = penalties[key] || 0
 
-if (isDsqRow || isRecoveredDsqRow || penaltyMain.kind === "dsq") {
-  return <Pill left="DSQ" variant="dsq" />
-}
+  const isDsqRow =
+    (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
 
-  if (penaltyEntries.length === 0) {
-    return "-"
+  const isRecoveredDsqRow = row.sourcePosGara >= 9000
+
+  if (isDsqRow || isRecoveredDsqRow) {
+    return <Pill left="DSQ" variant="dsq" />
   }
 
-  if (!showPenaltyDetail) {
-    if (penaltyMain.kind === "ammonition") {
-      return (
-        <div
-          style={{
-            ...exportPenaltyTimeTextStyle,
-            color: "#f59e0b",
-          }}
-        >
-          00:00.000
-        </div>
-      )
-    }
-
-    if (penaltyMain.kind === "time") {
-      return (
-        <div style={exportPenaltyTimeTextStyle}>
-          {penaltyMain.text}
-        </div>
-      )
-    }
-
+  if (penaltySeconds <= 0) {
     return "-"
-  }
-
-  if (penaltyEntries.length === 1) {
-    const entry = penaltyEntries[0]
-    const rule = getPenaltyRule(entry.code, raceNumber)
-
-    if (exportHasMultiPenalty) {
-      return (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: exporting ? 18 : 16,
-            minHeight: exporting ? 34 : 28,
-            width: "100%",
-          }}
-        >
-          <div
-            style={{
-              whiteSpace: "nowrap",
-              minWidth: exporting ? 108 : 92,
-              textAlign: "right",
-              flexShrink: 0,
-            }}
-          >
-            {(() => {
-              if (rule.effect === "ammonition") {
-                return (
-                  <div
-                    style={{
-                      ...exportPenaltyTimeTextStyle,
-                      color: "#f59e0b",
-                    }}
-                  >
-                    00:00.000
-                  </div>
-                )
-              }
-
-              if (rule.effect === "dsq") {
-                return <Pill left="DSQ" variant="dsq" />
-              }
-
-              if (rule.effect === "time") {
-                return <div style={exportPenaltyTimeTextStyle}>{penaltyMain.text}</div>
-              }
-
-              return "-"
-            })()}
-          </div>
-
-          <div
-            style={{
-              borderLeft: "1px solid rgba(255,255,255,0.18)",
-              paddingLeft: exporting ? 14 : 12,
-              minWidth: 0,
-              width: "100%",
-              display: "grid",
-              gridTemplateColumns: exporting ? "repeat(2, minmax(0, 1fr))" : "1fr",
-              gap: exporting ? "6px 12px" : 4,
-              alignItems: "start",
-            }}
-          >
-            <div
-              style={{
-                fontSize: exporting ? 14 : 12,
-                lineHeight: exporting ? 1.18 : 1.15,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                letterSpacing: exporting ? 0.1 : undefined,
-                display: "flex",
-                alignItems: "center",
-                gap: exporting ? 8 : 6,
-                minWidth: 0,
-              }}
-            >
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: exporting ? "4px 9px" : "2px 6px",
-                  borderRadius: 6,
-                  fontWeight: 900,
-                  fontSize: exporting ? 15 : 12,
-                  letterSpacing: 0.2,
-                  color: "white",
-                  background:
-                    rule.effect === "ammonition"
-                      ? "#f59e0b"
-                      : rule.effect === "dsq"
-                        ? "#ff4dff"
-                        : "#ff2d2d",
-                  boxShadow:
-                    rule.effect === "ammonition"
-                      ? "0 0 10px rgba(245,158,11,0.35)"
-                      : rule.effect === "dsq"
-                        ? "0 0 10px rgba(255,77,255,0.35)"
-                        : "0 0 10px rgba(255,45,45,0.35)",
-                  flexShrink: 0,
-                }}
-              >
-                {entry.code}
-              </span>
-
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 2,
-                  minWidth: 0,
-                }}
-              >
-                <span>Lap</span>
-                <span
-                  style={{
-                    display: "inline-block",
-                    minWidth: exporting ? 16 : 12,
-                    textAlign: "right",
-                  }}
-                >
-                  {entry.lap === "Lap -" ? "-" : entry.lap.replace("Lap ", "").replace("Lap", "")}
-                </span>
-              </span>
-
-              <span
-                style={{
-                  display: "inline-block",
-                  minWidth: exporting ? 40 : 34,
-                  textAlign: "right",
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                  flexShrink: 0,
-                }}
-              >
-                {entry.lap === "Lap -" ? "--:--" : `${entry.minute}:${entry.second}`}
-              </span>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: exporting ? 18 : 14,
-          minHeight: exporting ? 34 : 28,
-          width: "100%",
-        }}
-      >
-        <div
-          style={{
-            whiteSpace: "nowrap",
-            minWidth: exporting ? 108 : 92,
-            textAlign: "right",
-            flexShrink: 0,
-          }}
-        >
-          {(() => {
-            if (rule.effect === "ammonition") {
-              return (
-                <div
-                  style={{
-                    ...exportPenaltyTimeTextStyle,
-                    color: "#f59e0b",
-                  }}
-                >
-                  00:00.000
-                </div>
-              )
-            }
-
-            if (rule.effect === "dsq") {
-              return <Pill left="DSQ" variant="dsq" />
-            }
-
-            if (rule.effect === "time") {
-              return <div style={exportPenaltyTimeTextStyle}>{penaltyMain.text}</div>
-            }
-
-            return "-"
-          })()}
-        </div>
-
-        <div
-          style={{
-            borderLeft: "1px solid rgba(255,255,255,0.18)",
-            paddingLeft: exporting ? 14 : 12,
-            display: "grid",
-            gap: exporting ? 5 : 4,
-            justifyItems: "start",
-            minWidth: 0,
-          }}
-        >
-          <div
-            style={{
-              fontSize: exporting ? 15 : 12,
-              lineHeight: exporting ? 1.05 : 1.15,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              letterSpacing: exporting ? 0.05 : undefined,
-              display: "flex",
-              alignItems: "center",
-              gap: exporting ? 10 : 6,
-              minWidth: 0,
-            }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: exporting ? "5px 11px" : "2px 6px",
-                borderRadius: 7,
-                fontWeight: 900,
-                fontSize: exporting ? 16 : 12,
-                letterSpacing: 0.15,
-                color: "white",
-                background:
-                  rule.effect === "ammonition"
-                    ? "#f59e0b"
-                    : rule.effect === "dsq"
-                      ? "#ff4dff"
-                      : "#ff2d2d",
-                boxShadow:
-                  rule.effect === "ammonition"
-                    ? "0 0 10px rgba(245,158,11,0.35)"
-                    : rule.effect === "dsq"
-                      ? "0 0 10px rgba(255,77,255,0.35)"
-                      : "0 0 10px rgba(255,45,45,0.35)",
-                flexShrink: 0,
-              }}
-            >
-              {entry.code}
-            </span>
-
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <span>Lap</span>
-              <span
-                style={{
-                  display: "inline-block",
-                  minWidth: exporting ? 22 : 12,
-                  textAlign: "right",
-                }}
-              >
-                {entry.lap === "Lap -" ? "-" : entry.lap.replace("Lap ", "").replace("Lap", "")}
-              </span>
-            </span>
-
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minWidth: exporting ? 54 : 34,
-                justifyContent: "flex-end",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                fontSize: exporting ? 15 : 12,
-                lineHeight: 1.1,
-              }}
-            >
-              {entry.lap === "Lap -" ? "--:--" : `${entry.minute}:${entry.second}`}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: exporting ? 18 : 16,
-        minHeight: exporting ? 34 : 28,
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          whiteSpace: "nowrap",
-          minWidth: exporting ? 108 : 92,
-          textAlign: "right",
-          flexShrink: 0,
-        }}
-      >
-        {(() => {
-          if (penaltyMain.kind === "ammonition") {
-            return (
-              <div
-                style={{
-                  ...exportPenaltyTimeTextStyle,
-                  color: "#f59e0b",
-                }}
-              >
-                00:00.000
-              </div>
-            )
-          }
-
-          if (hasDsqPenalty(penaltyEntries, raceNumber)) {
-            return <Pill left="DSQ" variant="dsq" />
-          }
-
-          if (penaltyMain.kind === "time") {
-            return <div style={exportPenaltyTimeTextStyle}>{penaltyMain.text}</div>
-          }
-
-          return "-"
-        })()}
-      </div>
-
-      <div
-        style={{
-          borderLeft: "1px solid rgba(255,255,255,0.18)",
-          paddingLeft: exporting ? 14 : 12,
-          minWidth: 0,
-          width: "100%",
-          display: "grid",
-          gridTemplateColumns: exporting ? "repeat(2, minmax(0, 1fr))" : "1fr",
-          gap: exporting ? "6px 12px" : 4,
-          alignItems: "start",
-        }}
-      >
-        {penaltyEntries.slice(0, 4).map((entry) => {
-          const rule = getPenaltyRule(entry.code, raceNumber)
-
-          return (
-            <div
-              key={entry.id}
-              style={{
-                fontSize: exporting ? 13 : 12,
-                lineHeight: exporting ? 1.18 : 1.15,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                letterSpacing: exporting ? 0.1 : undefined,
-                display: "flex",
-                alignItems: "center",
-                gap: exporting ? 6 : 6,
-                minWidth: 0,
-              }}
-            >
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: exporting ? "2px 6px" : "2px 6px",
-                  borderRadius: 6,
-                  fontWeight: 900,
-                  fontSize: exporting ? 13 : 12,
-                  letterSpacing: 0.2,
-                  color: "white",
-                  background:
-                    rule.effect === "ammonition"
-                      ? "#f59e0b"
-                      : rule.effect === "dsq"
-                        ? "#ff4dff"
-                        : "#ff2d2d",
-                  boxShadow:
-                    rule.effect === "ammonition"
-                      ? "0 0 10px rgba(245,158,11,0.35)"
-                      : rule.effect === "dsq"
-                        ? "0 0 10px rgba(255,77,255,0.35)"
-                        : "0 0 10px rgba(255,45,45,0.35)",
-                  flexShrink: 0,
-                }}
-              >
-                {entry.code}
-              </span>
-
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 2,
-                  minWidth: 0,
-                }}
-              >
-                <span>Lap</span>
-                <span
-                  style={{
-                    display: "inline-block",
-                    minWidth: exporting ? 16 : 12,
-                    textAlign: "right",
-                  }}
-                >
-                  {entry.lap === "Lap -" ? "-" : entry.lap.replace("Lap ", "").replace("Lap", "")}
-                </span>
-              </span>
-
-              <span
-                style={{
-                  display: "inline-block",
-                  minWidth: exporting ? 40 : 34,
-                  textAlign: "right",
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                  flexShrink: 0,
-                }}
-              >
-                {entry.lap === "Lap -" ? "--:--" : `${entry.minute}:${entry.second}`}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+    <div style={exportPenaltyTimeTextStyle}>
+      {formatPenaltyDisplay(penaltySeconds)}
     </div>
   )
 }
@@ -3126,11 +2393,6 @@ function ResultsTable({
 }) {
   const showMeta = !forceHideMeta && (prtMode || unionMode)
   const showLobby = !forceHideMeta && unionMode
-
-  const exportHasMultiPenalty = exporting && previewRows.some((row) => {
-    const key = getPrtRowStableKey(row.sourcePosGara)
-    return (penalties[key] || []).length > 1
-  })
 
   const exportPenaltyTimeTextStyle: React.CSSProperties = {
     color: "#ff2d2d",
@@ -3447,8 +2709,8 @@ const rowStyle = getPrtTableRowStyle(
                     mono
                     dim={(() => {
                       const key = getPrtRowStableKey(r.sourcePosGara)
-                      const penaltyEntries = penalties[key] || []
-                      return penaltyEntries.length === 0 && !isDsqRow
+                      const penaltySeconds = penalties[key] || 0
+return penaltySeconds === 0 && !isDsqRow
                     })()}
                     style={{
                       ...(exporting
@@ -3464,7 +2726,6 @@ const rowStyle = getPrtTableRowStyle(
   raceNumber,
   exporting,
   unionMode,
-  exportHasMultiPenalty,
   exportPenaltyTimeTextStyle,
 })}
                   </TableCell>
@@ -3782,41 +3043,6 @@ const normalizedGaraForOutput = useMemo(() => {
 
   return raw
 }, [effectiveGara])
-
-  const penaltyCodeOptions = useMemo(() => {
-  const maxPenaltyCode = currentRace >= 8 ? 31 : currentRace >= 6 ? 32 : 39
-
-  return [
-    { value: "DSQ", label: "DSQ (Squalifica)" },
-    ...Array.from({ length: maxPenaltyCode }, (_, i) => {
-      const n = i + 1
-      const code = `P${String(n).padStart(2, "0")}`
-
-      return {
-        value: code,
-        label: getPenaltyOptionText(code, currentRace),
-      }
-    }),
-  ]
-}, [currentRace])
-
-  const lapOptions = useMemo(
-    () => [
-      "Lap -",
-      ...Array.from({ length: 60 }, (_, i) => `Lap ${String(i + 1).padStart(2, "0")}`),
-    ],
-    []
-  )
-
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
-    []
-  )
-
-  const secondOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0")),
-    []
-  )
 
   useEffect(() => {
   const style = document.createElement("style")
@@ -6388,16 +5614,7 @@ const maxSourcePos = rowsWithPole.reduce(
     const upperTempo = rawTempo.trim().toUpperCase()
     const isBaseDnf = upperTempo === "DNF" || upperTempo === "DNF-I"
     const dnfValue = isBaseDnf ? dnfOverrides[key] || (upperTempo === "DNF-I" ? "DNF-I" : "DNF") : null
-        const rowHasDsqPenalty = hasDsqPenalty(penalties[key] || [], currentRace)
-
-        if (rowHasDsqPenalty) {
-          return {
-            ...r,
-            posGara: i + 1,
-            tempoTotaleGara: "DSQ",
-            distaccoDalPrimo: "DSQ",
-          }
-        }
+        
 
         if (dnfValue) {
           return {
@@ -6463,9 +5680,8 @@ const maxSourcePos = rowsWithPole.reduce(
     for (let i = 0; i < orderedRows.length; i++) {
       const row = orderedRows[i]
       const key = getPrtRowStableKey(row.sourcePosGara)
-      const rowHasDsqPenalty = hasDsqPenalty(penalties[key] || [], currentRace)
       const isDsq =
-        (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ" || rowHasDsqPenalty
+  (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
 
       if (isDsq) {
         dsqRows.push({ orderedIndex: i, row })
@@ -6478,7 +5694,7 @@ const maxSourcePos = rowsWithPole.reduce(
         continue
       }
 
-      const penaltySec = totalPenaltySeconds(penalties[key] || [], currentRace)
+      const penaltySec = penalties[key] || 0
 
       comparable.push({
         orderedIndex: i,
@@ -6771,9 +5987,9 @@ const maxSourcePos = rowsWithPole.reduce(
 )
 
   const hasAnyPenalty = useMemo(
-    () => Object.values(penalties).some((entries) => (entries || []).length > 0),
-    [penalties]
-  )
+  () => Object.values(penalties).some((seconds) => seconds > 0),
+  [penalties]
+)
 
   const winner = useMemo(() => finalRows[0]?.pilota || "-", [finalRows])
   
@@ -7632,45 +6848,22 @@ function exportRaceDgJson() {
   const leagueForFile = normalizeLeagueKey(effectiveLega) || selectedLeague
 
   const dgRows = finalRows.flatMap((row) => {
-    const rowKey = getPrtRowStableKey(row.sourcePosGara)
-    const entries = penalties[rowKey] || []
+  const rowKey = getPrtRowStableKey(row.sourcePosGara)
+const penaltySeconds = penalties[rowKey] || 0
 
-    return entries
-      .filter((entry) => String(entry.code || "").trim())
-      .map((entry) => {
-        const rule = getPenaltyRule(entry.code, currentRace)
+  if (penaltySeconds <= 0) {
+    return []
+  }
 
-        const type =
-          rule.effect === "dsq"
-            ? "dsq"
-            : rule.effect === "ammonition"
-              ? "ammonition"
-              : "time"
-
-        const sanction =
-          rule.effect === "ammonition"
-            ? "Ammonizione"
-            : rule.effect === "dsq"
-              ? rule.shortLabel
-              : `+${rule.seconds} secondi`
-
-        return {
-          pilot: row.pilota,
-          code: entry.code,
-          lap: entry.lap.replace("Lap ", ""),
-          timing:
-            entry.lap === "Lap -"
-              ? "--:--"
-              : `${entry.minute}:${entry.second}`,
-          reason:
-            currentRace >= 8
-              ? RACE8_PENALTY_DESCRIPTIONS[entry.code] || getPenaltyOptionText(entry.code, currentRace)
-              : getPenaltyOptionText(entry.code, currentRace),
-          sanction,
-          type,
-        }
-      })
-  })
+  return [
+    {
+      pilot: row.pilota,
+      seconds: penaltySeconds,
+      sanction: `+${penaltySeconds} sec`,
+      type: "time",
+    },
+  ]
+})
 
   if (!dgRows.length) {
     alert("Nessun provvedimento DG da esportare")
@@ -11322,7 +10515,13 @@ clearCurrentWorkbench(false)
       : { gara: "", lobby: "", lega: "" }
   )
 
-  setPenalties(snapshot.penalties || {})
+  setPenalties(
+  Object.fromEntries(
+    Object.entries(snapshot.penalties || {}).filter(
+      ([, value]) => typeof value === "number" && value > 0
+    )
+  )
+)
   setLapOverrides(snapshot.lapOverrides || {})
   setDnfOverrides(snapshot.dnfOverrides || {})
 
@@ -11411,40 +10610,32 @@ function resetAllLeaguesInCurrentRace() {
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
 
-  function addPenaltyEntry(sourcePosGara: number) {
-    const key = getPrtRowStableKey(sourcePosGara)
-    setPenalties((prev) => {
-      const next = { ...prev }
-      next[key] = [...(next[key] || []), createPenaltyEntry()]
-      return next
-    })
-  }
+  function setUnionPenaltySeconds(sourcePosGara: number, value: string) {
+  const key = getPrtRowStableKey(sourcePosGara)
 
-  function updatePenaltyEntry(sourcePosGara: number, entryId: string, patch: Partial<PenaltyEntry>) {
-    const key = getPrtRowStableKey(sourcePosGara)
-    setPenalties((prev) => {
-      const next = { ...prev }
-      next[key] = (next[key] || []).map((entry) =>
-        entry.id === entryId ? { ...entry, ...patch } : entry
-      )
-      return next
-    })
-  }
+  setPenalties((prev) => {
+    const next = { ...prev }
 
-  function removePenaltyEntry(sourcePosGara: number, entryId: string) {
-    const key = getPrtRowStableKey(sourcePosGara)
-    setPenalties((prev) => {
-      const next = { ...prev }
-      const filtered = (next[key] || []).filter((entry) => entry.id !== entryId)
-      if (filtered.length === 0) {
-        delete next[key]
-      } else {
-        next[key] = filtered
-      }
-      return next
-    })
-  }
+    const raw = String(value || "").trim()
 
+    if (!raw) {
+      delete next[key]
+      return next
+    }
+
+    const seconds = Math.max(0, Math.round(Number(raw)))
+
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      delete next[key]
+      return next
+    }
+
+    next[key] = seconds
+
+    return next
+  })
+}
+  
   function setLapOverrideValue(sourcePosGara: number, value: string) {
     const key = getPrtRowStableKey(sourcePosGara)
     setLapOverrides((prev) => {
@@ -13137,9 +12328,7 @@ const lastCreatedMovementText = useMemo(() => {
         <tbody>
           {dgInfo.map(({ row, isDoppiato, isDnf, key, manualGap, manualGapValid }, idx) => {
             const dnfValue = dnfOverrides[key] || "DNF"
-            const entries = penalties[key] || []
-            const penaltyMain = getPenaltyMainDisplay(entries, currentRace)
-            const penaltyDisabled = false
+            const penaltySeconds = penalties[key] || 0
 
             return (
               <tr
@@ -13151,183 +12340,62 @@ const lastCreatedMovementText = useMemo(() => {
                 <TableCell>{row.pilota}</TableCell>
 
                 <TableCell align="center">
-                  <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
-                    <div style={{ display: "grid", gap: 6, width: "100%" }}>
-                      {entries.map((entry) => (
-                        <div
-                          key={entry.id}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "95px 82px 66px 66px 32px",
-                            gap: 8,
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <select
-                            disabled={penaltyDisabled}
-                            value={entry.code}
-                            onChange={(e) => updatePenaltyEntry(row.sourcePosGara, entry.id, { code: e.target.value })}
-                            style={{
-                              padding: "7px 8px",
-                              borderRadius: 10,
-                              border: "1px solid rgba(255,255,255,0.14)",
-                              background: penaltyDisabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.26)",
-                              color: "white",
-                              opacity: penaltyDisabled ? 0.65 : 1,
-                            }}
-                          >
-                            <option value="" style={{ background: "#11151d", color: "white" }}>
-    Penalità
-  </option>
-                            {penaltyCodeOptions.map((opt) => (
-                              <option key={opt.value} value={opt.value} style={{ background: "#11151d", color: "white" }}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    }}
+  >
+    <input
+      type="number"
+      min="0"
+      step="1"
+      placeholder="0"
+      value={penaltySeconds || ""}
+      onChange={(e) =>
+        setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
+      }
+      style={{
+        width: 82,
+        padding: "8px 10px",
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(0,0,0,0.26)",
+        color: "white",
+        textAlign: "center",
+        fontWeight: 900,
+        fontFamily:
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+      }}
+    />
 
-                            <select
-                              disabled={penaltyDisabled}
-                              value={entry.lap}
-                              onChange={(e) => updatePenaltyEntry(row.sourcePosGara, entry.id, { lap: e.target.value })}
-                              style={{
-                                padding: "7px 8px",
-                                borderRadius: 10,
-                                border: "1px solid rgba(255,255,255,0.14)",
-                                background: penaltyDisabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.26)",
-                                color: "white",
-                                opacity: penaltyDisabled ? 0.65 : 1,
-                              }}
-                            >
-                              {lapOptions.map((lap) => (
-                                <option key={lap} value={lap} style={{ background: "#11151d", color: "white" }}>
-                                  {lap}
-                                </option>
-                              ))}
-                            </select>
+    <span
+      style={{
+        fontSize: 12,
+        opacity: 0.72,
+        fontWeight: 800,
+      }}
+    >
+      sec
+    </span>
 
-                            <select
-                              disabled={penaltyDisabled}
-                              value={entry.minute}
-                              onChange={(e) => updatePenaltyEntry(row.sourcePosGara, entry.id, { minute: e.target.value })}
-                              style={{
-                                padding: "7px 8px",
-                                borderRadius: 10,
-                                border: "1px solid rgba(255,255,255,0.14)",
-                                background: penaltyDisabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.26)",
-                                color: "white",
-                                opacity: penaltyDisabled ? 0.65 : 1,
-                                textAlign: "center",
-                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                              }}
-                            >
-                              {minuteOptions.map((m) => (
-                                <option key={m} value={m} style={{ background: "#11151d", color: "white" }}>
-                                  {m}
-                                </option>
-                              ))}
-                            </select>
-
-                            <select
-                              disabled={penaltyDisabled}
-                              value={entry.second}
-                              onChange={(e) => updatePenaltyEntry(row.sourcePosGara, entry.id, { second: e.target.value })}
-                              style={{
-                                padding: "7px 8px",
-                                borderRadius: 10,
-                                border: "1px solid rgba(255,255,255,0.14)",
-                                background: penaltyDisabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.26)",
-                                color: "white",
-                                opacity: penaltyDisabled ? 0.65 : 1,
-                                textAlign: "center",
-                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                              }}
-                            >
-                              {secondOptions.map((s) => (
-                                <option key={s} value={s} style={{ background: "#11151d", color: "white" }}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-
-                            <button
-                              disabled={penaltyDisabled}
-                              onClick={() => removePenaltyEntry(row.sourcePosGara, entry.id)}
-                              style={{
-                                width: 36,
-                                height: 32,
-                                borderRadius: 10,
-                                border: "1px solid rgba(255,255,255,0.14)",
-                                background: "rgba(255,255,255,0.06)",
-                                color: "white",
-                                cursor: penaltyDisabled ? "not-allowed" : "pointer",
-                                opacity: penaltyDisabled ? 0.65 : 1,
-                              }}
-                              title="Rimuovi penalità"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-                        <button
-                          disabled={penaltyDisabled}
-                          onClick={() => addPenaltyEntry(row.sourcePosGara)}
-                          style={{
-                            padding: "8px 12px",
-                            borderRadius: 10,
-                            border: "1px solid rgba(255,255,255,0.14)",
-                            background: penaltyDisabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.26)",
-                            color: "white",
-                            cursor: penaltyDisabled ? "not-allowed" : "pointer",
-                            opacity: penaltyDisabled ? 0.65 : 1,
-                            fontWeight: 900,
-                            fontSize: 12,
-                          }}
-                        >
-                          + Penalità
-                        </button>
-
-                        <div
-                          style={{
-                            fontSize: 12,
-                            opacity: 0.88,
-                            fontWeight: 900,
-                            color:
-                              penaltyMain.kind === "dsq"
-                                ? "#ff7cff"
-                                : penaltyMain.kind === "ammonition"
-                                  ? "#f59e0b"
-                                  : penaltyMain.kind === "time"
-                                    ? "#ffb3b3"
-                                    : "rgba(255,255,255,0.65)",
-                          }}
-                        >
-                          Totale DG: {penaltyMain.text}
-                        </div>
-                      </div>
-
-                      {entries.length > 0 && (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            opacity: 0.85,
-                            borderTop: "1px solid rgba(255,255,255,0.08)",
-                            paddingTop: 8,
-                            width: "100%",
-                            textAlign: "center",
-                            whiteSpace: "normal",
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {entries.map((entry) => formatPenaltyDetail(entry)).join(" • ")}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
+    <div
+      style={{
+        minWidth: 88,
+        fontSize: 12,
+        fontWeight: 900,
+        color:
+  penaltySeconds > 0
+    ? "#ffb3b3"
+    : "rgba(255,255,255,0.55)",
+      }}
+    >
+      {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
+    </div>
+  </div>
+</TableCell>
 
                   <TableCell align="center">
                     {isDoppiato ? (
