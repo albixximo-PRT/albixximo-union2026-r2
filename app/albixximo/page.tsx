@@ -2128,18 +2128,14 @@ function renderPrtMetaCell({
 function renderPrtPenaltyCell({
   row,
   penalties,
-  raceNumber,
   exportPenaltyTimeTextStyle,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
-  raceNumber: number
-  exporting?: boolean
-  unionMode: boolean
   exportPenaltyTimeTextStyle: React.CSSProperties
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
-const penaltySeconds = penalties[key] || 0
+  const penaltySeconds = penalties[key] || 0
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
@@ -2376,7 +2372,6 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
-  raceNumber,
   forceHideMeta = false,
   tableTitle = "Classifica (output)",
 }: {
@@ -2387,7 +2382,6 @@ function ResultsTable({
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
-  raceNumber: number
   forceHideMeta?: boolean
   tableTitle?: string
 }) {
@@ -2723,9 +2717,6 @@ return penaltySeconds === 0 && !isDsqRow
                     {renderPrtPenaltyCell({
   row: r,
   penalties,
-  raceNumber,
-  exporting,
-  unionMode,
   exportPenaltyTimeTextStyle,
 })}
                   </TableCell>
@@ -7698,10 +7689,6 @@ try {
   background: linear-gradient(180deg, #ff4b4b, #b91c1c);
 }
 
-.dg-mini-pill.ammonition {
-  background: linear-gradient(180deg, #ffb020, #c76a00);
-}
-
 .dg-mini-pill.dsq {
   background: linear-gradient(180deg, #c084fc, #7e22ce);
 }
@@ -8479,10 +8466,6 @@ try {
 
 .dg-modal-code.time {
   background: linear-gradient(180deg,#ef4444,#991b1b);
-}
-
-.dg-modal-code.ammonition {
-  background: linear-gradient(180deg,#ffb020,#c76a00);
 }
 
 .dg-modal-code.dsq {
@@ -12056,7 +12039,6 @@ const lastCreatedMovementText = useMemo(() => {
     prtMode={prtMode}
     unionMode={unionMode}
     penalties={penalties}
-    raceNumber={currentRace}
     tableTitle="Classifica (output)"
   />
 )}
@@ -15665,7 +15647,6 @@ const changed = currentValue !== originalValue
           unionMode={unionMode}
           exporting={true}
           penalties={penalties}
-          raceNumber={currentRace}
           forceHideMeta={!exportMetaInPng}
           tableTitle="Classifica definitiva"
         />
