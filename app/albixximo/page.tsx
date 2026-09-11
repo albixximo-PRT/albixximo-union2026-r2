@@ -110,6 +110,7 @@ type ChampionshipState = {
   races: Partial<Record<number, SavedRaceState>>
   roundMovements: Partial<Record<number, RoundMovementState>>
   expectedDrivers: ExpectedDriversByLobby
+  driverCars: Record<string, string>
 }
 
 type ChampionshipCellStatus = "DNF" | "DNF-I" | "DNFV" | "DNP" | "BOX" | "DSQ"
@@ -489,6 +490,29 @@ function normalizeDriverLookupName(value: string) {
     .replace(/[^a-z0-9]/g, "")
 }
 
+const UNION_GR2_CARS = [
+  "RC F GT500 '16",
+  "GT-R NISMO GT500 '16",
+  "RS 5 Turbo DTM '19",
+  "NSX CONCEPT-GT '16",
+  "GT-One (TS020) '99",
+  "NSX GT500 '08",
+  "GT-R GT500 '08",
+  "CLK-LM '98",
+  "SC430 GT500 '08",
+  "McLaren F1 GTR Race Car '97",
+] as const
+
+function normalizeUnionCarName(value: string) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’‘`]/g, "'")
+    .replace(/[^a-z0-9]/g, "")
+}
+
 function applyQualiRaceAliasToRows(
   rows: ExtractRow[],
   qualiRows: QualiRow[],
@@ -544,6 +568,91 @@ function levenshteinDistance(a: string, b: string): number {
   }
 
   return matrix[aa.length][bb.length]
+}
+
+function findBestUnionCarMatch(rawCarName: string): {
+  officialName: string
+  score: number
+  isSafeAutoMatch: boolean
+} | null {
+  const raw = normalizeUnionCarName(rawCarName)
+
+  if (!raw) return null
+
+  const candidates = UNION_GR2_CARS.map((officialName) => {
+    const official = normalizeUnionCarName(officialName)
+
+    if (raw === official) {
+      return {
+        officialName,
+        score: 1,
+      }
+    }
+
+    const distance = levenshteinDistance(raw, official)
+    const maxLen = Math.max(raw.length, official.length)
+
+    return {
+      officialName,
+      score: maxLen > 0 ? 1 - distance / maxLen : 0,
+    }
+  }).sort((a, b) => b.score - a.score)
+
+  const best = candidates[0]
+  const second = candidates[1]
+
+  if (!best) return null
+
+  const gap = second ? best.score - second.score : best.score
+
+  const isSafeAutoMatch =
+    best.score === 1 ||
+    (best.score >= 0.88 && gap >= 0.08)
+
+  return {
+    officialName: best.officialName,
+    score: best.score,
+    isSafeAutoMatch,
+  }
+}
+
+function buildUnionDriverCarsFromRaces(
+  races: ChampionshipState["races"]
+): Record<string, string> {
+  const driverCars: Record<string, string> = {}
+
+  for (let raceNumber = 1; raceNumber <= 5; raceNumber++) {
+    const raceState = races[raceNumber]
+    if (!raceState) continue
+
+    for (const league of UNION_RANKS) {
+      const lobbyState = raceState[league]
+      if (!lobbyState) continue
+
+      for (const snapshot of Object.values(lobbyState)) {
+        if (!snapshot) continue
+
+        for (const row of snapshot.finalRows || []) {
+          const pilot = String(row.pilota || "").trim()
+          const car = String(row.auto || "").trim()
+
+          const isOfficialUnionCar = UNION_GR2_CARS.some(
+            (officialCar) => officialCar === car
+          )
+
+          if (
+            pilot &&
+            isOfficialUnionCar &&
+            !driverCars[pilot]
+          ) {
+            driverCars[pilot] = car
+          }
+        }
+      }
+    }
+  }
+
+  return driverCars
 }
 
 function computeDriverSimilarityScore(rawName: string, officialName: string) {
@@ -2858,6 +2967,7 @@ const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   races: {},
   roundMovements: {},
   expectedDrivers: {},
+  driverCars: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -2930,10 +3040,6 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 const [driverRatingMap, setDriverRatingMap] = useState<Record<string, DriverRatingValue>>({})
 
 const [unknownDriverSelections, setUnknownDriverSelections] = useState<Record<string, string>>({})
-const [dismissedUnknownDrivers, setDismissedUnknownDrivers] = useState<Record<string, true>>({})
-const [pendingQualiAliasName, setPendingQualiAliasName] = useState("")
-const [pendingQualiAliasTarget, setPendingQualiAliasTarget] = useState("")
-const [dismissedQualiAliasNames, setDismissedQualiAliasNames] = useState<Record<string, true>>({})
 
 const [uploadedLeagueHtmls, setUploadedLeagueHtmls] = useState<
   Partial<Record<ChampionshipLeagueKey, string>>
@@ -3084,8 +3190,13 @@ useEffect(() => {
     if (rawState) {
       const parsedState = JSON.parse(rawState)
       if (parsedState && typeof parsedState === "object" && typeof parsedState.races === "object") {
-  setChampionshipState({
-  races: parsedState.races || {},
+  const restoredRaces =
+  parsedState.races && typeof parsedState.races === "object"
+    ? parsedState.races
+    : {}
+
+setChampionshipState({
+  races: restoredRaces,
   roundMovements:
     parsedState.roundMovements && typeof parsedState.roundMovements === "object"
       ? parsedState.roundMovements
@@ -3094,6 +3205,7 @@ useEffect(() => {
     parsedState.expectedDrivers && typeof parsedState.expectedDrivers === "object"
       ? parsedState.expectedDrivers
       : {},
+  driverCars: buildUnionDriverCarsFromRaces(restoredRaces),
 })
 }
     }
@@ -3267,7 +3379,6 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   setManualLegaOverride(selectedLeague)
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
   setUnknownDriverSelections({})
-  setDismissedUnknownDrivers({})
 }, [currentRace, selectedLeague, selectedLobby, championshipState])
 
 function normalizeDriverNameForChampionship(value: string) {
@@ -5256,7 +5367,11 @@ function ChampionshipTableBlock({
 
   const leagueDriverResolution = useMemo(() => {
   const officialLeaguePilots = [
-  ...(workbenchDriverLeagueMap[selectedLeague] || []),
+  ...(
+    expectedLobbyDrivers.length > 0
+      ? expectedLobbyDrivers
+      : (workbenchDriverLeagueMap[selectedLeague] || [])
+  ),
 ]
   .map((name) => String(name || "").trim())
   .filter(Boolean)
@@ -5303,16 +5418,16 @@ function ChampionshipTableBlock({
 } else if (normalizedRaw) {
             const unresolvedId = `${selectedLeague}:${normalizedRaw}`
 
-            if (!dismissedUnknownDrivers[unresolvedId] && !unresolvedMap.has(unresolvedId)) {
-              unresolvedMap.set(unresolvedId, {
-                id: unresolvedId,
-                rawName: resolvedPilot,
-                normalizedRawName: normalizedRaw,
-                league: selectedLeague,
-                suggestedOfficialName: bestMatch?.officialName || "",
-                suggestedScore: bestMatch?.score || 0,
-              })
-            }
+            if (!unresolvedMap.has(unresolvedId)) {
+  unresolvedMap.set(unresolvedId, {
+    id: unresolvedId,
+    rawName: resolvedPilot,
+    normalizedRawName: normalizedRaw,
+    league: selectedLeague,
+    suggestedOfficialName: bestMatch?.officialName || "",
+    suggestedScore: bestMatch?.score || 0,
+  })
+}
           }
         }
       }
@@ -5320,10 +5435,23 @@ function ChampionshipTableBlock({
 
     const manualDistaccoValue = (manualDistaccoOverrides[r.sourcePosGara] ?? "").trim()
 
+const manualAutoValue = String(
+  manualAutoOverrides[r.sourcePosGara] ?? ""
+).trim()
+
+const rawAutoValue = String(r.auto ?? "").trim()
+const bestCarMatch = findBestUnionCarMatch(rawAutoValue)
+
+const resolvedAuto =
+  manualAutoValue ||
+  (bestCarMatch?.isSafeAutoMatch
+    ? bestCarMatch.officialName
+    : "")
+
 return {
   ...r,
   pilota: resolvedPilot,
-  auto: (manualAutoOverrides[r.sourcePosGara] ?? r.auto ?? "").trim(),
+  auto: resolvedAuto,
 
   tempoTotaleGara: r.tempoTotaleGara,
 
@@ -5381,16 +5509,16 @@ migliorGiroGara: r.migliorGiroGara,
       const bestMatch = findBestOfficialPilotMatch(qualiName, officialLeaguePilots)
       const unresolvedId = `${selectedLeague}:${normalizedRaw}`
 
-      if (!dismissedUnknownDrivers[unresolvedId] && !unresolvedMap.has(unresolvedId)) {
-        unresolvedMap.set(unresolvedId, {
-          id: unresolvedId,
-          rawName: qualiName,
-          normalizedRawName: normalizedRaw,
-          league: selectedLeague,
-          suggestedOfficialName: bestMatch?.officialName || "",
-          suggestedScore: bestMatch?.score || 0,
-        })
-      }
+      if (!unresolvedMap.has(unresolvedId)) {
+  unresolvedMap.set(unresolvedId, {
+    id: unresolvedId,
+    rawName: qualiName,
+    normalizedRawName: normalizedRaw,
+    league: selectedLeague,
+    suggestedOfficialName: bestMatch?.officialName || "",
+    suggestedScore: bestMatch?.score || 0,
+  })
+}
     }
   }
 
@@ -5408,9 +5536,9 @@ migliorGiroGara: r.migliorGiroGara,
   manualQualiDraft,
   showQualiModal,
   workbenchDriverLeagueMap,
+  expectedLobbyDrivers,
   driverAliasMap,
   selectedLeague,
-  dismissedUnknownDrivers,
   currentRace,
   championshipState,
 ])
@@ -5747,6 +5875,31 @@ const maxSourcePos = rowsWithPole.reduce(
     return [...updatedComparable, ...updatedNonComparable, ...updatedDsq]
   }, [displayRows, penalties, lapOverrides, dnfOverrides, shouldSyncDgTableWithManualEdits])
 
+  // AREA 9.6D — controllo vettura vincolata per pilota
+const driverCarMismatches = useMemo(() => {
+  return finalRows.flatMap((row) => {
+    const pilot = String(row.pilota || "").trim()
+    const currentCar = String(row.auto || "").trim()
+    const lockedCar = String(championshipState.driverCars[pilot] || "").trim()
+
+    if (!pilot || !currentCar || !lockedCar) {
+      return []
+    }
+
+    if (currentCar === lockedCar) {
+      return []
+    }
+
+    return [
+      {
+        pilot,
+        lockedCar,
+        currentCar,
+      },
+    ]
+  })
+}, [finalRows, championshipState.driverCars])
+  
   const matchSummary = useMemo<PrtMatchSummary>(() => {
   if (finalRows.length === 0) {
     return {
@@ -5803,16 +5956,19 @@ const maxSourcePos = rowsWithPole.reduce(
 
   // ---------------- AUTO ----------------
   const autos = finalRows.map((r) => (r.auto || "").trim())
-  const hasEmptyAuto = autos.some((a) => !a)
-  const suspiciousAuto = autos.some((a) => a.length < 3)
 
-  if (hasEmptyAuto) {
-    auto = "error"
-    notes.push("Presente almeno un'auto vuota.")
-  } else if (suspiciousAuto) {
-    auto = "warn"
-    notes.push("Possibile auto anomala.")
-  }
+const hasUnresolvedAuto = autos.some(
+  (value) =>
+    !value ||
+    !UNION_GR2_CARS.some((car) => car === value)
+)
+
+if (hasUnresolvedAuto) {
+  auto = "error"
+  notes.push(
+    "Una o più auto non sono state associate a una Gr.2 UNION."
+  )
+}
 
   // ---------------- DISTACCHI ----------------
   const validDistacco = finalRows.every((r, i) => {
@@ -9779,7 +9935,6 @@ setQualiRows(extractedQualiRows)
   setShowSaveLeagueSuccessModal(false)
   setShowConfirmResetRaceModal(false)
   setUnknownDriverSelections({})
-  setDismissedUnknownDrivers({})
 }
   
   function resetAll() {
@@ -9895,7 +10050,28 @@ async function importChampionshipBackup(file: File) {
     }
 
     // Applica stato
-setChampionshipState(parsed.championshipState)
+const importedChampionshipState = parsed.championshipState
+
+const importedRaces =
+  importedChampionshipState?.races &&
+  typeof importedChampionshipState.races === "object"
+    ? importedChampionshipState.races
+    : {}
+
+setChampionshipState({
+  races: importedRaces,
+  roundMovements:
+    importedChampionshipState?.roundMovements &&
+    typeof importedChampionshipState.roundMovements === "object"
+      ? importedChampionshipState.roundMovements
+      : {},
+  expectedDrivers:
+    importedChampionshipState?.expectedDrivers &&
+    typeof importedChampionshipState.expectedDrivers === "object"
+      ? importedChampionshipState.expectedDrivers
+      : {},
+  driverCars: buildUnionDriverCarsFromRaces(importedRaces),
+})
 setCurrentRace(race)
 setSelectedLeague(league)
 
@@ -10001,7 +10177,6 @@ setUploadedLeagueHtmls(
     // Reset workbench (pulizia UI)
     clearCurrentWorkbench(false)
     setUnknownDriverSelections({})
-    setDismissedUnknownDrivers({})
 
   } catch (err) {
     console.error("Errore import backup:", err)
@@ -10011,7 +10186,6 @@ setUploadedLeagueHtmls(
 
 function handleSelectLeague(league: ChampionshipLeagueKey) {
   setUnknownDriverSelections({})
-  setDismissedUnknownDrivers({})
   const defaultLobby = UNION_LOBBIES_BY_RANK[league][0]
 setSelectedLobby(defaultLobby)
 setUnionMeta((prev) => ({
@@ -10175,35 +10349,6 @@ function removeDsqDriversFromDrawer() {
   })
 }
 
-function addPilotToLeagueDrawerDirect(league: ChampionshipLeagueKey, pilotName: string) {
-  const rawName = String(pilotName || "").trim()
-  if (!rawName) return
-
-  const normalized = normalizeDriverNameForChampionship(rawName)
-
-  setWorkbenchDriverLeagueMap((prev) => {
-  const next: DriverLeagueMap = {
-    STAR: [...prev.STAR],
-    ELITE: [...prev.ELITE],
-    "PRO GOLD": [...prev["PRO GOLD"]],
-    "PRO SILVER": [...prev["PRO SILVER"]],
-    "PRO AMA": [...prev["PRO AMA"]],
-    AMA: [...prev.AMA],
-  }
-
-    for (const currentLeague of CHAMPIONSHIP_LEAGUES) {
-      next[currentLeague] = next[currentLeague].filter(
-        (pilot) => normalizeDriverNameForChampionship(pilot) !== normalized
-      )
-    }
-
-    next[league].push(rawName)
-    next[league].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }))
-
-    return next
-  })
-}
-
 function saveDriverTeamOverride(pilot: string) {
   const nextTeamCode = editingDriverTeamDraft.trim().toUpperCase()
 
@@ -10234,72 +10379,6 @@ function saveDriverAliasForLeague(
       ...(prev[league] || {}),
       [normalizedRaw]: cleanOfficial,
     },
-  }))
-
-  setDismissedUnknownDrivers((prev) => {
-    const next = { ...prev }
-    delete next[`${league}:${normalizedRaw}`]
-    return next
-  })
-}
-
-function renamePilotInsideLeagueDrawer(
-  league: ChampionshipLeagueKey,
-  oldPilotName: string,
-  newPilotName: string
-) {
-  const cleanOld = String(oldPilotName || "").trim()
-  const cleanNew = String(newPilotName || "").trim()
-  if (!cleanOld || !cleanNew) return
-
-  const oldNorm = normalizeDriverNameForChampionship(cleanOld)
-
-  setWorkbenchDriverLeagueMap((prev) => {
-  const next: DriverLeagueMap = {
-    STAR: [...prev.STAR],
-    ELITE: [...prev.ELITE],
-    "PRO GOLD": [...prev["PRO GOLD"]],
-    "PRO SILVER": [...prev["PRO SILVER"]],
-    "PRO AMA": [...prev["PRO AMA"]],
-    AMA: [...prev.AMA],
-  }
-
-    next[league] = next[league]
-      .map((pilot) =>
-        normalizeDriverNameForChampionship(pilot) === oldNorm ? cleanNew : pilot
-      )
-      .filter((pilot, index, arr) => {
-        const norm = normalizeDriverNameForChampionship(pilot)
-        return arr.findIndex((x) => normalizeDriverNameForChampionship(x) === norm) === index
-      })
-      .sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }))
-
-    return next
-  })
-
-  setDriverAliasMap((prev) => {
-    const currentLeagueAliases = { ...(prev[league] || {}) }
-
-    Object.keys(currentLeagueAliases).forEach((aliasKey) => {
-      if (currentLeagueAliases[aliasKey] === cleanOld) {
-        currentLeagueAliases[aliasKey] = cleanNew
-      }
-    })
-
-    return {
-      ...prev,
-      [league]: currentLeagueAliases,
-    }
-  })
-}
-
-function dismissUnknownDriver(league: ChampionshipLeagueKey, rawName: string) {
-  const normalizedRaw = normalizeDriverLookupName(rawName)
-  if (!normalizedRaw) return
-
-  setDismissedUnknownDrivers((prev) => ({
-    ...prev,
-    [`${league}:${normalizedRaw}`]: true,
   }))
 }
 
@@ -10386,6 +10465,19 @@ function resetExpectedLobbyDrivers() {
 function openConfirmSaveLeagueModal() {
   if (finalRows.length === 0) return
 
+  const hasUnresolvedAuto = finalRows.some((row) => {
+    const auto = String(row.auto || "").trim()
+
+    return !UNION_GR2_CARS.some(
+      (officialCar) => officialCar === auto
+    )
+  })
+
+  if (hasUnresolvedAuto) {
+    openAutoCorrectionModal()
+    return
+  }
+
   const mode = savedLeagueInCurrentRace ? "overwrite" : "save"
   setPendingSaveLeagueMode(mode)
   setShowConfirmSaveLeagueModal(true)
@@ -10398,12 +10490,14 @@ function confirmSaveCurrentLeague() {
     normalizeLeagueKey(effectiveLega) || selectedLeague
 
   const saveLobbyKey = String(
-  selectedLobby || unionMeta.lobby || ""
-).trim().toUpperCase()
+    selectedLobby || unionMeta.lobby || ""
+  )
+    .trim()
+    .toUpperCase()
 
-if (!saveLobbyKey) return
-  
-    const snapshot: SavedLeagueSnapshot = {
+  if (!saveLobbyKey) return
+
+  const snapshot: SavedLeagueSnapshot = {
     savedAt: new Date().toISOString(),
     league: saveLeagueKey,
     raceNumber: currentRace,
@@ -10429,18 +10523,21 @@ if (!saveLobbyKey) return
   setChampionshipState((prev) => {
     const prevRace = prev.races[currentRace] || {}
 
+    const nextRaces = {
+      ...prev.races,
+      [currentRace]: {
+        ...prevRace,
+        [saveLeagueKey]: {
+          ...(prevRace[saveLeagueKey] || {}),
+          [saveLobbyKey]: snapshot,
+        },
+      },
+    }
+
     return {
       ...prev,
-      races: {
-        ...prev.races,
-        [currentRace]: {
-  ...prevRace,
-  [saveLeagueKey]: {
-    ...(prevRace[saveLeagueKey] || {}),
-    [saveLobbyKey]: snapshot,
-  },
-},
-      },
+      races: nextRaces,
+      driverCars: buildUnionDriverCarsFromRaces(nextRaces),
     }
   })
 
@@ -10448,10 +10545,10 @@ if (!saveLobbyKey) return
   setLastSavedLeagueName(saveLeagueKey)
   setShowConfirmSaveLeagueModal(false)
   setShowSaveLeagueSuccessModal(true)
-  // forza refresh visivo immediato (già ok ma più reattivo)
-setManualPilotDraft({})
-setManualAutoDraft({})
-setManualDistaccoDraft({})
+
+  setManualPilotDraft({})
+  setManualAutoDraft({})
+  setManualDistaccoDraft({})
 }
 
 function reopenSavedLeague(
@@ -10468,7 +10565,6 @@ setSelectedLobby(lobby)
 
 clearCurrentWorkbench(false)
   setUnknownDriverSelections({})
-  setDismissedUnknownDrivers({})
 
   setWorkbenchDriverLeagueMap((prev) => {
     const hasWorkbenchData = CHAMPIONSHIP_LEAGUES.some(
@@ -10552,12 +10648,15 @@ function resetCurrentLeagueInRace() {
       }
     }
 
+    const nextRaces = {
+      ...prev.races,
+      [currentRace]: nextRaceData,
+    }
+
     return {
       ...prev,
-      races: {
-        ...prev.races,
-        [currentRace]: nextRaceData,
-      },
+      races: nextRaces,
+      driverCars: buildUnionDriverCarsFromRaces(nextRaces),
     }
   })
 
@@ -10585,6 +10684,7 @@ function resetAllLeaguesInCurrentRace() {
       ...prev,
       races: nextRaces,
       roundMovements: nextRoundMovements,
+      driverCars: buildUnionDriverCarsFromRaces(nextRaces),
     }
   })
 
@@ -10673,48 +10773,30 @@ function applyPilotCorrections() {
     }
   }
 
-  const nextAutoOverrides: Record<number, string> = {}
-
-  for (const baseRow of previewRows) {
-    const finalPilotName = String(
-      cleaned[baseRow.sourcePosGara] ?? baseRow.pilota ?? ""
-    ).trim()
-
-    const originalAuto = String(baseRow.auto ?? "").trim()
-
-    if (!finalPilotName) continue
-
-    const sourceRow = previewRows.find(
-      (candidate) => normalizePilot(candidate.pilota) === normalizePilot(finalPilotName)
-    )
-
-    if (!sourceRow) continue
-
-    const sourceAuto = String(sourceRow.auto ?? "").trim()
-
-    if (sourceAuto !== originalAuto) {
-      nextAutoOverrides[baseRow.sourcePosGara] = sourceAuto
-    }
-  }
-
+  
   setManualPilotOverrides(cleaned)
-  setManualAutoOverrides(nextAutoOverrides)
   setShowPilotModal(false)
 }
 
 function resetPilotCorrections() {
   setManualPilotOverrides({})
   setManualPilotDraft({})
-  setManualAutoOverrides({})
-  setManualAutoDraft({})
   setShowPilotModal(false)
 }
 
 function openAutoCorrectionModal() {
   const nextDraft: Record<number, string> = {}
+
   for (const row of displayRows) {
-    nextDraft[row.sourcePosGara] = String(row.auto ?? "").trim()
+    const rawAuto = String(row.auto ?? "").trim()
+    const bestMatch = findBestUnionCarMatch(rawAuto)
+
+    nextDraft[row.sourcePosGara] =
+      bestMatch?.isSafeAutoMatch
+        ? bestMatch.officialName
+        : ""
   }
+
   setManualAutoDraft(nextDraft)
   setShowAutoModal(true)
 }
@@ -10722,13 +10804,26 @@ function openAutoCorrectionModal() {
 function applyAutoCorrections() {
   const cleaned: Record<number, string> = {}
 
-  for (const row of previewRows) {
-    const draftValue = String(manualAutoDraft[row.sourcePosGara] ?? "").trim()
-    const originalValue = String(row.auto ?? "").trim()
+  const hasUnresolvedAuto = previewRows.some((row) => {
+    const draftValue = String(
+      manualAutoDraft[row.sourcePosGara] ?? ""
+    ).trim()
 
-    if (draftValue && draftValue !== originalValue) {
-      cleaned[row.sourcePosGara] = draftValue
-    }
+    return !UNION_GR2_CARS.some(
+      (car) => car === draftValue
+    )
+  })
+
+  if (hasUnresolvedAuto) {
+    return
+  }
+
+  for (const row of previewRows) {
+    const draftValue = String(
+      manualAutoDraft[row.sourcePosGara] ?? ""
+    ).trim()
+
+    cleaned[row.sourcePosGara] = draftValue
   }
 
   setManualAutoOverrides(cleaned)
@@ -13653,6 +13748,48 @@ const lastCreatedMovementText = useMemo(() => {
         </div>
       </div>
 
+      {driverCarMismatches.length > 0 && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 14,
+      borderRadius: 14,
+      border: "1px solid rgba(239,68,68,0.55)",
+      background: "rgba(239,68,68,0.12)",
+      color: "#fee2e2",
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 900,
+        fontSize: 13,
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+      }}
+    >
+      ⚠ Vettura non conforme
+    </div>
+
+    {driverCarMismatches.map((item) => (
+      <div
+        key={`${item.pilot}-${item.currentCar}`}
+        style={{
+          fontSize: 12,
+          lineHeight: 1.5,
+          marginTop: 6,
+        }}
+      >
+        <b>{item.pilot}</b>
+        <br />
+        Vettura registrata: <b>{item.lockedCar}</b>
+        <br />
+        Vettura rilevata: <b>{item.currentCar}</b>
+      </div>
+    ))}
+  </div>
+)}
+      
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowConfirmSaveLeagueModal(false)}
@@ -13982,7 +14119,7 @@ const lastCreatedMovementText = useMemo(() => {
 
         <div style={{ marginTop: 8, fontSize: 13, opacity: 0.82, lineHeight: 1.5 }}>
           Ho letto <b>{activeUnknownDriver.rawName}</b> nella lega <b>{activeUnknownDriver.league}</b>, ma
-          non ho trovato un match sicuro nel cassetto piloti di quella lega.
+non ho trovato un'associazione sicura tra i piloti previsti della lobby.
         </div>
 
         {activeUnknownDriver.suggestedOfficialName ? (
@@ -14002,7 +14139,7 @@ const lastCreatedMovementText = useMemo(() => {
             fontWeight: 900,
           }}
         >
-          Pilota ufficiale della lega
+          Pilota previsto nella lobby
         </label>
 
         <select
@@ -14030,15 +14167,19 @@ const lastCreatedMovementText = useMemo(() => {
             Seleziona pilota...
           </option>
 
-          {(workbenchDriverLeagueMap[activeUnknownDriver.league] || []).map((pilot) => (
-            <option
-              key={`${activeUnknownDriver.id}-${pilot}`}
-              value={pilot}
-              style={{ background: "#11151d", color: "white" }}
-            >
-              {pilot}
-            </option>
-          ))}
+          {(
+  expectedLobbyDrivers.length > 0
+    ? expectedLobbyDrivers
+    : (workbenchDriverLeagueMap[activeUnknownDriver.league] || [])
+).map((pilot) => (
+  <option
+    key={`${activeUnknownDriver.id}-${pilot}`}
+    value={pilot}
+    style={{ background: "#11151d", color: "white" }}
+  >
+    {pilot}
+  </option>
+))}
         </select>
       </div>
 
@@ -14105,97 +14246,11 @@ const lastCreatedMovementText = useMemo(() => {
           Salva come alias
         </button>
 
-        <button
-  onClick={() => {
-    const selectedOfficial =
-      unknownDriverSelections[activeUnknownDriver.id] ||
-      activeUnknownDriver.suggestedOfficialName
-
-    if (!selectedOfficial) return
-
-    renamePilotInsideLeagueDrawer(
-      activeUnknownDriver.league,
-      selectedOfficial,
-      activeUnknownDriver.rawName
-    )
-
-    setUnknownDriverSelections((prev) => {
-      const next = { ...prev }
-      delete next[activeUnknownDriver.id]
-      return next
-    })
-  }}
-          style={{
-            padding: "12px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(245,158,11,0.30)",
-            background: "rgba(245,158,11,0.20)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          Rinomina nel cassetto
-        </button>
-
-        <button
-  onClick={() => {
-    addPilotToLeagueDrawerDirect(
-      activeUnknownDriver.league,
-      activeUnknownDriver.rawName
-    )
-
-    setUnknownDriverSelections((prev) => {
-      const next = { ...prev }
-      delete next[activeUnknownDriver.id]
-      return next
-    })
-  }}
-          style={{
-            padding: "12px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(96,165,250,0.30)",
-            background: "rgba(96,165,250,0.20)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          Aggiungi al cassetto
-        </button>
-
-        <button
-          onClick={() =>
-            dismissUnknownDriver(
-              activeUnknownDriver.league,
-              activeUnknownDriver.rawName
-            )
-          }
-          style={{
-            padding: "12px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.06)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          Ignora per ora
-        </button>
       </div>
 
       <div style={{ fontSize: 12, opacity: 0.7, lineHeight: 1.45 }}>
-        <b>Alias</b>: quando l’OCR legge questo nome, verrà ricondotto al pilota ufficiale scelto.
-        <br />
-        <b>Rinomina nel cassetto</b>: cambia proprio il nome ufficiale del pilota nella lega corrente.
-      </div>
+  <b>Alias</b>: quando l’OCR legge questo nome, verrà ricondotto al pilota ufficiale scelto.
+</div>
     </div>
   </div>
 )}
@@ -14765,32 +14820,7 @@ const lastCreatedMovementText = useMemo(() => {
           }
         }
 
-        const nextAutoOverrides: Record<number, string> = {}
-
-        for (const baseRow of previewRows) {
-          const finalPilotName = String(
-            cleaned[baseRow.sourcePosGara] ?? baseRow.pilota ?? ""
-          ).trim()
-
-          const originalAuto = String(baseRow.auto ?? "").trim()
-
-          if (!finalPilotName) continue
-
-          const sourceRow = previewRows.find(
-            (candidate) => normalizePilot(candidate.pilota) === normalizePilot(finalPilotName)
-          )
-
-          if (!sourceRow) continue
-
-          const sourceAuto = String(sourceRow.auto ?? "").trim()
-
-          if (sourceAuto !== originalAuto) {
-            nextAutoOverrides[baseRow.sourcePosGara] = sourceAuto
-          }
-        }
-
         setManualPilotOverrides(cleaned)
-        setManualAutoOverrides(nextAutoOverrides)
         setManualPilotDraft({})
         setShowPilotModal(false)
 
@@ -14972,8 +15002,12 @@ const lastCreatedMovementText = useMemo(() => {
             <tbody>
               {displayRows.map((row) => {
                 const currentValue = String(manualAutoDraft[row.sourcePosGara] ?? "").trim()
-                const originalValue = String(row.auto ?? "").trim()
-                const changed = currentValue !== originalValue
+const originalValue = String(row.auto ?? "").trim()
+const changed = currentValue !== originalValue
+
+const unresolved = !UNION_GR2_CARS.some(
+  (car) => car === currentValue
+)
 
                 return (
                   <tr
@@ -15021,27 +15055,40 @@ const lastCreatedMovementText = useMemo(() => {
                         borderBottom: "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
-                      <input
-                        value={manualAutoDraft[row.sourcePosGara] ?? ""}
-                        onChange={(e) =>
-                          setManualAutoDraft((prev) => ({
-                            ...prev,
-                            [row.sourcePosGara]: e.target.value,
-                          }))
-                        }
-                        placeholder="Correggi auto"
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: changed
-                            ? "1px solid rgba(160,90,255,0.30)"
-                            : "1px solid rgba(255,255,255,0.14)",
-                          background: "rgba(0,0,0,0.24)",
-                          color: "white",
-                          boxSizing: "border-box",
-                        }}
-                      />
+                      <select
+  value={manualAutoDraft[row.sourcePosGara] ?? ""}
+  onChange={(e) =>
+    setManualAutoDraft((prev) => ({
+      ...prev,
+      [row.sourcePosGara]: e.target.value,
+    }))
+  }
+  style={{
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: unresolved
+  ? "1px solid rgba(255,90,90,0.75)"
+  : changed
+    ? "1px solid rgba(160,90,255,0.30)"
+    : "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.24)",
+    color: "white",
+    boxSizing: "border-box",
+  }}
+>
+  <option value="">Seleziona auto...</option>
+
+  {UNION_GR2_CARS.map((car) => (
+    <option
+      key={car}
+      value={car}
+      style={{ background: "#11151d", color: "white" }}
+    >
+      {car}
+    </option>
+  ))}
+</select>
                     </td>
                   </tr>
                 )
