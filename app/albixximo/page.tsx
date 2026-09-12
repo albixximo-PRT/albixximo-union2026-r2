@@ -79,7 +79,9 @@ type SavedLeagueSnapshot = {
   penalties: PenaltyMap
   lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
-  manualGaraOverride: string
+absenceOverrides: AbsenceOverrideMap
+manualDsqOverrides: ManualDsqOverrideMap
+manualGaraOverride: string
   manualLegaOverride: string
   manualPilotOverrides: Record<number, string>
   manualAutoOverrides: Record<number, string>
@@ -113,7 +115,17 @@ type ChampionshipState = {
   driverCars: Record<string, string>
 }
 
-type ChampionshipCellStatus = "DNF" | "DNF-I" | "DNFV" | "DNP" | "BOX" | "DSQ"
+type ChampionshipCellStatus =
+  | "DNF"
+  | "DNF-I"
+  | "DNFV"
+  | "NC"
+  | "DNP"
+  | "ASS-I"
+| "ASS-G"
+  | "BOX"
+  | "DSQ"
+  | "DOPPIATO"
 
 type ChampionshipRaceCell = {
   position: number | null
@@ -187,8 +199,11 @@ type BackupFile = {
 }
 
 type PenaltyMap = Record<string, number>
-type DnfOverrideValue = "DNF" | "DNF-I" | "DNFV"
+type DnfOverrideValue = "NC" | "BOX"
 type DnfOverrideMap = Record<string, DnfOverrideValue>
+type AbsenceOverrideValue = "ASS-I" | "ASS-G"
+type AbsenceOverrideMap = Record<string, AbsenceOverrideValue>
+type ManualDsqOverrideMap = Record<string, boolean>
 
 const UNION_RACE_OPTIONS = [
   { value: 1, label: "Gara 1" },
@@ -351,7 +366,7 @@ function parseAbsoluteRaceTimeMs(s: string): number | null {
   const t = (s || "").trim()
   if (!t) return null
   if (t.startsWith("+")) return null
-  if (/^(DNF|DNF-I|DNFV|BOX|DSQ)$/i.test(t)) return null
+  if (/^(NC|DNF|DNF-I|DNFV|ASS-I|ASS-G|BOX|DSQ)$/i.test(t)) return null
   if (/^\d+giro$/i.test(t)) return null
 
   const hms = t.match(/^(\d+):(\d{2}):(\d{2})\.(\d{3})$/)
@@ -864,7 +879,7 @@ function buildCsvFromRows(rows: ExtractRow[], unionMeta: UnionMeta) {
 function isNonComparableRaceValue(value: string) {
   const t = (value || "").trim()
   if (!t) return true
-  if (/^(DNF|DNF-I|DNFV|DNP|BOX|DSQ)$/i.test(t)) return true
+  if (/^(NC|DNF|DNF-I|DNFV|DNP|ASS-I|ASS-G|BOX|DSQ)$/i.test(t)) return true
   if (/^\d+giro$/i.test(t)) return true
   if (/^DOPPIATO$/i.test(t)) return true
   return false
@@ -1058,7 +1073,7 @@ function Pill({
 }: {
   left: string
   right?: string
-  variant: "gold" | "violet" | "orange" | "teal" | "fuchsia" | "dsq" | "dnp"
+  variant: "gold" | "violet" | "orange" | "teal" | "fuchsia" | "dsq" | "dnp" | "absenceRed"
   exporting?: boolean
   compact?: boolean
 }) {
@@ -1088,6 +1103,11 @@ function Pill({
       border: "1px solid rgba(255,0,128,0.55)",
       boxShadow: "0 0 22px rgba(255,0,128,0.18)",
     },
+    absenceRed: {
+  background: "rgba(220,53,69,0.92)",
+  border: "1px solid rgba(220,53,69,0.60)",
+  boxShadow: "0 0 22px rgba(220,53,69,0.24)",
+},
     dsq: {
       background: "rgba(255,0,255,0.92)",
       border: "1px solid rgba(255,0,255,0.60)",
@@ -1265,17 +1285,14 @@ function renderTempoCell(tempo: string, exporting = false, compact = false) {
 
   if (!t || t === "-") return "-"
 
-  if (upper === "DNF") {
-    return <Pill left="DNF" variant="teal" exporting={exporting} compact={compact} />
-  }
-
-  if (upper === "DNF-I") {
-    return <Pill left="DNF-I" variant="teal" exporting={exporting} compact={compact} />
-  }
-
-  if (upper === "DNFV") {
-    return <Pill left="DNFV" variant="teal" exporting={exporting} compact={compact} />
-  }
+  if (
+  upper === "NC" ||
+  upper === "DNF" ||
+  upper === "DNF-I" ||
+  upper === "DNFV"
+) {
+  return <Pill left="NC" variant="teal" exporting={exporting} compact={compact} />
+}
 
   if (upper === "BOX") {
     return <Pill left="BOX" variant="fuchsia" exporting={exporting} compact={compact} />
@@ -1289,9 +1306,17 @@ function renderTempoCell(tempo: string, exporting = false, compact = false) {
     return <Pill left="DSQ" variant="dsq" exporting={exporting} compact={compact} />
   }
 
-  if (upper === "DNP") {
-    return <Pill left="DNP" variant="dnp" exporting={exporting} compact={compact} />
-  }
+  if (upper === "ASS-I") {
+  return <Pill left="A" variant="absenceRed" exporting={exporting} compact={compact} />
+}
+
+if (upper === "ASS-G") {
+  return <Pill left="A" variant="orange" exporting={exporting} compact={compact} />
+}
+
+if (upper === "DNP") {
+  return <Pill left="A" variant="absenceRed" exporting={exporting} compact={compact} />
+}
 
   return (
     <span
@@ -1310,12 +1335,19 @@ function renderTableStyleStatusBadge(value: string) {
 
   if (!t || t === "-") return null
 
-  if (upper === "DNF") return <Pill left="DNF" variant="teal" />
-  if (upper === "DNF-I") return <Pill left="DNF-I" variant="teal" />
-  if (upper === "DNFV") return <Pill left="DNFV" variant="teal" />
+  if (
+  upper === "NC" ||
+  upper === "DNF" ||
+  upper === "DNF-I" ||
+  upper === "DNFV"
+) {
+  return <Pill left="NC" variant="teal" />
+}
   if (upper === "BOX") return <Pill left="BOX" variant="fuchsia" />
   if (upper === "DSQ") return <Pill left="DSQ" variant="dsq" />
-  if (upper === "DNP") return <Pill left="DNP" variant="dnp" />
+  if (upper === "ASS-I") return <Pill left="A" variant="absenceRed" />
+if (upper === "ASS-G") return <Pill left="A" variant="orange" />
+if (upper === "DNP") return <Pill left="A" variant="absenceRed" />
   if (/^\d+GIRO$/i.test(upper) || upper === "DOPPIATO") {
     return <Pill left="DOPPIATO" variant="orange" />
   }
@@ -1479,8 +1511,12 @@ function RaceResultChip({
   const hasPp = !!pp
   const hasGv = !!gv
 
-  if (status === "DNF" || status === "DNF-I" || status === "DNFV") {
-  return <Pill left={status} variant="teal" exporting={exporting} />
+  if (status === "NC") {
+  return <Pill left="NC" variant="teal" exporting={exporting} />
+}
+
+if (status === "DNF" || status === "DNF-I" || status === "DNFV") {
+  return <Pill left="NC" variant="teal" exporting={exporting} />
 }
 
   if (status === "BOX") {
@@ -1491,8 +1527,16 @@ function RaceResultChip({
   return <Pill left="DSQ" variant="dsq" exporting={exporting} />
 }
 
-  if (status === "DNP") {
-  return <Pill left="DNP" variant="dnp" exporting={exporting} />
+  if (status === "ASS-I") {
+  return <Pill left="A" variant="absenceRed" exporting={exporting} />
+}
+
+if (status === "ASS-G") {
+  return <Pill left="A" variant="orange" exporting={exporting} />
+}
+
+if (status === "DNP") {
+  return <Pill left="A" variant="absenceRed" exporting={exporting} />
 }
 
   if (status === "DOPPIATO") {
@@ -1557,13 +1601,13 @@ function LegendBare() {
       </span>
 
       <Pill left="POLE" variant="gold" />
-      <Pill left="BEST LAP" variant="violet" />
-      <Pill left="DOPPIATO" variant="orange" />
-      <Pill left="DNP" variant="dnp" />
-      <Pill left="DNF-I" variant="teal" />
-      <Pill left="DNF-V" variant="teal" />
-      <Pill left="BOX" variant="fuchsia" />
-      <Pill left="DSQ" variant="dsq" />
+<Pill left="BEST LAP" variant="violet" />
+<Pill left="DOPPIATO" variant="orange" />
+<Pill left="A" variant="absenceRed" />
+<Pill left="A" variant="orange" />
+<Pill left="NC" variant="teal" />
+<Pill left="BOX" variant="fuchsia" />
+<Pill left="DSQ" variant="dsq" />
 
       <span
   style={{
@@ -1826,12 +1870,18 @@ function renderPrtPointsCell({
   const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
 
   const isBox = rawTempo === "BOX"
-  const isDnf = rawTempo === "DNF" || rawTempo === "DNF-I"
-  const isDnfv = rawTempo === "DNFV"
-  const isDnp = rawTempo === "DNP"
-  const isDsqRow = (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
+const isNc =
+  rawTempo === "NC" ||
+  rawTempo === "DNF" ||
+  rawTempo === "DNF-I" ||
+  rawTempo === "DNFV"
+const isDnp =
+  rawTempo === "DNP" ||
+  rawTempo === "ASS-I" ||
+  rawTempo === "ASS-G"
+const isDsqRow = (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
 
-  const isZeroPointsStatus = isBox || isDnfv || isDnp || isDsqRow
+const isZeroPointsStatus = isBox || isNc || isDnp || isDsqRow
 
   const isPole = (row.pole || "").trim().toUpperCase() === "POLE"
   const bestLapTime = (bestRaceLap.split("  ").pop() || "").trim()
@@ -1843,8 +1893,6 @@ function renderPrtPointsCell({
 
   if (isZeroPointsStatus) {
     pointsValue = 0
-  } else if (isDnf) {
-  pointsValue = bonusPoints
 } else {
     pointsValue = getPointsForUnionRow(row, bestRaceLap)
   }
@@ -1876,7 +1924,7 @@ function renderPrtPointsCell({
 
   const title = isZeroPointsStatus
     ? "Punti gara: 0"
-    : isDnf
+    : isNc
       ? "Punti assegnati come DNF involontario"
       : isPole && isBestLap
         ? "Bonus: POLE + BEST LAP"
@@ -2095,6 +2143,10 @@ function renderPrtQualifyingCell({
   const isDnp =
   distacco === "DNP" ||
   tempo === "DNP" ||
+  distacco === "ASS-I" ||
+  tempo === "ASS-I" ||
+  distacco === "ASS-G" ||
+  tempo === "ASS-G" ||
   tempo === "DNS" ||
   distacco === "DSQ" ||
   tempo === "DSQ"
@@ -2164,9 +2216,13 @@ function renderPrtBestLapCell({
   if ((bestRaceLap || "").trim().toUpperCase() === "NO TIME") {
   const tempo = tempoLikeGt7(row).trim().toUpperCase()
 
-  if (tempo === "DNP") {
-    return "-"
-  }
+  if (
+  tempo === "DNP" ||
+  tempo === "ASS-I" ||
+  tempo === "ASS-G"
+) {
+  return "-"
+}
 
   return <Pill left="NO TIME" variant="orange" exporting={exporting} />
 }
@@ -2532,7 +2588,9 @@ function ResultsTable({
     value === "BOX" ||
     value === "DSQ" ||
     value === "DNP" ||
-    value === "DOPPIATO" ||
+value === "ASS-I" ||
+value === "ASS-G" ||
+value === "DOPPIATO" ||
     /^\d+GIRO$/i.test(value)
   )
 }).length
@@ -2943,6 +3001,9 @@ export default function Page() {
   const [exportMetaInPng, setExportMetaInPng] = useState(false)
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
+  const [absenceOverrides, setAbsenceOverrides] = useState<AbsenceOverrideMap>({})
+  const [manualDsqOverrides, setManualDsqOverrides] =
+  useState<ManualDsqOverrideMap>({})
   const [showExportModal, setShowExportModal] = useState(false)
   const [manualGaraOverride, setManualGaraOverride] = useState("")
   const [manualLegaOverride, setManualLegaOverride] = useState("")
@@ -3079,7 +3140,6 @@ const [manualQualiOverrides, setManualQualiOverrides] = useState<Record<number, 
 const [manualQualiDraft, setManualQualiDraft] = useState<Record<number, string>>({})
 const [showMovementCreatedModal, setShowMovementCreatedModal] = useState(false)
 const [showApplyMovementsModal, setShowApplyMovementsModal] = useState(false)
-const [showRemoveDsqDriversModal, setShowRemoveDsqDriversModal] = useState(false)
 const [lastCreatedMovement, setLastCreatedMovement] = useState<LeagueMovementEntry | null>(null)
 const [showApplyLastMovementModal, setShowApplyLastMovementModal] = useState(false)
 
@@ -3439,12 +3499,13 @@ function buildSavedRaceCell(row: DisplayRow, bestRaceLap: string): ChampionshipR
 
   let status: ChampionshipCellStatus | null = null
 
-  if (rawTempo === "DNF") status = "DNF"
-  else if (rawTempo === "DNF-I") status = "DNF-I"
-  else if (rawTempo === "DNFV") status = "DNFV"
-  else if (rawTempo === "DNP") status = "DNP"
-  else if (rawTempo === "BOX") status = "BOX"
-  else if (rawTempo === "DSQ") status = "DSQ"
+  if (rawTempo === "NC") status = "NC"
+else if (rawTempo === "BOX") status = "BOX"
+else if (rawTempo === "DNF" || rawTempo === "DNF-I" || rawTempo === "DNFV") status = "NC"
+else if (rawTempo === "ASS-I") status = "ASS-I"
+else if (rawTempo === "ASS-G") status = "ASS-G"
+else if (rawTempo === "DNP") status = "DNP"
+else if (rawTempo === "DSQ") status = "DSQ"
 
   return {
     position: status ? null : row.posGara,
@@ -3466,12 +3527,15 @@ function buildSnapshotRacePointsMap(
   const arrivedRows = finalRows.filter((row) => {
     const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
     return (
-      rawTempo !== "DNF" &&
-      rawTempo !== "DNF-I" &&
-      rawTempo !== "DNFV" &&
-      rawTempo !== "DNP" &&
-      rawTempo !== "BOX" &&
-      rawTempo !== "DSQ"
+      rawTempo !== "NC" &&
+rawTempo !== "DNF" &&
+rawTempo !== "DNF-I" &&
+rawTempo !== "DNFV" &&
+rawTempo !== "DNP" &&
+rawTempo !== "ASS-I" &&
+rawTempo !== "ASS-G" &&
+rawTempo !== "BOX" &&
+rawTempo !== "DSQ"
     )
   })
 
@@ -3486,9 +3550,17 @@ function buildSnapshotRacePointsMap(
   })
 
   const dnpBoxDsqRows = finalRows.filter((row) => {
-    const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
-    return rawTempo === "DNP" || rawTempo === "BOX" || rawTempo === "DSQ"
-  })
+  const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
+
+  return (
+    rawTempo === "NC" ||
+    rawTempo === "DNP" ||
+    rawTempo === "ASS-I" ||
+    rawTempo === "ASS-G" ||
+    rawTempo === "BOX" ||
+    rawTempo === "DSQ"
+  )
+})
 
   for (const row of arrivedRows) {
     const isPole = (row.pole || "").trim().toUpperCase() === "POLE"
@@ -3532,8 +3604,8 @@ function createDnpDisplayRow(pilota: string, posGara: number): DisplayRow {
     posGara,
     pilota,
     auto: "---",
-    tempoTotaleGara: "DNP",
-    distaccoDalPrimo: "DNP",
+    tempoTotaleGara: "ASS-I",
+    distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
     tempoQualifica: "",
     pole: "",
@@ -3543,55 +3615,12 @@ function createDnpDisplayRow(pilota: string, posGara: number): DisplayRow {
 function buildDnpRaceCell(): ChampionshipRaceCell {
   return {
     position: null,
-    status: "DNP",
+    status: "ASS-I",
     pp: false,
     gv: false,
     points: 0,
-    rawText: "dnp",
+    rawText: "ass-i",
   }
-}
-
-function applyFourthDnpAsDsqRule(driver: DriverChampionshipRow) {
-  let dnpCount = 0
-
-  for (let raceNumber = 1; raceNumber <= 13; raceNumber++) {
-    const cell = driver.raceResults[raceNumber]
-    if (!cell) continue
-
-    if (cell.status === "DNP") {
-      dnpCount += 1
-
-      if (dnpCount >= 4) {
-        driver.raceResults[raceNumber] = {
-          ...cell,
-          status: "DSQ",
-          points: 0,
-          rawText: "dsq",
-        }
-
-        driver.racePoints[raceNumber] = 0
-      }
-    }
-  }
-}
-
-function getDnpDisqualificationRace(driver: DriverChampionshipRow): number | null {
-  let dnpOrDsqCount = 0
-
-  for (let raceNumber = 1; raceNumber <= 13; raceNumber++) {
-    const cell = driver.raceResults[raceNumber]
-    if (!cell) continue
-
-    if (cell.status === "DNP" || cell.status === "DSQ") {
-      dnpOrDsqCount += 1
-
-      if (dnpOrDsqCount >= 4) {
-        return raceNumber
-      }
-    }
-  }
-
-  return null
 }
 
 function RaceCellStars({ pp, gv }: { pp: boolean; gv: boolean }) {
@@ -3971,7 +4000,7 @@ function CompactChampionshipPill({
   exporting = false,
 }: {
   left: string
-  variant: "orange" | "teal" | "fuchsia" | "dsq" | "dnp"
+  variant: "orange" | "teal" | "fuchsia" | "dsq" | "dnp" | "absenceRed"
   exporting?: boolean
 }) {
   const styles: Record<typeof variant, React.CSSProperties> = {
@@ -3990,6 +4019,11 @@ function CompactChampionshipPill({
       border: "1px solid rgba(255,0,128,0.55)",
       boxShadow: "0 0 18px rgba(255,0,128,0.18)",
     },
+    absenceRed: {
+  background: "linear-gradient(180deg, rgba(220,53,69,0.95), rgba(190,40,55,0.85))",
+  border: "1px solid rgba(220,53,69,0.60)",
+  boxShadow: "0 0 18px rgba(220,53,69,0.24)",
+},
     dsq: {
       background: "linear-gradient(180deg, rgba(255,0,255,0.95), rgba(200,0,200,0.85))",
       border: "1px solid rgba(255,0,255,0.60)",
@@ -4280,7 +4314,7 @@ function renderChampionshipRaceCell(
   const status = cell.status ?? null
   const specialMovement = cell.specialMovement ?? null
 
-  const allowStarsOnStatus = status === "DNF" || status === "DNF-I"
+  const allowStarsOnStatus = false
   const pp = allowStarsOnStatus ? (cell.pp ?? false) : false
   const gv = allowStarsOnStatus ? (cell.gv ?? false) : false
 
@@ -4304,37 +4338,22 @@ function renderChampionshipRaceCell(
     )
   }
 
-  if (status === "DNF") {
-    return wrapWithOptionalStars(
-      <CompactChampionshipPill
-        left="DNF"
-        variant="teal"
-        exporting={exporting}
-      />
-    )
-  }
-
-  if (status === "DNF-I") {
-    return wrapWithOptionalStars(
-      <CompactChampionshipPill
-        left="DNF-I"
-        variant="teal"
-        exporting={exporting}
-      />
-    )
-  }
-
-  if (status === "DNFV") {
-    return renderMovementWrapper(
-      <CompactChampionshipPill
-        left="DNF-V"
-        variant="teal"
-        exporting={exporting}
-      />,
-      specialMovement,
-      exporting
-    )
-  }
+  if (
+  status === "NC" ||
+  status === "DNF" ||
+  status === "DNF-I" ||
+  status === "DNFV"
+) {
+  return renderMovementWrapper(
+    <CompactChampionshipPill
+      left="NC"
+      variant="teal"
+      exporting={exporting}
+    />,
+    specialMovement,
+    exporting
+  )
+}
 
   if (status === "BOX") {
     return renderMovementWrapper(
@@ -4360,17 +4379,41 @@ function renderChampionshipRaceCell(
     )
   }
 
-  if (status === "DNP") {
-    return renderMovementWrapper(
-      <CompactChampionshipPill
-        left="DNP"
-        variant="dnp"
-        exporting={exporting}
-      />,
-      specialMovement,
-      exporting
-    )
-  }
+  if (status === "ASS-I") {
+  return renderMovementWrapper(
+    <CompactChampionshipPill
+      left="A"
+      variant="dsq"
+      exporting={exporting}
+    />,
+    specialMovement,
+    exporting
+  )
+}
+
+if (status === "ASS-G") {
+  return renderMovementWrapper(
+    <CompactChampionshipPill
+      left="A"
+      variant="orange"
+      exporting={exporting}
+    />,
+    specialMovement,
+    exporting
+  )
+}
+
+if (status === "DNP") {
+  return renderMovementWrapper(
+    <CompactChampionshipPill
+      left="A"
+      variant="absenceRed"
+      exporting={exporting}
+    />,
+    specialMovement,
+    exporting
+  )
+}
 
   if (status === "DOPPIATO") {
     return renderMovementWrapper(
@@ -4526,25 +4569,25 @@ function ChampionshipHtmlLegend() {
           </div>
 
           <div style={rowStyle}>
-            <div style={badgeWrapStyle}>
-              <CompactChampionshipPill left="DNP" variant="dnp" exporting={true} />
-            </div>
-            <div style={textStyle}>Non presente.</div>
-          </div>
+  <div style={badgeWrapStyle}>
+    <CompactChampionshipPill left="A" variant="absenceRed" exporting={true} />
+  </div>
+  <div style={textStyle}>Assenza ingiustificata.</div>
+</div>
 
-          <div style={rowStyle}>
-            <div style={badgeWrapStyle}>
-              <CompactChampionshipPill left="DNF-I" variant="teal" exporting={true} />
-            </div>
-            <div style={textStyle}>Crash / abbandono involontario.</div>
-          </div>
+<div style={rowStyle}>
+  <div style={badgeWrapStyle}>
+    <CompactChampionshipPill left="A" variant="orange" exporting={true} />
+  </div>
+  <div style={textStyle}>Assenza giustificata.</div>
+</div>
 
-          <div style={rowStyle}>
-            <div style={badgeWrapStyle}>
-              <CompactChampionshipPill left="DNF-V" variant="teal" exporting={true} />
-            </div>
-            <div style={textStyle}>Abbandono volontario.</div>
-          </div>
+<div style={rowStyle}>
+  <div style={badgeWrapStyle}>
+    <CompactChampionshipPill left="NC" variant="teal" exporting={true} />
+  </div>
+  <div style={textStyle}>Non classificato.</div>
+</div>
 
           <div style={rowStyle}>
             <div style={badgeWrapStyle}>
@@ -5593,8 +5636,8 @@ const maxSourcePos = rowsWithPole.reduce(
     sourcePosGara: maxSourcePos + index + 1,
     pilota: pilot,
     auto: "---",
-    tempoTotaleGara: "DNP",
-    distaccoDalPrimo: "DNP",
+    tempoTotaleGara: "ASS-I",
+    distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
     tempoQualifica: "",
     pole: "",
@@ -5731,8 +5774,32 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(r.sourcePosGara)
     const rawTempo = tempoLikeGt7(r)
     const upperTempo = rawTempo.trim().toUpperCase()
-    const isBaseDnf = upperTempo === "DNF" || upperTempo === "DNF-I"
-    const dnfValue = isBaseDnf ? dnfOverrides[key] || (upperTempo === "DNF-I" ? "DNF-I" : "DNF") : null
+    const absenceValue =
+  upperTempo === "ASS-I" || upperTempo === "ASS-G"
+    ? absenceOverrides[key] || upperTempo
+    : null
+    const isManualDsq = !!manualDsqOverrides[key]
+    if (isManualDsq) {
+  return {
+    ...r,
+    posGara: i + 1,
+    tempoTotaleGara: "DSQ",
+    distaccoDalPrimo: "DSQ",
+  }
+}
+    if (absenceValue) {
+  return {
+    ...r,
+    posGara: i + 1,
+    tempoTotaleGara: absenceValue,
+    distaccoDalPrimo: absenceValue,
+  }
+}
+    const isBaseDnf =
+  upperTempo === "DNF" ||
+  upperTempo === "DNF-I" ||
+  upperTempo === "DNFV"
+    const dnfValue = isBaseDnf ? dnfOverrides[key] || "NC" : null
         
 
         if (dnfValue) {
@@ -5767,10 +5834,14 @@ const maxSourcePos = rowsWithPole.reduce(
     const resolvedBaseMsByOrderedIndex = new Map<number, number>()
 
     for (let i = 0; i < orderedRows.length; i++) {
-      const row = orderedRows[i]
-      const key = getPrtRowStableKey(row.sourcePosGara)
-      const rawTempo = tempoLikeGt7(row)
-      const isDoppiato = isDoppiatoValue(rawTempo)
+  const row = orderedRows[i]
+  const key = getPrtRowStableKey(row.sourcePosGara)
+  const rawTempo = tempoLikeGt7(row)
+  const isDoppiato = isDoppiatoValue(rawTempo)
+
+  if (manualDsqOverrides[key]) {
+  continue
+}
       const manualGap = (lapOverrides[key] || "").trim()
 
       let baseMs: number | null = null
@@ -5800,7 +5871,8 @@ const maxSourcePos = rowsWithPole.reduce(
       const row = orderedRows[i]
       const key = getPrtRowStableKey(row.sourcePosGara)
       const isDsq =
-  (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
+  (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ" ||
+  !!manualDsqOverrides[key]
 
       if (isDsq) {
         dsqRows.push({ orderedIndex: i, row })
@@ -5845,8 +5917,32 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(item.row.sourcePosGara)
     const rawTempo = tempoLikeGt7(item.row)
     const upperTempo = rawTempo.trim().toUpperCase()
-    const isBaseDnf = upperTempo === "DNF" || upperTempo === "DNF-I"
-    const dnfValue = isBaseDnf ? dnfOverrides[key] || (upperTempo === "DNF-I" ? "DNF-I" : "DNF") : null
+    const absenceValue =
+  upperTempo === "ASS-I" || upperTempo === "ASS-G"
+    ? absenceOverrides[key] || upperTempo
+    : null
+    const isManualDsq = !!manualDsqOverrides[key]
+    if (isManualDsq) {
+  return {
+    ...item.row,
+    posGara: updatedComparable.length + idx + 1,
+    tempoTotaleGara: "DSQ",
+    distaccoDalPrimo: "DSQ",
+  }
+}
+    if (absenceValue) {
+  return {
+    ...item.row,
+    posGara: updatedComparable.length + idx + 1,
+    tempoTotaleGara: absenceValue,
+    distaccoDalPrimo: absenceValue,
+  }
+}
+    const isBaseDnf =
+  upperTempo === "DNF" ||
+  upperTempo === "DNF-I" ||
+  upperTempo === "DNFV"
+    const dnfValue = isBaseDnf ? dnfOverrides[key] || "NC" : null
 
         if (dnfValue) {
           return {
@@ -5873,7 +5969,15 @@ const maxSourcePos = rowsWithPole.reduce(
       }))
 
     return [...updatedComparable, ...updatedNonComparable, ...updatedDsq]
-  }, [displayRows, penalties, lapOverrides, dnfOverrides, shouldSyncDgTableWithManualEdits])
+  }, [
+  displayRows,
+  penalties,
+  lapOverrides,
+  dnfOverrides,
+  absenceOverrides,
+  manualDsqOverrides,
+  shouldSyncDgTableWithManualEdits,
+])
 
   // AREA 9.6D — controllo vettura vincolata per pilota
 const driverCarMismatches = useMemo(() => {
@@ -5981,6 +6085,8 @@ if (hasUnresolvedAuto) {
       /^DNF$/i.test(d) ||
       /^DNFV$/i.test(d) ||
       /^DNP$/i.test(d) ||
+      /^ASS-I$/i.test(d) ||
+/^ASS-G$/i.test(d) ||
       /^DSQ$/i.test(d) ||
       /^DOPPIATO$/i.test(d) ||
       /^\d+giro$/i.test(d)
@@ -6108,25 +6214,30 @@ if (hasUnresolvedAuto) {
       const key = getPrtRowStableKey(row.sourcePosGara)
       const rawTempo = tempoLikeGt7(row)
       const isDoppiato = isDoppiatoValue(rawTempo)
-      const isDnf = /^DNF$/i.test(rawTempo.trim())
+const isDnf = /^(DNF|DNF-I|DNFV)$/i.test(rawTempo.trim())
+const isAbsence = /^(ASS-I|ASS-G)$/i.test(rawTempo.trim())
+const absenceValue: AbsenceOverrideValue =
+  absenceOverrides[key] || (rawTempo.trim().toUpperCase() === "ASS-G" ? "ASS-G" : "ASS-I")
       const manualGap = (lapOverrides[key] || "").trim()
       const manualGapMs = isDoppiato ? parseManualLeaderGapInputMs(manualGap) : null
       const comparable = manualGapMs != null || isRowComparable(row, leaderMs)
 
       return {
-        index,
-        row,
-        key,
-        isDoppiato,
-        isDnf,
-        comparable,
+  index,
+  row,
+  key,
+  isDoppiato,
+  isDnf,
+  isAbsence,
+  absenceValue,
+  comparable,
         canEditPenalty: true,
         manualGap,
         manualGapValid: manualGap.length === 0 ? true : manualGapMs != null,
         manualGapMs,
       }
     })
-  }, [dgTableRows, lapOverrides])
+  }, [dgTableRows, lapOverrides, absenceOverrides])
 
   const finalCsv = useMemo(
   () => buildCsvFromRows(finalRows, { ...unionMeta, gara: normalizedGaraForOutput, lega: effectiveLega }),
@@ -6144,6 +6255,60 @@ if (hasUnresolvedAuto) {
   const currentRaceSnapshot = useMemo<SavedRaceState>(() => {
   return championshipState.races[currentRace] || {}
 }, [championshipState, currentRace])
+
+const unjustifiedAbsenceCounts = useMemo(() => {
+  const counts: Record<string, number> = {}
+
+  for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
+    const raceState = championshipState.races[raceNumber]
+    if (!raceState) continue
+
+    for (const league of CHAMPIONSHIP_LEAGUES) {
+      const lobbyState = raceState[league]
+      if (!lobbyState) continue
+
+      for (const [lobby, snapshot] of Object.entries(lobbyState)) {
+        if (!snapshot) continue
+
+        // La lobby attualmente aperta viene conteggiata dai finalRows,
+        // così evitiamo un doppio conteggio se era già stata salvata.
+        if (
+          raceNumber === currentRace &&
+          league === selectedLeague &&
+          lobby === selectedLobby
+        ) {
+          continue
+        }
+
+        for (const row of snapshot.finalRows || []) {
+          if (tempoLikeGt7(row).trim().toUpperCase() !== "ASS-I") continue
+
+          const key = normalizeDriverNameForChampionship(row.pilota)
+          if (!key) continue
+
+          counts[key] = (counts[key] || 0) + 1
+        }
+      }
+    }
+  }
+
+  for (const row of finalRows) {
+    if (tempoLikeGt7(row).trim().toUpperCase() !== "ASS-I") continue
+
+    const key = normalizeDriverNameForChampionship(row.pilota)
+    if (!key) continue
+
+    counts[key] = (counts[key] || 0) + 1
+  }
+
+  return counts
+}, [
+  championshipState,
+  currentRace,
+  selectedLeague,
+  selectedLobby,
+  finalRows,
+])
 
 const currentRoundMovements = useMemo<RoundMovementState>(() => {
   return championshipState.roundMovements?.[currentRace] || {}
@@ -6634,16 +6799,22 @@ const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
 
 let resolvedStatus: ChampionshipCellStatus | null = baseCell.status
 
-if (rawTempo === "DNFV") {
-  resolvedStatus = "DNFV"
-} else if (rawTempo === "DNF-I") {
-  resolvedStatus = "DNF-I"
-} else if (rawTempo === "DNF") {
-  resolvedStatus = "DNF"
-} else if (rawTempo === "DNP") {
-  resolvedStatus = "DNP"
+if (rawTempo === "NC") {
+  resolvedStatus = "NC"
 } else if (rawTempo === "BOX") {
   resolvedStatus = "BOX"
+} else if (
+  rawTempo === "DNF" ||
+  rawTempo === "DNF-I" ||
+  rawTempo === "DNFV"
+) {
+  resolvedStatus = "NC"
+} else if (rawTempo === "ASS-I") {
+  resolvedStatus = "ASS-I"
+} else if (rawTempo === "ASS-G") {
+  resolvedStatus = "ASS-G"
+} else if (rawTempo === "DNP") {
+  resolvedStatus = "DNP"
 } else if (rawTempo === "DSQ") {
   resolvedStatus = "DSQ"
 }
@@ -6843,9 +7014,6 @@ for (const movementRound of [1, 2, 3, 4, 5]) {
     }
   }
 }
- for (const driver of map.values()) {
-  applyFourthDnpAsDsqRule(driver)
-}
 
 const activeDrawerDrivers = new Set(
   CHAMPIONSHIP_LEAGUES.flatMap((league) =>
@@ -6858,30 +7026,8 @@ const activeDrawerDrivers = new Set(
 return Array.from(map.values())
   .filter((driver) => {
     const driverKey = normalizeDriverNameForChampionship(driver.pilota)
-
-    if (!activeDrawerDrivers.has(driverKey)) return false
-
-    const disqualificationRace = getDnpDisqualificationRace(driver)
-
-  // Se non è mai stato squalificato → resta
-  if (disqualificationRace == null) return true
-
-  // Se siamo nella gara della DSQ → resta visibile
-  if (currentRace <= disqualificationRace) return true
-
-  // Da qui in poi: siamo DOPO la DSQ
-  // 👉 resta SOLO se è ancora nel cassetto
-
-  const isStillInDrawer = CHAMPIONSHIP_LEAGUES.some((league) =>
-    (workbenchDriverLeagueMap[league] || []).some(
-      (p) =>
-        normalizeDriverNameForChampionship(p) ===
-        normalizeDriverNameForChampionship(driver.pilota)
-    )
-  )
-
-  return isStillInDrawer
-})
+    return activeDrawerDrivers.has(driverKey)
+  })
   .sort((a, b) => {
     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
     return a.pilota.localeCompare(b.pilota, "it", { sensitivity: "base" })
@@ -6973,23 +7119,6 @@ const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
   selectedLeague,
   currentRoundMovements,
 ])
-
-const driversToRemoveAfterDsq = useMemo(() => {
-  return driverChampionship.filter((driver) => {
-    let dnpOrDsqCount = 0
-
-    for (let raceNumber = 1; raceNumber <= 13; raceNumber++) {
-      const cell = driver.raceResults[raceNumber]
-      if (!cell) continue
-
-      if (cell.status === "DNP" || cell.status === "DSQ") {
-        dnpOrDsqCount += 1
-      }
-    }
-
-    return dnpOrDsqCount >= 4
-  })
-}, [driverChampionship])
 
 function exportRaceDgJson() {
   const leagueForFile = normalizeLeagueKey(effectiveLega) || selectedLeague
@@ -9789,6 +9918,8 @@ async function run(targetLeague?: ChampionshipLeagueKey) {
   setPenalties({})
   setLapOverrides({})
   setDnfOverrides({})
+  setAbsenceOverrides({})
+  setManualDsqOverrides({})
 
   setManualPilotOverrides({})
   setManualAutoOverrides({})
@@ -9919,6 +10050,8 @@ setQualiRows(extractedQualiRows)
   setExportMetaInPng(false)
   setLapOverrides({})
   setDnfOverrides({})
+  setAbsenceOverrides({})
+  setManualDsqOverrides({})
   setShowExportModal(false)
   setManualGaraOverride("")
   setManualLegaOverride(keepSelectedLeague ? selectedLeague : "")
@@ -9963,7 +10096,7 @@ function exportChampionshipBackup() {
 
     const a = document.createElement("a")
     a.href = url
-    a.download = `albixximo_prt_backup_${new Date()
+    a.download = `union_2026_backup_${new Date()
       .toISOString()
       .slice(0, 19)
       .replace(/[:T]/g, "-")}.json`
@@ -10317,38 +10450,6 @@ function removePilotFromLeagueDrawer(
   })
 }
 
-function removeDsqDriversFromDrawer() {
-  if (driversToRemoveAfterDsq.length === 0) return
-
-  const keysToRemove = new Set(
-    driversToRemoveAfterDsq.map((driver) =>
-      normalizeDriverNameForChampionship(driver.pilota)
-    )
-  )
-
-  setWorkbenchDriverLeagueMap((prev) => {
-  const next: DriverLeagueMap = {
-    STAR: [...prev.STAR],
-    ELITE: [...prev.ELITE],
-    "PRO GOLD": [...prev["PRO GOLD"]],
-    "PRO SILVER": [...prev["PRO SILVER"]],
-    "PRO AMA": [...prev["PRO AMA"]],
-    AMA: [...prev.AMA],
-  }
-
-    for (const league of CHAMPIONSHIP_LEAGUES) {
-      next[league] = next[league].filter(
-        (pilot) =>
-          !keysToRemove.has(
-            normalizeDriverNameForChampionship(pilot)
-          )
-      )
-    }
-
-    return next
-  })
-}
-
 function saveDriverTeamOverride(pilot: string) {
   const nextTeamCode = editingDriverTeamDraft.trim().toUpperCase()
 
@@ -10507,10 +10608,12 @@ function confirmSaveCurrentLeague() {
     finalRows,
     unionMeta,
     penalties,
-    lapOverrides,
-    dnfOverrides,
-    manualGaraOverride,
-    manualLegaOverride,
+lapOverrides,
+dnfOverrides,
+absenceOverrides,
+manualDsqOverrides,
+manualGaraOverride,
+manualLegaOverride,
     manualPilotOverrides,
     manualAutoOverrides,
     manualDistaccoOverrides,
@@ -10602,7 +10705,9 @@ clearCurrentWorkbench(false)
   )
 )
   setLapOverrides(snapshot.lapOverrides || {})
-  setDnfOverrides(snapshot.dnfOverrides || {})
+setDnfOverrides(snapshot.dnfOverrides || {})
+setAbsenceOverrides(snapshot.absenceOverrides || {})
+setManualDsqOverrides(snapshot.manualDsqOverrides || {})
 
   setManualPilotOverrides(snapshot.manualPilotOverrides || {})
   setManualAutoOverrides(snapshot.manualAutoOverrides || {})
@@ -10739,19 +10844,45 @@ function resetAllLeaguesInCurrentRace() {
   setDnfOverrides((prev) => {
     const next = { ...prev }
 
-    if (value === "DNFV") {
-      next[key] = "DNFV"
-    } else if (value === "DNF-I") {
-      next[key] = "DNF-I"
+    if (value === "BOX") {
+      next[key] = "BOX"
     } else {
-      next[key] = "DNF"
+      next[key] = "NC"
     }
 
     return next
   })
 }
 
-  function openPilotCorrectionModal() {
+  function setAbsenceOverrideValue(sourcePosGara: number, value: string) {
+  const key = getPrtRowStableKey(sourcePosGara)
+
+  setAbsenceOverrides((prev) => ({
+    ...prev,
+    [key]: value === "ASS-G" ? "ASS-G" : "ASS-I",
+  }))
+}
+
+function setManualDsqOverrideValue(
+  sourcePosGara: number,
+  enabled: boolean
+) {
+  const key = getPrtRowStableKey(sourcePosGara)
+
+  setManualDsqOverrides((prev) => {
+    const next = { ...prev }
+
+    if (enabled) {
+      next[key] = true
+    } else {
+      delete next[key]
+    }
+
+    return next
+  })
+}
+
+function openPilotCorrectionModal() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   const nextDraft: Record<number, string> = {}
   for (const row of displayRows) {
@@ -12397,15 +12528,18 @@ const lastCreatedMovementText = useMemo(() => {
                 width: "15%",
               }}
             >
-              DNF-I / DNF-V
+              STATO DG
             </th>
           </tr>
         </thead>
 
         <tbody>
-          {dgInfo.map(({ row, isDoppiato, isDnf, key, manualGap, manualGapValid }, idx) => {
-            const dnfValue = dnfOverrides[key] || "DNF"
+          {dgInfo.map(
+  ({ row, isDoppiato, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
+            const dnfValue = dnfOverrides[key] || "NC"
             const penaltySeconds = penalties[key] || 0
+            const unjustifiedAbsenceCount =
+  unjustifiedAbsenceCounts[normalizeDriverNameForChampionship(row.pilota)] || 0
 
             return (
               <tr
@@ -12414,7 +12548,24 @@ const lastCreatedMovementText = useMemo(() => {
                   background: idx % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.10)",
                 }}
               >
-                <TableCell>{row.pilota}</TableCell>
+                <TableCell>
+  <div style={{ display: "grid", gap: 4 }}>
+    <span>{row.pilota}</span>
+
+    {unjustifiedAbsenceCount >= 2 ? (
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 900,
+          color: "#ff6b6b",
+          letterSpacing: 0.2,
+        }}
+      >
+        ⚠ 2 ASSENZE INGIUSTIFICATE — VALUTARE DSQ
+      </span>
+    ) : null}
+  </div>
+</TableCell>
 
                 <TableCell align="center">
   <div
@@ -12512,33 +12663,72 @@ const lastCreatedMovementText = useMemo(() => {
                   </TableCell>
 
                   <TableCell align="center">
-                    {isDnf ? (
-                      <select
-  value={dnfValue}
-  onChange={(e) => setDnfOverrideValue(row.sourcePosGara, e.target.value)}
-  style={{
-    minWidth: 120,
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.26)",
-    color: "white",
-  }}
->
-  <option value="DNF" style={{ background: "#11151d", color: "white" }}>
-  DNF
-</option>
-<option value="DNF-I" style={{ background: "#11151d", color: "white" }}>
-  DNF-I
-</option>
-<option value="DNFV" style={{ background: "#11151d", color: "white" }}>
-  DNFV
-</option>
-</select>
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
+  <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
+    {isDnf ? (
+      <select
+        value={dnfValue}
+        onChange={(e) => setDnfOverrideValue(row.sourcePosGara, e.target.value)}
+        style={{
+          minWidth: 120,
+          padding: "8px 10px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(0,0,0,0.26)",
+          color: "white",
+        }}
+      >
+        <option value="NC" style={{ background: "#11151d", color: "white" }}>
+          NC
+        </option>
+        <option value="BOX" style={{ background: "#11151d", color: "white" }}>
+          BOX
+        </option>
+      </select>
+    ) : isAbsence ? (
+      <select
+        value={absenceValue}
+        onChange={(e) => setAbsenceOverrideValue(row.sourcePosGara, e.target.value)}
+        style={{
+          minWidth: 120,
+          padding: "8px 10px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(0,0,0,0.26)",
+          color: "white",
+        }}
+      >
+        <option value="ASS-I" style={{ background: "#11151d", color: "white" }}>
+          ASS-I
+        </option>
+        <option value="ASS-G" style={{ background: "#11151d", color: "white" }}>
+          ASS-G
+        </option>
+      </select>
+    ) : (
+      <span>-</span>
+    )}
+
+    <label
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 11,
+        fontWeight: 900,
+        cursor: "pointer",
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={!!manualDsqOverrides[key]}
+        onChange={(e) =>
+          setManualDsqOverrideValue(row.sourcePosGara, e.target.checked)
+        }
+      />
+      DSQ
+    </label>
+  </div>
+</TableCell>
                 </tr>
               )
             })}
@@ -12599,28 +12789,6 @@ const lastCreatedMovementText = useMemo(() => {
   0
 )} piloti totali
       </div>
-
-      {driversToRemoveAfterDsq.length > 0 && (
-  <button
-    onClick={(e) => {
-      e.stopPropagation()
-      setShowRemoveDsqDriversModal(true)
-    }}
-    style={{
-      padding: "8px 12px",
-      borderRadius: 12,
-      border: "1px solid rgba(239,68,68,0.35)",
-      background: "rgba(239,68,68,0.16)",
-      color: "white",
-      cursor: "pointer",
-      fontWeight: 900,
-      fontSize: 12,
-      textTransform: "uppercase",
-    }}
-  >
-    Rimuovi DSQ dal cassetto
-  </button>
-)}
 
       <div
         style={{
@@ -13970,116 +14138,6 @@ const lastCreatedMovementText = useMemo(() => {
           }}
         >
           Conferma reset
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-      {showRemoveDsqDriversModal && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.72)",
-      backdropFilter: "blur(6px)",
-      display: "grid",
-      placeItems: "center",
-      zIndex: 9999,
-      padding: 20,
-    }}
-  >
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 560,
-        borderRadius: 22,
-        border: "1px solid rgba(255,255,255,0.12)",
-        background:
-          "linear-gradient(180deg, rgba(18,22,31,0.98), rgba(8,10,15,0.98))",
-        boxShadow: "0 20px 80px rgba(0,0,0,0.55)",
-        padding: 20,
-        display: "grid",
-        gap: 16,
-      }}
-    >
-      <div>
-        <div style={{ fontSize: 20, fontWeight: 900 }}>
-          Rimuovere piloti DSQ dal cassetto?
-        </div>
-
-        <div
-          style={{
-            marginTop: 8,
-            fontSize: 13,
-            opacity: 0.78,
-            lineHeight: 1.45,
-          }}
-        >
-          Questi piloti hanno raggiunto il 4° DNP/DSQ in classifica generale e
-          verranno rimossi dal cassetto piloti:
-        </div>
-
-        <div
-          style={{
-            marginTop: 12,
-            display: "grid",
-            gap: 6,
-            fontSize: 13,
-            fontWeight: 800,
-          }}
-        >
-          {driversToRemoveAfterDsq.map((driver) => (
-            <div key={driver.pilota}>
-              • {driver.pilota} — {driver.league}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={() => setShowRemoveDsqDriversModal(false)}
-          style={{
-            padding: "12px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.06)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          Annulla
-        </button>
-
-        <button
-          onClick={() => {
-            removeDsqDriversFromDrawer()
-            setShowRemoveDsqDriversModal(false)
-          }}
-          style={{
-            padding: "12px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(239,68,68,0.35)",
-            background: "rgba(239,68,68,0.20)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          Conferma rimozione
         </button>
       </div>
     </div>
