@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+  name="viewport"
+  content="width=device-width, initial-scale=0.5, minimum-scale=0.5, maximum-scale=3, user-scalable=yes, viewport-fit=cover"
+/>
+  <title>UNION 2026 - Portale Classifiche</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+
+  
+  <style>
+  @font-face {
+  font-family: 'VampireWars';
+  src: url('/fonts/VampireWars.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(1200px 600px at 15% 10%, rgba(255,215,0,0.14), transparent 50%),
+        radial-gradient(900px 500px at 85% 20%, rgba(160,90,255,0.16), transparent 50%),
+        linear-gradient(180deg, #0b0d12 0%, #07080c 100%);
+      color: white;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1680px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background:
+        radial-gradient(900px 240px at 10% 10%, rgba(255,215,0,0.16), transparent 60%),
+        radial-gradient(700px 240px at 90% 0%, rgba(160,90,255,0.18), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      box-shadow: 0 14px 60px rgba(0,0,0,0.45);
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .hero-title-wrap {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .hero-title {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      line-height: 1.02;
+      text-shadow: 0 0 18px rgba(255,215,0,0.22);
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      opacity: 0.82;
+      line-height: 1.4;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.55px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      width: fit-content;
+    }
+
+    .hero-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hero-logo img {
+      height: 120px;
+      width: auto;
+      max-width: 100%;
+      filter:
+        drop-shadow(0 0 18px rgba(255,215,0,0.55))
+        drop-shadow(0 0 40px rgba(255,215,0,0.25));
+    }
+
+    .tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.race-png-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.22);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.race-png-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.race-png-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  line-height: 1.1;
+
+  color: white;
+
+  text-shadow:
+    0 0 10px rgba(255,215,0,0.35),
+    0 0 18px rgba(160,90,255,0.25);
+}
+
+.race-png-select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.28);
+  color: white;
+  font-weight: 900;
+}
+
+.race-png-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.race-png-viewer {
+  display: none;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.30);
+}
+
+.race-png-viewer.visible {
+  display: block;
+}
+
+.race-png-viewer img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+}
+
+.race-dg-panel {
+  display: none;
+  margin-top: 14px;
+}
+
+.dg-accordion {
+  border-radius: 20px;
+  border: 1px solid rgba(255,215,0,0.24);
+  background:
+    radial-gradient(700px 220px at 8% 0%, rgba(255,215,0,0.14), transparent 55%),
+    radial-gradient(520px 220px at 92% 0%, rgba(160,90,255,0.13), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(0,0,0,0.28));
+  box-shadow:
+    0 12px 36px rgba(0,0,0,0.28),
+    inset 0 0 18px rgba(255,255,255,0.025);
+  overflow: hidden;
+}
+
+.dg-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 20px 4px 20px;
+}
+
+.dg-logo-wrap img {
+  display: block;
+  width: auto;
+  height: 54px;
+  object-fit: contain;
+}
+
+.dg-accordion-summary {
+  padding: 17px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dg-accordion-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(255,215,0,0.28),
+    0 0 18px rgba(160,90,255,0.18);
+}
+
+.dg-accordion-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.68;
+  letter-spacing: 0.3px;
+}
+
+.dg-accordion-content {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 16px 16px;
+}
+
+.dg-signature {
+  padding: 0 20px 18px 20px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.72);
+}
+
+.dg-driver-row {
+  appearance: none;
+  border: none;
+  width: 100%;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  color: white;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    inset 0 0 14px rgba(255,255,255,0.018),
+    0 8px 18px rgba(0,0,0,0.18);
+}
+
+.dg-driver-name {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.25px;
+}
+
+.dg-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.65px;
+  box-shadow:
+    0 0 16px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.dg-mini-pill.time {
+  background: linear-gradient(180deg, #ff4b4b, #b91c1c);
+}
+
+.race-png-viewer.loading::before {
+  content: "Caricamento...";
+  display: block;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 40px 0;
+  opacity: 0.7;
+}
+
+.tab-btn {
+  appearance: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: white;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+}
+
+    .tab-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(255,215,0,0.22);
+      box-shadow: 0 0 18px rgba(255,215,0,0.08);
+    }
+
+    .tab-btn.saved {
+      background: rgba(34,197,94,0.14);
+      border-color: rgba(34,197,94,0.30);
+      box-shadow: 0 0 18px rgba(34,197,94,0.08);
+    }
+
+    .tab-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #22c55e, #15803d);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow:
+    0 0 8px rgba(34,197,94,0.85),
+    0 0 18px rgba(34,197,94,0.45);
+  vertical-align: middle;
+}
+
+.tab-missing {
+  opacity: 0.55;
+}
+
+    .tab-btn.preloaded {
+      opacity: 1;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10));
+      border-color: rgba(255,215,0,0.42);
+      box-shadow: 0 0 18px rgba(255,215,0,0.12);
+    }
+
+    .tab-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .tab-btn.active-loading {
+  background: rgba(255,215,0,0.18);
+  border-color: rgba(255,215,0,0.45);
+  box-shadow: 0 0 18px rgba(255,215,0,0.18);
+}
+
+.tab-btn.active-loading::after {
+  content: " ⏳";
+  animation: blink 1s infinite;
+}
+
+.tab-btn.active-ready {
+  background: linear-gradient(180deg, rgba(34,197,94,0.18), rgba(34,197,94,0.10));
+  border-color: rgba(34,197,94,0.45);
+}
+
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+    .viewer-shell {
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 60px rgba(0,0,0,0.35);
+  overflow: visible;
+  min-height: 0;
+  position: relative;
+}
+
+    .home-panel {
+      min-height: 980px;
+      display: grid;
+      place-items: center;
+      padding: 40px;
+    }
+
+    .home-card {
+  width: 100%;
+  max-width: 680px; /* più stretta */
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  box-shadow: 0 10px 30px rgba(0,0,0,0.30);
+
+  padding: 20px; /* meno spazio */
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+}
+
+    .home-card img {
+  max-width: 100%;
+  height: auto;
+  max-height: 140px; /* prima era ~220 */
+  filter:
+    drop-shadow(0 0 14px rgba(255,215,0,0.35))
+    drop-shadow(0 0 22px rgba(255,215,0,0.18));
+}
+
+    .home-card-title {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  line-height: 1.2;
+
+  text-shadow:
+    0 0 10px rgba(255,215,0,0.25),
+    0 0 18px rgba(160,90,255,0.18);
+}
+
+     .home-card.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 1.6s ease, transform 0.8s ease;
+}
+
+    .home-card-text {
+      font-size: 14px;
+      line-height: 1.55;
+      opacity: 0.82;
+      max-width: 760px;
+    }
+
+    .booting-panel {
+      display: grid;
+      place-items: center;
+      min-height: 980px;
+      padding: 40px;
+    }
+
+    .booting-card {
+      width: 100%;
+      max-width: 760px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      box-shadow: 0 12px 40px rgba(0,0,0,0.30);
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .booting-title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .booting-text {
+      font-size: 13px;
+      line-height: 1.55;
+      opacity: 0.8;
+      max-width: 560px;
+    }
+
+    .booting-bar {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: inset 0 0 14px rgba(0,0,0,0.25);
+    }
+
+    .booting-bar::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -35%;
+      width: 35%;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, rgba(255,215,0,0.95), rgba(220,220,220,0.95), rgba(160,90,255,0.95));
+      box-shadow:
+        0 0 18px rgba(255,215,0,0.25),
+        0 0 22px rgba(160,90,255,0.18);
+      animation: portalLoadSlide 2.8s ease-in-out infinite;
+    }
+
+    .booting-bar::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -20%;
+      width: 20%;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.42), rgba(255,255,255,0));
+      filter: blur(2px);
+      animation: portalLoadShine 2.8s ease-in-out infinite;
+    }
+
+    .movements-wrap {
+      display: none;
+      width: 100%;
+      justify-content: flex-end;
+      padding: 14px 14px 0 14px;
+      background: rgba(0,0,0,0.10);
+    }
+
+    .movements-wrap.visible {
+      display: flex;
+    }
+
+    .movements-details {
+      width: 100%;
+      max-width: 660px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+      overflow: hidden;
+    }
+
+    .movements-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: white;
+
+  border-radius: 16px;
+
+  background:
+    linear-gradient(90deg,
+      rgba(34,197,94,0.22),
+      rgba(255,215,0,0.18),
+      rgba(239,68,68,0.22)
+    );
+
+  border: 1px solid rgba(255,255,255,0.12);
+
+  box-shadow:
+    0 0 25px rgba(255,215,0,0.10),
+    inset 0 0 20px rgba(255,255,255,0.05);
+
+  transition: all 0.2s ease;
+}
+
+.movements-summary:hover {
+  transform: scale(1.015);
+  box-shadow:
+    0 0 35px rgba(255,215,0,0.18),
+    inset 0 0 25px rgba(255,255,255,0.08);
+}
+
+.movements-content {
+  padding: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.movements-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.movements-label-promote,
+.movements-label-relegate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+
+  padding-top: 2px;
+}
+
+.movements-label-promote {
+  color: #22c55e;
+}
+
+.movements-label-relegate {
+  color: #ef4444;
+}
+
+.movement-arrow {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.movement-arrow-up {
+  color: #22c55e;
+}
+
+.movement-arrow-down {
+  color: #ef4444;
+}
+
+.movements-list {
+  display: grid;
+  gap: 8px;
+}
+
+.movement-driver-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: fit-content;
+
+  padding: 8px 12px;
+  border-radius: 999px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.movement-driver-badge-promote {
+  background: rgba(34, 197, 94, 0.14);
+  color: #d9ffe6;
+}
+
+.movement-driver-badge-relegate {
+  background: rgba(239, 68, 68, 0.14);
+  color: #ffe0e0;
+}
+
+.movement-driver-dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 999px;
+
+  background: currentColor;
+}
+
+.movements-empty {
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.84);
+}
+
+.movements-note {
+  padding-top: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.72);
+}
+
+    .iframe-wrap {
+  display: none;
+  width: 100%;
+  min-height: 0;
+  background: transparent;
+  padding: 14px 14px 0 14px;
+}
+
+    .iframe-wrap.visible {
+      display: block;
+    }
+
+    #leagueFrame {
+  width: 100%;
+  display: block;
+}
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 6px 4px 0 4px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.58);
+      letter-spacing: 0.2px;
+    }
+
+    @keyframes portalLoadSlide {
+      0% { left: -35%; }
+      50% { left: 100%; }
+      100% { left: -35%; }
+    }
+
+    @keyframes portalLoadShine {
+      0% { left: -20%; }
+      50% { left: 100%; }
+      100% { left: -20%; }
+    }
+
+    @media (min-width: 701px) {
+  .home-panel,
+  .booting-panel {
+    min-height: 360px;
+    place-items: start center;
+    padding: 34px 40px 40px 40px;
+  }
+
+  .home-card,
+  .booting-card {
+    margin-top: 0;
+  }
+}
+    
+@media (min-width: 701px) {
+  .movements-wrap {
+    justify-content: flex-start;
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 1100px) {
+      body {
+        padding: 14px;
+      }
+
+      .shell {
+        gap: 14px;
+      }
+
+      .hero {
+        padding: 16px;
+        gap: 14px;
+      }
+
+      .hero-top {
+        align-items: flex-start;
+      }
+
+      .hero-title {
+        font-size: 28px;
+      }
+
+      .hero-subtitle {
+        font-size: 13px;
+      }
+
+      .viewer-shell {
+        min-height: auto;
+      }
+
+      .home-panel,
+      .booting-panel {
+        min-height: auto;
+        padding: 22px 14px;
+      }
+
+      .iframe-wrap {
+        min-height: auto;
+        padding: 10px;
+      }
+    }
+
+    @media (max-width: 700px) {
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  body {
+    padding: 10px;
+  }
+
+  .shell {
+    width: 1260px;
+    min-width: 1260px;
+    max-width: none;
+    margin: 0;
+  }
+
+  .hero {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .hero-title {
+    font-size: 22px;
+    line-height: 1.08;
+  }
+
+  .hero-subtitle {
+    font-size: 12px;
+  }
+
+  .hero-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .hero-logo img {
+    height: 82px;
+  }
+
+  .tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tab-btn {
+    padding: 13px 12px;
+    font-size: 11px;
+  }
+
+  .viewer-shell {
+    width: 1260px;
+    min-width: 1260px;
+    max-width: none;
+    overflow: visible;
+    border-radius: 18px;
+  }
+
+  .iframe-wrap {
+    width: 1260px;
+    min-width: 1260px;
+    max-width: none;
+    padding: 8px;
+    overflow: visible;
+  }
+
+  #leagueFrame {
+    width: 1260px !important;
+    min-width: 1260px !important;
+    display: block;
+  }
+
+  .home-panel,
+  .booting-panel {
+    padding: 16px 10px;
+  }
+
+  .home-card,
+  .booting-card {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+
+  .home-card-title,
+  .booting-title {
+    font-size: 22px;
+  }
+
+  .home-card-text,
+  .booting-text {
+    font-size: 13px;
+  }
+
+  .movements-wrap {
+    padding: 10px 10px 0 10px;
+  }
+
+  .movements-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .footer {
+    font-size: 11px;
+  }
+  @media (max-width: 700px) {
+  #splashText {
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+}
+  /* 🔥 FIX OVERLAP HEADER CLASSIFICA */
+  .championship-header,
+  .header-top,
+  .title-row {
+    display: flex;
+    flex-wrap: wrap !important;
+    gap: 6px;
+  }
+
+  .championship-title,
+  .header-title {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  .championship-subtitle,
+  .header-circuit {
+    width: 100%;
+    font-size: 11px;
+    opacity: 0.8;
+  }
+}
+
+    @media print {
+      html, body {
+        background: #0b0d12;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .shell {
+        max-width: none;
+        gap: 12px;
+      }
+    }
+
+    #splashScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: black;
+  display: block;
+  overflow: hidden;
+}
+
+#splashScreen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  opacity: 0;
+  animation: splashImageIn 1s ease-out 0.65s forwards;
+}
+
+.splash-desktop {
+  display: block !important;
+}
+
+.splash-mobile {
+  display: none !important;
+}
+
+@media (orientation: portrait) {
+  .splash-desktop {
+    display: none !important;
+  }
+
+  .splash-mobile {
+    display: block !important;
+  }
+}
+
+#splashText {
+  position: absolute;
+  bottom: 12%;
+  width: 100%;
+  text-align: center;
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  z-index: 3;
+
+  opacity: 0;
+  transform: translateY(26px);
+
+  text-shadow:
+    0 0 12px rgba(255,215,0,0.95),
+    0 0 28px rgba(255,215,0,0.55),
+    0 0 46px rgba(0,0,0,0.9);
+
+  animation: splashTextIn 2.4s ease-out 0.05s forwards;
+}
+
+#splashSubText {
+  position: absolute;
+  bottom: 4%;
+  width: 100%;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  opacity: 0;
+  color: rgba(255,255,255,0.95);
+  font-family: 'Orbitron', sans-serif;
+  z-index: 3;
+
+  text-shadow:
+    0 0 8px rgba(255,255,255,0.75),
+    0 0 16px rgba(255,215,0,0.55);
+
+  animation: splashTextIn 1.4s ease-out 0.15s forwards;
+}
+
+.splash-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  width: min(420px, 72vw);
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 12px rgba(255, 190, 40, 0.18);
+  z-index: 3;
+  opacity: 0;
+animation: unionSplashTrackIn 0.25s ease 1s forwards;
+}
+
+@keyframes unionSplashTrackIn {
+  to {
+    opacity: 1;
+  }
+}
+.splash-progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    #8f5b00 0%,
+    #ffb300 45%,
+    #fff0a0 70%,
+    #ffb300 100%
+  );
+  box-shadow:
+    0 0 8px rgba(255, 183, 0, 0.9),
+    0 0 18px rgba(255, 153, 0, 0.65);
+  animation: unionSplashProgress 7s linear 1s forwards;
+}
+
+@keyframes unionSplashProgress {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+#splashHint {
+  display: block;
+  font-size: 24px; /* più grande */
+  margin-top: 14px;
+  color: black; /* testo nero pieno */
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  text-align: center;
+
+  /* 🔥 contorno bianco + glow oro */
+  text-shadow:
+    /* contorno bianco netto */
+    1px 1px 0 white,
+    -1px 1px 0 white,
+    1px -1px 0 white,
+    -1px -1px 0 white,
+
+    /* glow bianco base */
+    0 0 6px rgba(255,255,255,1),
+    0 0 12px rgba(255,255,255,0.9),
+
+    /* glow oro forte */
+    0 0 18px rgba(255,215,0,0.9),
+    0 0 30px rgba(255,215,0,0.7),
+    0 0 46px rgba(255,215,0,0.5);
+
+  animation: splashHintGlow 1.6s ease-in-out infinite;
+}
+
+@media (max-width: 700px) {
+  #splashHint {
+    font-size: 20px;
+    padding: 0 12px;
+  }
+}
+
+@keyframes splashHintGlow {
+  0% {
+    opacity: 0.7;
+    text-shadow:
+      0 0 4px rgba(255,255,255,0.6),
+      0 0 8px rgba(255,215,0,0.4);
+  }
+
+  50% {
+    opacity: 1;
+    text-shadow:
+      0 0 10px rgba(255,255,255,1),
+      0 0 18px rgba(255,215,0,0.9);
+  }
+
+  100% {
+    opacity: 0.7;
+    text-shadow:
+      0 0 4px rgba(255,255,255,0.6),
+      0 0 8px rgba(255,215,0,0.4);
+  }
+}
+
+@keyframes splashTextIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashImageIn {
+  to {
+    opacity: 1;
+  }
+}
+  </style>
+</head>
+<body>
+<div id="splashScreen">
+  <img
+    class="splash-desktop"
+    src="/union-splash.webp"
+    alt="UNION 2026 Splash Desktop"
+  />
+
+  <img
+    class="splash-mobile"
+    src="/union-splash-mobile.webp"
+    alt="UNION 2026 Splash Mobile"
+  />
+
+  <div class="splash-progress">
+  <div class="splash-progress-bar"></div>
+</div>
+</div>
+  <div class="shell">
+    <div class="hero">
+  <div class="hero-top">
+    <div class="hero-title-wrap">
+      <div class="hero-badge">UNION 2026 • ROUND 2</div>
+<div class="hero-title">Portale Classifiche UNION</div>
+      <div class="hero-subtitle">
+        Consulta le classifiche generali delle Leghe e i risultati delle singole gare del Round 2.
+      </div>
+    </div>
+
+    <div class="hero-logo">
+      <img src="/union-logo.png" alt="UNION 2026 Logo" />
+    </div>
+  </div>
+</div>
+
+<div class="race-png-panel">
+  <div>
+    <div class="race-png-title">Classifiche Assolute UNION 2026 • Round 2</div>
+    <div style="font-size:12px; opacity:0.72; margin-top:4px;">
+      Seleziona una lega per aprire la relativa classifica assoluta.
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    
+      <button
+        class="tab-btn "
+        data-league="STAR"
+        disabled
+        title="STAR non salvata"
+      >
+        STAR —
+      </button>
+    
+      <button
+        class="tab-btn "
+        data-league="ELITE"
+        disabled
+        title="ELITE non salvata"
+      >
+        ELITE —
+      </button>
+    
+      <button
+        class="tab-btn "
+        data-league="PRO GOLD"
+        disabled
+        title="PRO GOLD non salvata"
+      >
+        PRO GOLD —
+      </button>
+    
+      <button
+        class="tab-btn "
+        data-league="PRO SILVER"
+        disabled
+        title="PRO SILVER non salvata"
+      >
+        PRO SILVER —
+      </button>
+    
+      <button
+        class="tab-btn "
+        data-league="PRO AMA"
+        disabled
+        title="PRO AMA non salvata"
+      >
+        PRO AMA —
+      </button>
+    
+      <button
+        class="tab-btn "
+        data-league="AMA"
+        disabled
+        title="AMA non salvata"
+      >
+        AMA —
+      </button>
+    
+  </div>
+</div>
+
+<div class="race-png-panel">
+  <div class="race-png-head">
+  <div class="race-png-title">CLASSIFICHE GARA • ROUND 2</div>
+
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:6px;">
+
+    <div style="font-size:13px; opacity:0.82; font-weight:700;">
+  Seleziona Gara (1–5)
+</div>
+
+<select class="race-png-select" id="racePngSelect">
+  <option value="1">Gara 1</option>
+  <option value="2">Gara 2</option>
+  <option value="3">Gara 3</option>
+  <option value="4">Gara 4</option>
+  <option value="5">Gara 5</option>
+</select>
+    </div>
+  </div>
+
+  <div class="race-png-tabs" id="racePngTabs"></div>
+<div class="race-png-tabs" id="raceLobbyTabs"></div>
+
+  <div class="race-png-viewer" id="racePngViewer">
+  <img id="racePngImage" src="" alt="Classifica gara" />
+</div>
+
+<div class="race-dg-panel" id="raceDgPanel"></div>
+</div>
+
+    <div class="viewer-shell">
+      <div class="booting-panel" id="bootingPanel">
+        <div class="booting-card">
+          <div class="booting-title">Preparazione portale</div>
+
+<div
+  style="
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.35px;
+    text-transform: uppercase;
+    line-height: 1.15;
+    opacity: 0.92;
+  "
+>
+  Il caricamento può richiedere fino a 30 secondi
+</div>
+
+<div class="booting-bar"></div>
+
+<div class="booting-text">
+  Le leghe saranno visibili subito dopo il caricamento.
+  Il portale sta inizializzando le classifiche UNION 2026.
+</div>
+        </div>
+      </div>
+
+      <div class="home-panel" id="homePanel" style="display:grid;">
+        <div class="home-card">
+          <img src="/union-logo.png" alt="UNION 2026 Logo" />
+          <div class="home-card-title">ADESSO PUOI SELEZIONARE UNA LEGA</div>
+        </div>
+      </div>
+
+      <div class="movements-wrap" id="movementsWrap"></div>
+
+      <div class="iframe-wrap" id="iframeWrap">
+  <div id="leagueFrame"></div>
+</div>
+    </div>
+  </div>
+
+  <script>
+    const pages = {};
+    const movementSummaryByLeague = {"STAR":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]},"ELITE":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]},"PRO GOLD":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]},"PRO SILVER":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]},"PRO AMA":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]},"AMA":{"promotedIn":[],"relegatedFrom":[],"promotedFrom":[],"relegatedIn":[]}};
+    const isMovementRoundForHtml = false;
+    const orderedLeagues = ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"];
+
+const lobbiesByLeague = {
+  STAR: ["A1", "A5", "A10", "A17", "A29", "A34"],
+  ELITE: ["A2", "A8", "A12", "A18", "A30", "A35"],
+  "PRO GOLD": ["A3", "A14", "A21", "A24", "A28", "A31"],
+  "PRO SILVER": ["A4", "A9", "A13", "A22", "A25", "A36"],
+  "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
+  AMA: ["A7", "A11", "A19", "A23", "A27", "A33"]
+};
+
+    const tabs = document.getElementById("tabs");
+    const frame = document.getElementById("leagueFrame");
+    const homePanel = document.getElementById("homePanel");
+    const iframeWrap = document.getElementById("iframeWrap");
+    const movementsWrap = document.getElementById("movementsWrap");
+    const bootingPanel = document.getElementById("bootingPanel");
+    const racePngSelect = document.getElementById("racePngSelect");
+const racePngTabs = document.getElementById("racePngTabs");
+const raceLobbyTabs = document.getElementById("raceLobbyTabs");
+const racePngViewer = document.getElementById("racePngViewer");
+const racePngImage = document.getElementById("racePngImage");
+const raceDgPanel = document.getElementById("raceDgPanel");
+
+
+let selectedRacePng = "1";
+
+
+function renderRacePngTabs() {
+  if (!racePngTabs) return;
+
+  racePngTabs.innerHTML = "";
+
+  const raceLeagues = orderedLeagues;
+
+  raceLeagues.forEach(function(league) {
+  const btn = document.createElement("button");
+  btn.className = "tab-btn saved preloaded";
+  btn.type = "button";
+  btn.textContent = league;
+
+  btn.addEventListener("click", function() {
+  const allLeagueTabs = racePngTabs.querySelectorAll("button");
+
+  allLeagueTabs.forEach(function(tab) {
+    tab.classList.remove("active-ready");
+  });
+
+  btn.classList.add("active-ready");
+
+  renderRaceLobbyTabs(league);
+
+  if (racePngImage) {
+    racePngImage.src = "";
+  }
+
+  if (racePngViewer) {
+    racePngViewer.classList.remove("visible");
+    racePngViewer.classList.remove("loading");
+  }
+
+  if (raceDgPanel) {
+    raceDgPanel.style.display = "none";
+  }
+});
+
+  racePngTabs.appendChild(btn);
+});
+}
+
+function renderRaceLobbyTabs(league) {
+  if (!raceLobbyTabs) return;
+
+  raceLobbyTabs.innerHTML = "";
+
+  const lobbies = lobbiesByLeague[league] || [];
+
+  lobbies.forEach(function(lobby) {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn saved preloaded";
+    btn.type = "button";
+    btn.textContent = lobby;
+
+    btn.addEventListener("click", function() {
+      openRacePng(league, lobby);
+    });
+
+    raceLobbyTabs.appendChild(btn);
+  });
+}
+
+function openRacePng(league, lobby) {
+  if (!racePngImage || !racePngViewer || !raceLobbyTabs) return;
+
+  const src =
+    "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + ".png";
+
+  const allTabs = raceLobbyTabs.querySelectorAll("button");
+
+  allTabs.forEach(function(btn) {
+    btn.classList.remove("active-loading", "active-ready");
+  });
+
+  const activeBtn = Array.from(allTabs).find(function(btn) {
+    return btn.textContent === lobby;
+  });
+
+  if (activeBtn) {
+    activeBtn.classList.add("active-loading");
+  }
+
+  racePngImage.src = "";
+  racePngImage.alt =
+    "Classifica Gara " + selectedRacePng + " " + league + " " + lobby;
+
+  racePngViewer.classList.add("visible");
+  racePngViewer.classList.add("loading");
+  
+  if (raceDgPanel) {
+  raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
+
+  const dgSrc =
+  "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
+
+  fetch(dgSrc)
+    .then(function(response) {
+      if (!response.ok) return null;
+      return response.json();
+    })
+    .then(function(items) {
+      if (!Array.isArray(items) || items.length === 0) return;
+
+      let rowsHtml = "";
+
+      items.forEach(function(item) {
+  rowsHtml +=
+    '<div class="dg-driver-row">' +
+      '<span class="dg-driver-name">' +
+        escapeHtml(item.pilot || "-") +
+      '</span>' +
+      '<span class="dg-mini-pill time">' +
+        escapeHtml(item.sanction || ("+" + (item.seconds || 0) + " sec")) +
+      '</span>' +
+    '</div>';
+});
+
+raceDgPanel.innerHTML =
+  '<div class="dg-accordion">' +
+    '<div class="dg-logo-wrap">' +
+      '<img src="/union-logo.png" alt="UNION 2026 Logo" />' +
+    '</div>' +
+
+    '<div class="dg-accordion-summary">' +
+      '<div>' +
+        '<div class="dg-accordion-title">PROVVEDIMENTI DIREZIONE GARA</div>' +
+        '<div class="dg-accordion-subtitle">Gara ' +
+          selectedRacePng +
+          ' • ' +
+          league +
+          ' • ' +
+          lobby +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="dg-accordion-content">' +
+      rowsHtml +
+    '</div>' +
+
+    '<div class="dg-signature">La Direzione Gara</div>' +
+  '</div>';
+
+raceDgPanel.style.display = "grid";
+    })
+    .catch(function() {
+      raceDgPanel.style.display = "none";
+      raceDgPanel.innerHTML = "";
+    });
+}
+
+  const img = new Image();
+
+  img.onload = function() {
+    racePngImage.src = src;
+    racePngViewer.classList.remove("loading");
+
+    if (activeBtn) {
+      activeBtn.classList.remove("active-loading");
+      activeBtn.classList.add("active-ready");
+    }
+  };
+
+  img.onerror = function() {
+    racePngViewer.classList.remove("loading");
+
+    if (activeBtn) {
+      activeBtn.classList.remove("active-loading");
+    }
+  };
+
+  img.src = src;
+
+  // Chiude eventuale classifica assoluta aperta
+activeLeague = null;
+renderTabs();
+
+if (iframeWrap) {
+  iframeWrap.classList.remove("visible");
+}
+
+if (frame) {
+  frame.innerHTML = "";
+}
+
+if (movementsWrap) {
+  movementsWrap.classList.remove("visible");
+  movementsWrap.innerHTML = "";
+}
+  
+  if (bootingPanel) bootingPanel.style.display = "none";
+  if (homePanel) homePanel.style.display = "none";
+}
+
+if (racePngSelect) {
+  racePngSelect.value = selectedRacePng;
+
+  racePngSelect.addEventListener("change", function() {
+    selectedRacePng = racePngSelect.value;
+    renderRacePngTabs();
+    if (raceLobbyTabs) {
+  raceLobbyTabs.innerHTML = "";
+}
+    if (racePngTabs) {
+  const allLeagueTabs = racePngTabs.querySelectorAll("button");
+
+  allLeagueTabs.forEach(function(tab) {
+    tab.classList.remove("active-loading", "active-ready");
+  });
+}
+    if (racePngImage) racePngImage.src = "";
+    if (racePngViewer) {
+  racePngViewer.classList.remove("visible");
+  racePngViewer.classList.remove("loading");
+}
+  if (raceDgPanel) {
+  raceDgPanel.style.display = "none";
+}
+  });
+}
+
+renderRacePngTabs();
+
+    let activeLeague = null;
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function finishBoot() {
+  if (bootingPanel) {
+    bootingPanel.style.display = "none";
+  }
+
+  if (homePanel && !activeLeague) {
+    homePanel.style.display = "grid";
+  }
+}
+
+    function renderLeagueMovements(league) {
+  if (!movementsWrap) return;
+
+  if (!isMovementRoundForHtml) {
+    movementsWrap.classList.remove("visible");
+    movementsWrap.innerHTML = "";
+    return;
+  }
+
+  const summary = movementSummaryByLeague[league] || {
+    promotedIn: [],
+    relegatedFrom: [],
+    promotedFrom: [],
+    relegatedIn: [],
+  };
+
+  const sections = [];
+
+const promotedInGroups = {};
+const relegatedFromGroups = {};
+
+summary.promotedIn.forEach(function(item) {
+  if (!promotedInGroups[item.toLeague]) {
+    promotedInGroups[item.toLeague] = [];
+  }
+
+  promotedInGroups[item.toLeague].push(item);
+});
+
+summary.relegatedFrom.forEach(function(item) {
+  if (!relegatedFromGroups[item.toLeague]) {
+    relegatedFromGroups[item.toLeague] = [];
+  }
+
+  relegatedFromGroups[item.toLeague].push(item);
+});
+
+Object.entries(promotedInGroups).forEach(([targetLeague, items]) => {
+  sections.push({
+    title: "Promossi in " + targetLeague,
+    type: "promote",
+    items,
+  });
+});
+
+Object.entries(relegatedFromGroups).forEach(([targetLeague, items]) => {
+  sections.push({
+    title: "Retrocessi in " + targetLeague,
+    type: "relegate",
+    items,
+  });
+});
+
+  const promotedFromGroups = {};
+
+  summary.promotedFrom.forEach(function(item) {
+    if (!promotedFromGroups[item.fromLeague]) {
+      promotedFromGroups[item.fromLeague] = [];
+    }
+
+    promotedFromGroups[item.fromLeague].push(item);
+  });
+
+  Object.keys(promotedFromGroups).forEach(function(sourceLeague) {
+    sections.push({
+      title: "Promossi da " + sourceLeague,
+      type: "promote",
+      items: promotedFromGroups[sourceLeague],
+    });
+  });
+
+  const relegatedInGroups = {};
+
+  summary.relegatedIn.forEach(function(item) {
+    if (!relegatedInGroups[item.toLeague]) {
+      relegatedInGroups[item.toLeague] = [];
+    }
+
+    relegatedInGroups[item.toLeague].push(item);
+  });
+
+  Object.keys(relegatedInGroups).forEach(function(destinationLeague) {
+    sections.push({
+      title: "Retrocessi in " + destinationLeague,
+      type: "relegate",
+      items: relegatedInGroups[destinationLeague],
+    });
+  });
+
+  let inner = "";
+
+  inner += '<details class="movements-details">';
+  inner += '<summary class="movements-summary">';
+  inner +=
+    '<span><span style="color:#22c55e;">PROMOZIONI</span> - <span style="color:#ef4444;">RETROCESSIONI</span></span>';
+  inner +=
+    '<span style="opacity:0.78; font-size:12px;">Tap / Click</span>';
+  inner += "</summary>";
+
+  inner += '<div class="movements-content">';
+
+  let hasMovements = false;
+
+  sections.forEach(function(section) {
+    if (!Array.isArray(section.items) || section.items.length === 0) {
+      return;
+    }
+
+    hasMovements = true;
+
+    const labelClass =
+      section.type === "promote"
+        ? "movements-label-promote"
+        : "movements-label-relegate";
+
+    const arrowClass =
+      section.type === "promote"
+        ? "movement-arrow-up"
+        : "movement-arrow-down";
+
+    const arrow =
+      section.type === "promote"
+        ? "↑"
+        : "↓";
+
+    const badgeClass =
+      section.type === "promote"
+        ? "movement-driver-badge movement-driver-badge-promote"
+        : "movement-driver-badge movement-driver-badge-relegate";
+
+    inner += '<div class="movements-row">';
+
+    inner += '<div class="' + labelClass + '">';
+    inner +=
+      '<span class="movement-arrow ' +
+      arrowClass +
+      '">' +
+      arrow +
+      "</span>";
+    inner += escapeHtml(section.title);
+    inner += "</div>";
+
+    inner += '<div class="movements-list">';
+
+    section.items.forEach(function(item) {
+      inner +=
+        '<div class="' +
+        badgeClass +
+        '">' +
+        '<span class="movement-driver-dot"></span>' +
+        escapeHtml(item.driverName) +
+        "</div>";
+    });
+
+    inner += "</div>";
+    inner += "</div>";
+  });
+
+  if (!hasMovements) {
+    inner += '<div class="movements-empty">';
+    inner += "Nessuna promozione o retrocessione per questa lega.";
+    inner += "</div>";
+  }
+
+  inner += '<div class="movements-note">';
+  inner += "Movimenti ufficiali collegati a questa lega.";
+  inner += "</div>";
+
+  inner += "</div>";
+  inner += "</details>";
+
+  movementsWrap.innerHTML = inner;
+  movementsWrap.classList.add("visible");
+}
+
+    function renderTabs() {
+      const existingButtons = tabs.querySelectorAll("[data-league]");
+
+      existingButtons.forEach(function(btn) {
+        const league = btn.getAttribute("data-league");
+        const hasPage = !!(pages[league] && String(pages[league]).trim());
+
+        btn.className =
+          "tab-btn" +
+          (hasPage ? " saved preloaded" : "") +
+          (activeLeague === league ? " active" : "");
+
+        const isLoaded = !!frame.srcdoc && activeLeague === league;
+
+btn.innerHTML = hasPage
+  ? league + ' <span class="tab-check">✓</span>'
+  : league + ' <span class="tab-missing">—</span>';
+        btn.disabled = !hasPage;
+        btn.title = hasPage ? "Apri " + league : league + " non salvata";
+
+        if (hasPage && !btn.dataset.bound) {
+          btn.addEventListener("click", function() {
+            openLeague(league);
+          });
+          btn.dataset.bound = "true";
+        }
+      });
+    }
+
+    function openLeague(league) {
+      if (!pages[league]) return;
+
+      activeLeague = league;
+      renderTabs();
+      // Chiude eventuale classifica gara PNG aperta
+if (racePngViewer) {
+  racePngViewer.classList.remove("visible");
+  racePngViewer.classList.remove("loading");
+}
+
+if (racePngImage) {
+  racePngImage.src = "";
+}
+
+if (raceDgPanel) {
+  raceDgPanel.style.display = "none";
+}
+
+if (racePngTabs) {
+  racePngTabs.querySelectorAll("button").forEach(function(btn) {
+    btn.classList.remove("active-loading", "active-ready");
+  });
+}
+
+      if (bootingPanel) {
+        bootingPanel.style.display = "none";
+      }
+
+      homePanel.style.display = "none";
+      iframeWrap.classList.add("visible");
+      const parser = new DOMParser();
+const parsed = parser.parseFromString(pages[league], "text/html");
+
+const styles = Array.from(parsed.head.querySelectorAll("style"))
+  .map((style) => style.outerHTML)
+  .join("");
+
+const bodyContent = parsed.body.innerHTML;
+
+frame.innerHTML = styles + bodyContent;
+
+if (window.matchMedia("(max-width: 700px)").matches) {
+  const allNodes = Array.from(frame.querySelectorAll("*"));
+
+  const seasonNode = allNodes.find((el) => {
+    const text = (el.textContent || "").trim().toUpperCase();
+    return text === "UNION 2026 • ROUND 2";
+  });
+
+  if (seasonNode) {
+    let row = seasonNode.parentElement;
+
+    for (let i = 0; i < 8 && row; i++) {
+      const children = Array.from(row.children);
+      const rowText = (row.textContent || "").toUpperCase();
+
+      if (
+        children.length >= 2 &&
+        rowText.includes("UNION 2026 • ROUND 2")
+      ) {
+        row.style.setProperty("display", "grid", "important");
+        row.style.setProperty("grid-template-columns", "1fr", "important");
+        row.style.setProperty("gap", "8px", "important");
+        row.style.setProperty("align-items", "start", "important");
+        row.style.setProperty("justify-content", "start", "important");
+
+        children.forEach((child) => {
+          child.style.setProperty("width", "100%", "important");
+          child.style.setProperty("max-width", "100%", "important");
+          child.style.setProperty("white-space", "normal", "important");
+          child.style.setProperty("text-align", "left", "important");
+        });
+
+        break;
+      }
+
+      row = row.parentElement;
+    }
+  }
+}
+
+document.title = "UNION 2026 - " + league;
+
+renderLeagueMovements(league);
+    }
+
+    renderTabs();
+
+    if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(function() {
+        window.requestAnimationFrame(function() {
+          finishBoot();
+        });
+      });
+    } else {
+      setTimeout(finishBoot, 80);
+    }
+
+// SPLASH SCREEN
+
+const splashDots = document.getElementById("splashDots");
+
+let dots = 0;
+
+function animateDots() {
+  if (!splashDots) return;
+
+  dots = (dots + 1) % 4;
+  splashDots.textContent = ".".repeat(dots);
+
+  setTimeout(animateDots, 500);
+}
+
+animateDots();
+
+setTimeout(() => {
+  const splash = document.getElementById("splashScreen");
+  if (splash) splash.style.display = "none";
+}, 8000);
+  </script>
+
+<div id="prtAccessCounterBox">
+  <div class="prtAccessCounterLabel">👁️ ACCESSI PORTALE UNION</div>
+  <div id="prtAccessCounterNumber" class="prtAccessCounterNumber"></div>
+</div>
+
+<style>
+#prtAccessCounterBox{
+  display:none;
+  position:fixed;
+  right:170px;
+bottom:165px;
+  z-index:9999;
+  padding:12px 16px;
+  border-radius:16px;
+  background:rgba(5,10,25,.88);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 0 22px rgba(0,180,255,.22);
+  color:#fff;
+  text-align:center;
+  font-family:Arial,sans-serif;
+  opacity:0;
+animation: unionCounterSplash 6.6s ease 1s forwards;
+}
+
+@keyframes unionCounterSplash {
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.prtAccessCounterLabel{
+  font-size:11px;
+  font-weight:800;
+}
+
+.prtAccessCounterNumber{
+  margin-top:4px;
+  font-size:26px;
+  font-weight:900;
+}
+
+@media (max-width:700px){
+  #prtAccessCounterBox{
+    right:10px;
+    bottom:10px;
+  }
+}
+</style>
+
+<script>
+(function(){
+  const BASE_VISITS = 0;
+const NAMESPACE = "union-2026-r2";
+const COUNTER_NAME = "accessi-portale-union";
+
+  const boxEl = document.getElementById("prtAccessCounterBox");
+  const numberEl = document.getElementById("prtAccessCounterNumber");
+
+  fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${COUNTER_NAME}/up`)
+    .then(r => r.json())
+    .then(data => {
+      const realVisits = Number(data?.count || data?.value || 0);
+
+      numberEl.textContent =
+        (BASE_VISITS + realVisits).toLocaleString("it-IT");
+
+      boxEl.style.display = "block";
+
+      setTimeout(() => {
+        boxEl.style.opacity = "0";
+
+        setTimeout(() => {
+          boxEl.style.display = "none";
+        }, 2600);
+      }, 4500);
+    })
+    .catch(() => {
+      numberEl.textContent = BASE_VISITS.toLocaleString("it-IT");
+
+      boxEl.style.display = "block";
+
+      setTimeout(() => {
+        boxEl.style.opacity = "0";
+
+        setTimeout(() => {
+          boxEl.style.display = "none";
+        }, 2600);
+      }, 4500);
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -150,12 +150,6 @@ type DriverChampionshipRow = {
 type DriverLeagueMap = Record<ChampionshipLeagueKey, string[]>
 type UnionDriverTeamOverrideMap = Record<string, string>
 type DriverAliasMap = Record<ChampionshipLeagueKey, Record<string, string>>
-type DriverRatingPenalty =
-  | "Sospeso per 1 gara"
-  | "Sospeso per 2 gare"
-  | "Squalificato"
-
-type DriverRatingValue = number | DriverRatingPenalty
 
 type MovementType = "promote" | "relegate"
 type MovementDrawerAction = "move" | "swap" | "replace_remove"
@@ -185,17 +179,18 @@ type BackupFile = {
   savedAt: string
   championshipState: ChampionshipState
   currentRace: number
-  selectedLeague: ChampionshipLeagueKey
-  exportTexts: {
+selectedLeague: ChampionshipLeagueKey
+selectedLobby?: string
+exportTexts: {
     mainTitle: string
     sideLabel: string
     subtitle: string
   }
   
   driverLeagueMap: DriverLeagueMap
-  driverAliasMap: DriverAliasMap
-  driverRatingMap: Record<string, DriverRatingValue>
-  uploadedLeagueHtmls: Partial<Record<ChampionshipLeagueKey, string>>
+driverAliasMap: DriverAliasMap
+driverTeamOverrides: UnionDriverTeamOverrideMap
+uploadedLeagueHtmls: Partial<Record<ChampionshipLeagueKey, string>>
 }
 
 type PenaltyMap = Record<string, number>
@@ -1662,9 +1657,9 @@ function LegendBare() {
 }
 
 function AppHeader({
-  mainTitle = "Albixximo Race Tools",
-  sideLabel = "Race CSV Extractor",
-  subtitle = "PRT Timing Assistant",
+  mainTitle = "UNION RACE TOOL",
+  sideLabel = "Circuito UNION",
+  subtitle = "UNION Timing Assistant",
 }: {
   mainTitle?: string
   sideLabel?: string
@@ -1724,25 +1719,76 @@ function AppHeader({
               minWidth: 0,
             }}
           >
-            {mainTitle}
+            {mainTitle.includes(" | ") ? (
+  <>
+    <span>{mainTitle.split(" | ")[0]}</span>
+
+    <span
+  style={{
+    display: "inline-block",
+    width: 1,
+    height: 38,
+    margin: "0 16px",
+    borderRadius: 999,
+    background:
+      "linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,1) 25%, rgba(255,255,255,0.95) 50%, rgba(160,90,255,0.9) 75%, rgba(160,90,255,0.10) 100%)",
+    boxShadow:
+      "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
+    transform: "skewX(-14deg)",
+    verticalAlign: "middle",
+  }}
+/>
+
+    <span>{mainTitle.split(" | ")[1]}</span>
+  </>
+) : (
+  mainTitle
+)}
           </div>
 
           <span
-            style={{
-              fontSize: 14,
-              padding: "6px 10px",
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.06)",
-              opacity: 0.95,
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {sideLabel}
-          </span>
+  style={{
+    fontSize: 14,
+    padding: sideLabel === "ELENCO PILOTI" ? "5px 12px 6px" : "6px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.06)",
+    opacity: 0.95,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    marginLeft: sideLabel === "ELENCO PILOTI" ? 6 : 0,
+    display: "inline-flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: 1.05,
+  }}
+>
+  {sideLabel === "ELENCO PILOTI" ? (
+    <>
+      <span style={{ fontSize: 13, fontWeight: 800 }}>
+        ELENCO PILOTI
+      </span>
+
+      <span
+        style={{
+          marginTop: 3,
+          fontSize: 8,
+          fontWeight: 600,
+          letterSpacing: 0.45,
+          opacity: 0.62,
+          textTransform: "none",
+        }}
+      >
+        in ordine alfabetico
+      </span>
+    </>
+  ) : (
+    sideLabel
+  )}
+</span>
         </div>
 
         <div style={{ marginTop: 5, fontSize: 13, opacity: 0.9, whiteSpace: "nowrap" }}>
@@ -1763,10 +1809,10 @@ function AppHeader({
       </div>
 
       <a
-        href="/prt_logo.png"
-        target="_blank"
-        rel="noreferrer"
-        title="PRT Logo"
+  href="/union-logo.png"
+  target="_blank"
+  rel="noreferrer"
+  title="UNION 2026 Logo"
         style={{
           display: "flex",
           alignItems: "center",
@@ -1776,8 +1822,8 @@ function AppHeader({
         }}
       >
         <img
-          src="/prt_logo.png"
-          alt="PRT"
+  src="/union-logo.png"
+  alt="UNION 2026"
           style={{
             height: 110,
             width: "auto",
@@ -2966,12 +3012,11 @@ const CHAMPIONSHIP_LEAGUES: ChampionshipLeagueKey[] = [
 const RACE_OPTIONS = UNION_RACE_OPTIONS
 const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v1"
 const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
-const PRT_SELECTED_LEAGUE_STORAGE_KEY = "albixximo_prt_selected_league"
+const UNION_SELECTED_RANK_STORAGE_KEY = "albixximo_union2026_selected_rank_v1"
 const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v1"
 const UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY =
   "albixximo_union2026_driver_team_override_v1"
-const PRT_DRIVER_ALIAS_MAP_STORAGE_KEY = "albixximo_prt_driver_alias_map"
-const PRT_DRIVER_RATING_MAP_STORAGE_KEY = "albixximo_prt_driver_rating_map"
+const UNION_DRIVER_ALIAS_MAP_STORAGE_KEY = "albixximo_union2026_driver_alias_map_v1"
 
 const vampireWarsFontStyle = `
   @font-face {
@@ -3098,8 +3143,6 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
   AMA: {},
 })
 
-const [driverRatingMap, setDriverRatingMap] = useState<Record<string, DriverRatingValue>>({})
-
 const [unknownDriverSelections, setUnknownDriverSelections] = useState<Record<string, string>>({})
 
 const [uploadedLeagueHtmls, setUploadedLeagueHtmls] = useState<
@@ -3144,9 +3187,9 @@ const [lastCreatedMovement, setLastCreatedMovement] = useState<LeagueMovementEnt
 const [showApplyLastMovementModal, setShowApplyLastMovementModal] = useState(false)
 
   const [exportTexts, setExportTexts] = useState({
-    mainTitle: "PRT - SEASON 2K26",
-    sideLabel: "Inserire Circuito Attuale",
-    subtitle: "Albixximo Timing Assistant",
+  mainTitle: "UNION 2026 - ROUND 2",
+  sideLabel: "Inserire Circuito Attuale",
+  subtitle: "UNION Timing Assistant",
   })
   const [pendingHeaderExportType, setPendingHeaderExportType] = useState<"png" | "championship-html" | null>(null)
 
@@ -3241,10 +3284,11 @@ useEffect(() => {
   setCurrentRace(parsedRace)
 }
 
-    const rawLeague = window.localStorage.getItem(PRT_SELECTED_LEAGUE_STORAGE_KEY)
-    if (CHAMPIONSHIP_LEAGUES.includes(rawLeague as ChampionshipLeagueKey)) {
-      setSelectedLeague(rawLeague as ChampionshipLeagueKey)
-    }
+    const rawLeague = window.localStorage.getItem(UNION_SELECTED_RANK_STORAGE_KEY)
+
+if (CHAMPIONSHIP_LEAGUES.includes(rawLeague as ChampionshipLeagueKey)) {
+  setSelectedLeague(rawLeague as ChampionshipLeagueKey)
+}
 
     const rawState = window.localStorage.getItem(UNION_CHAMPIONSHIP_STORAGE_KEY)
     if (rawState) {
@@ -3304,7 +3348,7 @@ if (rawDriverLeagueMap) {
   }
 }
 
-const rawDriverAliasMap = window.localStorage.getItem(PRT_DRIVER_ALIAS_MAP_STORAGE_KEY)
+const rawDriverAliasMap = window.localStorage.getItem(UNION_DRIVER_ALIAS_MAP_STORAGE_KEY)
 if (rawDriverAliasMap) {
   const parsedDriverAliasMap = JSON.parse(rawDriverAliasMap)
   if (parsedDriverAliasMap && typeof parsedDriverAliasMap === "object") {
@@ -3346,14 +3390,6 @@ if (rawDriverTeamOverrides) {
 
 setDriverTeamOverridesHydrated(true)
 
-const rawDriverRatingMap = window.localStorage.getItem(PRT_DRIVER_RATING_MAP_STORAGE_KEY)
-if (rawDriverRatingMap) {
-  const parsedDriverRatingMap = JSON.parse(rawDriverRatingMap)
-  if (parsedDriverRatingMap && typeof parsedDriverRatingMap === "object") {
-    setDriverRatingMap(parsedDriverRatingMap)
-  }
-}
-
   } catch {
     // nessuna azione
   }
@@ -3366,7 +3402,7 @@ useEffect(() => {
 
 useEffect(() => {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(PRT_SELECTED_LEAGUE_STORAGE_KEY, selectedLeague)
+  window.localStorage.setItem(UNION_SELECTED_RANK_STORAGE_KEY, selectedLeague)
 }, [selectedLeague])
 
 useEffect(() => {
@@ -3388,7 +3424,7 @@ useEffect(() => {
 useEffect(() => {
   if (typeof window === "undefined") return
   window.localStorage.setItem(
-    PRT_DRIVER_ALIAS_MAP_STORAGE_KEY,
+    UNION_DRIVER_ALIAS_MAP_STORAGE_KEY,
     JSON.stringify(driverAliasMap)
   )
 }, [driverAliasMap])
@@ -3402,14 +3438,6 @@ useEffect(() => {
     JSON.stringify(driverTeamOverrides)
   )
 }, [driverTeamOverrides, driverTeamOverridesHydrated])
-
-useEffect(() => {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(
-    PRT_DRIVER_RATING_MAP_STORAGE_KEY,
-    JSON.stringify(driverRatingMap)
-  )
-}, [driverRatingMap])
 
 useEffect(() => {
   console.log("uploadedLeagueHtmls changed:", uploadedLeagueHtmls)
@@ -3891,12 +3919,12 @@ const PRT_CHAMPIONSHIP_TABLE_STYLES = {
   } satisfies React.CSSProperties,
 
   col: {
-    pos: { width: 60, minWidth: 60, maxWidth: 60 },
-    pilota: { width: 150, minWidth: 150 },
-    rating: { width: 150, minWidth: 150, maxWidth: 150 },
-    gara: { width: 66, minWidth: 66, maxWidth: 66 },
-    totale: { width: 70, minWidth: 70, maxWidth: 70 },
-  },
+  pos: { width: 60, minWidth: 60, maxWidth: 60 },
+  team: { width: 54, minWidth: 54, maxWidth: 54 },
+  pilota: { width: 150, minWidth: 150 },
+  gara: { width: 66, minWidth: 66, maxWidth: 66 },
+  totale: { width: 70, minWidth: 70, maxWidth: 70 },
+},
 
   posCell: {
     fontSize: 13,
@@ -3922,22 +3950,6 @@ const PRT_CHAMPIONSHIP_TABLE_STYLES = {
     fontWeight: 900,
     color: "rgba(255,255,255,0.98)",
     letterSpacing: 0.12,
-  } satisfies React.CSSProperties,
-
-  ratingCell: {
-    whiteSpace: "nowrap" as const,
-    width: 92,
-    minWidth: 92,
-    maxWidth: 92,
-    padding: "9px 4px",
-  } satisfies React.CSSProperties,
-
-  ratingCellExport: {
-    whiteSpace: "nowrap" as const,
-    width: 92,
-    minWidth: 92,
-    maxWidth: 92,
-    padding: "10px 4px",
   } satisfies React.CSSProperties,
 
   garaCell: {
@@ -4693,84 +4705,6 @@ function ChampionshipHtmlLegend() {
             </div>
             <div style={textStyle}>Giro veloce.</div>
           </div>
-
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              display: "grid",
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: 0.35,
-                textTransform: "uppercase",
-                opacity: 0.88,
-              }}
-            >
-              Rating pilota
-            </div>
-
-            <div
-              style={{
-                borderRadius: 14,
-                border: "1px solid rgba(96,165,250,0.18)",
-                background:
-                  "linear-gradient(180deg, rgba(96,165,250,0.10), rgba(255,255,255,0.02))",
-                boxShadow: "0 0 18px rgba(96,165,250,0.08)",
-                padding: "12px 14px",
-                display: "grid",
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 16,
-                    lineHeight: 1,
-                    color: "#facc15",
-                    textShadow: "0 0 8px rgba(250,204,21,0.45)",
-                  }}
-                >
-                  ★★★★★
-                </span>
-
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 900,
-                    color: "#ffffff",
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  Sportività pilota
-                </span>
-              </div>
-
-              <div
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                  color: "rgba(255,255,255,0.84)",
-                }}
-              >
-                Il <b>Rating</b> rappresenta il livello di sportività del pilota durante il
-                campionato: correttezza in pista, rispetto degli avversari, gestione dei
-                duelli, presenze e comportamento generale.
-              </div>
-            </div>
-          </div>
         </div>
       </details>
     </div>
@@ -4801,155 +4735,28 @@ function renderExactRaceResultBadge({
   )
 }
 
-function getDriverRatingKey(pilota: string) {
-  return normalizeDriverNameForChampionship(pilota)
-}
-
-type DriverRatingPenalty = "Sospeso per 1 gara" | "Sospeso per 2 gare" | "Squalificato"
-type DriverRatingValue = number | DriverRatingPenalty
-
-function DriverRatingStars({
-  value,
-  exporting = false,
-  onChange,
-}: {
-  value: DriverRatingValue
-  exporting?: boolean
-  onChange?: (v: DriverRatingValue) => void
-}) {
-  const isPenalty = typeof value === "string"
-  const safeValue = isPenalty ? 0 : Math.max(0, Math.min(5, Number(value) || 0))
-  const starSize = exporting ? 16 : 17
-  const [hoverValue, setHoverValue] = React.useState<number | null>(null)
-  const displayValue = exporting ? safeValue : (hoverValue ?? safeValue)
-
-  if (isPenalty) {
-  return (
-    <span
-      onClick={() => {
-        if (!exporting && onChange) onChange(5)
-      }}
-      title={exporting ? undefined : "Clicca per ripristinare 5 stelle"}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: exporting ? "5px 10px" : "4px 9px",
-        borderRadius: 999,
-        background: "rgba(239,68,68,0.92)",
-        border: "1px solid rgba(239,68,68,0.65)",
-        boxShadow: "0 0 16px rgba(239,68,68,0.28)",
-        color: "#fff",
-        fontSize: exporting ? 11 : 10,
-        fontWeight: 900,
-        textTransform: "uppercase",
-        whiteSpace: "nowrap",
-        cursor: exporting ? "default" : "pointer",
-      }}
-    >
-      {value}
-    </span>
-  )
-}
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 3,
-        minWidth: 96,
-      }}
-      onMouseLeave={() => {
-        if (!exporting) setHoverValue(null)
-      }}
-    >
-      {Array.from({ length: 5 }).map((_, index) => {
-        const starIndex = index + 1
-        const filled = starIndex <= displayValue
-
-        return (
-          <span
-            key={index}
-            onMouseEnter={() => {
-              if (!exporting) setHoverValue(starIndex)
-            }}
-            onClick={() => {
-              if (!exporting && onChange) {
-                if (starIndex === 1 && safeValue === 1) {
-                  const scelta = window.prompt(
-                    "Provvedimento rating:\n1 = Sospeso per 1 gara\n2 = Sospeso per 2 gare\n3 = Squalificato"
-                  )
-
-                  if (scelta === "1") onChange("Sospeso per 1 gara")
-                  if (scelta === "2") onChange("Sospeso per 2 gare")
-                  if (scelta === "3") onChange("Squalificato")
-                  return
-                }
-
-                onChange(starIndex)
-              }
-            }}
-            title={
-              exporting
-                ? undefined
-                : starIndex === 1 && safeValue === 1
-                  ? "Clicca per togliere anche l'ultima stella"
-                  : `${starIndex} stelle`
-            }
-            style={{
-              fontSize: starSize,
-              lineHeight: 1,
-              fontWeight: 900,
-              cursor: exporting ? "default" : "pointer",
-              userSelect: "none",
-              color: filled ? "#facc15" : "transparent",
-              WebkitTextStroke: filled
-                ? "0px transparent"
-                : "1px rgba(255,255,255,0.12)",
-              opacity: filled ? 1 : 0.25,
-              textShadow: filled
-                ? "0 0 6px rgba(250,204,21,0.65), 0 0 14px rgba(250,204,21,0.40)"
-                : "none",
-              transform:
-                !exporting && hoverValue === starIndex
-                  ? "scale(1.15)"
-                  : "scale(1)",
-              transition: "all 0.15s ease",
-              display: "inline-block",
-            }}
-          >
-            ★
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
 function ChampionshipTableBlock({
   selectedLeague,
   currentRace,
   championshipRacesIncludedLabel,
-  driverChampionshipByLeague,
-  driverRatingMap = {},
-  setDriverRatingMap,
+    driverChampionshipByLeague,
   exporting = false,
 }: {
   selectedLeague: ChampionshipLeagueKey
   currentRace: number
   championshipRacesIncludedLabel: string
   driverChampionshipByLeague: Record<ChampionshipLeagueKey, DriverChampionshipRow[]>
-  driverRatingMap?: Record<string, DriverRatingValue>
-  setDriverRatingMap?: React.Dispatch<React.SetStateAction<Record<string, DriverRatingValue>>>
   exporting?: boolean
 }) {
   const leagueRows = driverChampionshipByLeague[selectedLeague] || []
 
-  if (leagueRows.length === 0) return null
+if (leagueRows.length === 0) return null
 
-  const s = PRT_CHAMPIONSHIP_TABLE_STYLES
+const hasChampionshipResults = leagueRows.some(
+  (driver) => Object.keys(driver.raceResults).length > 0
+)
+
+const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
   const championshipCircuits: Record<
   number,
@@ -5032,17 +4839,17 @@ function ChampionshipTableBlock({
           </div>
 
           {isMovementRound(currentRace) && !exporting ? (
-            <div
-              style={{
-                fontSize: 12,
-                opacity: 0.76,
-                lineHeight: 1.4,
-                color: "rgba(255,255,255,0.82)",
-              }}
-            >
-              Nei round di snodo la classifica generale riflette subito la lega aggiornata del cassetto piloti.
-            </div>
-          ) : null}
+  <div
+    style={{
+      fontSize: 12,
+      opacity: 0.76,
+      lineHeight: 1.4,
+      color: "rgba(255,255,255,0.82)",
+    }}
+  >
+    La classifica generale riflette gli eventuali cambi Rank stabiliti dalla Direzione Gara.
+  </div>
+) : null}
         </div>
 
         <div
@@ -5083,6 +4890,16 @@ function ChampionshipTableBlock({
                 Pos
               </th>
 
+                            <th
+                style={{
+                  ...(exporting ? s.thBaseExport : s.thBase),
+                  textAlign: "center",
+                  ...s.col.team,
+                }}
+              >
+                Team
+              </th>
+
               <th
                 style={{
                   ...(exporting ? s.thBaseExport : s.thBase),
@@ -5091,16 +4908,6 @@ function ChampionshipTableBlock({
                 }}
               >
                 Pilota
-              </th>
-
-              <th
-                style={{
-                  ...(exporting ? s.thBaseExport : s.thBase),
-                  textAlign: "center",
-                  ...s.col.rating,
-                }}
-              >
-                Rating
               </th>
 
               <th
@@ -5134,22 +4941,22 @@ function ChampionshipTableBlock({
                 {renderRaceHeaderCell(2)}
               </th>
 
-              {Array.from({ length: 11 }).map((_, i) => {
-                const raceNumber = i + 3
-                return (
-                  <th
-                    key={`head-g-${raceNumber}`}
-                    style={{
-                      ...(exporting ? s.thBaseExport : s.thBase),
-                      ...s.col.gara,
-                      paddingTop: exporting ? 10 : 8,
-                      paddingBottom: exporting ? 10 : 8,
-                    }}
-                  >
-                    {renderRaceHeaderCell(raceNumber)}
-                  </th>
-                )
-              })}
+              {Array.from({ length: 3 }).map((_, i) => {
+  const raceNumber = i + 3
+  return (
+    <th
+      key={`head-g-${raceNumber}`}
+      style={{
+        ...(exporting ? s.thBaseExport : s.thBase),
+        ...s.col.gara,
+        paddingTop: exporting ? 10 : 8,
+        paddingBottom: exporting ? 10 : 8,
+      }}
+    >
+      {renderRaceHeaderCell(raceNumber)}
+    </th>
+  )
+})}
             </tr>
           </thead>
 
@@ -5159,10 +4966,7 @@ function ChampionshipTableBlock({
             }}
           >
             {leagueRows.map((driver, index) => {
-              const ratingKey = getDriverRatingKey(driver.pilota)
-              const currentRating = driverRatingMap[ratingKey] ?? 5
-
-              return (
+  return (
                 <tr
                   key={`${driver.pilota}-${index}`}
                   style={{
@@ -5204,8 +5008,53 @@ function ChampionshipTableBlock({
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "center" }}>
-                      <PosBadge pos={index + 1} />
-                    </div>
+  {hasChampionshipResults ? (
+    <PosBadge pos={index + 1} />
+  ) : (
+    <span
+      style={{
+        fontSize: 12,
+        fontWeight: 900,
+        fontFamily:
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        opacity: 0.9,
+      }}
+    >
+      {index + 1}
+    </span>
+  )}
+</div>
+                  </TableCell>
+
+                                    <TableCell
+                    align="center"
+                    style={{
+                      ...s.col.team,
+                      fontSize: exporting ? 12 : 11,
+                      fontWeight: 800,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                                        <span
+                      style={{
+                        display: "inline-block",
+                        minWidth: 42,
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        border: "1.5px solid rgba(255,215,0,0.72)",
+background: "rgba(255,215,0,0.10)",
+boxShadow: "0 0 6px rgba(255,215,0,0.22)",
+                        color: "white",
+                        fontSize: 10,
+                        fontWeight: 900,
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {driverTeamOverrides[driver.pilota] ||
+                        getUnionDriverTeamCode(driver.pilota) ||
+                        "—"}
+                    </span>
                   </TableCell>
 
                   <TableCell
@@ -5225,26 +5074,6 @@ function ChampionshipTableBlock({
                     }}
                   >
                     {driver.pilota}
-                  </TableCell>
-
-                  <TableCell
-                    align="center"
-                    style={{
-                      ...s.col.rating,
-                      ...(exporting ? s.ratingCellExport : s.ratingCell),
-                    }}
-                  >
-                    <DriverRatingStars
-                      value={currentRating}
-                      exporting={exporting}
-                      onChange={(v) => {
-                        if (!setDriverRatingMap) return
-                        setDriverRatingMap((prev) => ({
-                          ...prev,
-                          [ratingKey]: typeof v === "number" ? Math.max(1, Math.min(5, v)) : v,
-                        }))
-                      }}
-                    />
                   </TableCell>
 
                   <TableCell
@@ -5281,18 +5110,18 @@ function ChampionshipTableBlock({
     ...(exporting ? s.garaCellExport : s.garaCell),
   }}
 >
-  {1 <= currentRace ? (
-    <span
-      style={{
-        ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
-        fontWeight: exporting ? 700 : 600,
-      }}
-    >
-      {renderChampionshipRaceCell(driver.raceResults[1] ?? null, exporting)}
-    </span>
-  ) : (
-    "-"
-  )}
+  {hasChampionshipResults && 1 <= currentRace ? (
+  <span
+    style={{
+      ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
+      fontWeight: exporting ? 700 : 600,
+    }}
+  >
+    {renderChampionshipRaceCell(driver.raceResults[1] ?? null, exporting)}
+  </span>
+) : (
+  "-"
+)}
 </TableCell>
 
 <TableCell
@@ -5315,7 +5144,7 @@ function ChampionshipTableBlock({
   )}
 </TableCell>
 
-                  {Array.from({ length: 11 }).map((_, i) => {
+                  {Array.from({ length: 3 }).map((_, i) => {
                     const raceNumber = i + 3
                     const cell = driver.raceResults[raceNumber] ?? null
 
@@ -6703,7 +6532,7 @@ const readyLeagueHtmlCount = useMemo(() => {
   ).length
 }, [uploadedLeagueHtmls])
 
-const canExportGeneralHtml = readyLeagueHtmlCount >= 3
+const canExportGeneralHtml = true
 
 const isCurrentRaceComplete = useMemo(() => {
   return CHAMPIONSHIP_LEAGUES.every(
@@ -6909,17 +6738,17 @@ for (const driver of map.values()) {
     if (movedIntoCurrentLeagueAfterThisRace) continue
 
     if (!driver.raceResults[raceNumber]) {
-      driver.raceResults[raceNumber] = {
-        position: null,
-        status: "DNP",
-        pp: false,
-        gv: false,
-        points: 0,
-        rawText: "dnp",
-      }
+  driver.raceResults[raceNumber] = {
+    position: null,
+    status: "ASS-I",
+    pp: false,
+    gv: false,
+    points: 0,
+    rawText: "ASS-I",
+  }
 
-      driver.racePoints[raceNumber] = 0
-    }
+  driver.racePoints[raceNumber] = 0
+}
   }
 }
 
@@ -7029,7 +6858,31 @@ return Array.from(map.values())
     return activeDrawerDrivers.has(driverKey)
   })
   .sort((a, b) => {
-    if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
+    // 1. Prima regola: punti totali
+    if (b.totalPoints !== a.totalPoints) {
+      return b.totalPoints - a.totalPoints
+    }
+
+    // 2. Al termine di Gara 5 entra in vigore lo spareggio ufficiale UNION:
+    //    maggior numero di 1° posti, poi 2° posti, poi 3° posti, ecc.
+    if (currentRace === 5) {
+      for (let position = 1; position <= 14; position++) {
+        let aCount = 0
+        let bCount = 0
+
+        for (let raceNumber = 1; raceNumber <= 5; raceNumber++) {
+          if (a.raceResults[raceNumber]?.position === position) aCount++
+          if (b.raceResults[raceNumber]?.position === position) bCount++
+        }
+
+        if (bCount !== aCount) {
+          return bCount - aCount
+        }
+      }
+    }
+
+    // 3. G1-G4: criterio neutro.
+    //    Dopo G5 resta anche come ultimo fallback in caso di storico identico.
     return a.pilota.localeCompare(b.pilota, "it", { sensitivity: "base" })
   })
 }, [championshipState, currentRace, workbenchDriverLeagueMap])
@@ -7154,7 +7007,7 @@ const penaltySeconds = penalties[rowKey] || 0
   const a = document.createElement("a")
 
   a.href = url
-  a.download = `${leagueForFile}-dg.json`
+  a.download = `${selectedLobby}-dg.json`
 
   document.body.appendChild(a)
   a.click()
@@ -7189,7 +7042,7 @@ async function performExportTablePng() {
     })
 
     const link = document.createElement("a")
-    link.download = "albixximo_classifica_output.png"
+    link.download = `${selectedLobby}.png`
     link.href = dataUrl
     link.click()
 
@@ -7350,7 +7203,6 @@ body {
   gap: 8px !important;
 }
 
-.championship-html-export-root [style*="PRT Season"],
 .championship-html-export-root div,
 .championship-html-export-root span {
   white-space: normal !important;
@@ -7436,7 +7288,20 @@ body {
   }
 }
 
-async function downloadChampionshipGeneralHtmlExport() {
+async function downloadChampionshipGeneralHtmlExport(preview = false) {
+  const latestSavedRace = [1, 2, 3, 4, 5]
+  .filter((raceNumber) => {
+    const raceState = championshipState.races[raceNumber]
+    if (!raceState) return false
+
+    return CHAMPIONSHIP_LEAGUES.some((league) => {
+      const lobbyState = raceState[league]
+      if (!lobbyState) return false
+
+      return Object.values(lobbyState).some((snapshot) => !!snapshot)
+    })
+  })
+  .pop() ?? 1
   const savedPages: Partial<Record<ChampionshipLeagueKey, string>> = {}
 
   for (const league of CHAMPIONSHIP_LEAGUES) {
@@ -7450,12 +7315,10 @@ async function downloadChampionshipGeneralHtmlExport() {
     (league) => !!String(savedPages[league] || "").trim()
   )
 
-  if (savedLeagues.length === 0) {
-    setError("Non ci sono HTML di lega caricati. Usa prima 'Carica HTML leghe'.")
-    return
-  }
 
-  const isMovementRoundForHtml = [3, 6, 9, 12].includes(currentRace)
+  const isMovementRoundForHtml = Object.values(
+  championshipState.roundMovements?.[currentRace] || {}
+).some((entries) => entries.length > 0)
 
   type LeagueMovementItem = {
   driverName: string
@@ -7518,56 +7381,11 @@ if (entry.type === "relegate") {
   }
 }
 
-  let logoDataUrl = ""
+const logoDataUrl = "/union-logo.png"
 
-  try {
-    const absoluteSrc = new URL("/prt_logo.png", window.location.origin).href
-    const response = await fetch(absoluteSrc)
-    const blob = await response.blob()
+const splashDataUrl = "/union-splash.webp"
 
-    logoDataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(String(reader.result))
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    logoDataUrl = ""
-  }
-
-  let splashDataUrl = ""
-
-try {
-  const absoluteSrc = new URL("/prt-splash.webp", window.location.origin).href
-  const response = await fetch(absoluteSrc)
-  const blob = await response.blob()
-
-  splashDataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(String(reader.result))
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-} catch {
-  splashDataUrl = ""
-}
-
-let splashMobileDataUrl = ""
-
-try {
-  const absoluteSrc = new URL("/prt-splash2.webp", window.location.origin).href
-  const response = await fetch(absoluteSrc)
-  const blob = await response.blob()
-
-  splashMobileDataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(String(reader.result))
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-} catch {
-  splashMobileDataUrl = ""
-}
+const splashMobileDataUrl = "/union-splash-mobile.webp"
 
   const pagesJson = JSON.stringify(savedPages).replace(/<\/script/gi, "<\\/script")
   const movementSummaryJson = JSON.stringify(movementSummaryByLeague).replace(
@@ -7605,7 +7423,7 @@ try {
   name="viewport"
   content="width=device-width, initial-scale=0.5, minimum-scale=0.5, maximum-scale=3, user-scalable=yes, viewport-fit=cover"
 />
-  <title>PRT Season 2K26 - Portale Classifiche</title>
+  <title>UNION 2026 - Portale Classifiche</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 
   
@@ -7724,7 +7542,7 @@ try {
 
     .tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
 }
@@ -7812,18 +7630,26 @@ try {
   overflow: hidden;
 }
 
+.dg-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 20px 4px 20px;
+}
+
+.dg-logo-wrap img {
+  display: block;
+  width: auto;
+  height: 54px;
+  object-fit: contain;
+}
+
 .dg-accordion-summary {
-  list-style: none;
-  cursor: pointer;
   padding: 17px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-}
-
-.dg-accordion-summary::-webkit-details-marker {
-  display: none;
 }
 
 .dg-accordion-title {
@@ -7844,53 +7670,30 @@ try {
   letter-spacing: 0.3px;
 }
 
-.dg-accordion-action {
-  flex-shrink: 0;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: #ffe58a;
-  border: 1px solid rgba(255,215,0,0.28);
-  background: rgba(255,215,0,0.08);
-  box-shadow: 0 0 16px rgba(255,215,0,0.08);
-}
-
-.dg-accordion[open] .dg-accordion-action {
-  color: #d8c7ff;
-  border-color: rgba(160,90,255,0.30);
-  background: rgba(160,90,255,0.10);
-}
-
-.dg-accordion[open] .dg-accordion-action::before {
-  content: "Chiudi";
-}
-
-.dg-accordion[open] .dg-accordion-action {
-  font-size: 0;
-}
-
-.dg-accordion[open] .dg-accordion-action::before {
-  font-size: 12px;
-}
-
 .dg-accordion-content {
   display: grid;
   gap: 8px;
   padding: 0 16px 16px 16px;
 }
 
+.dg-signature {
+  padding: 0 20px 18px 20px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.72);
+}
+
 .dg-driver-row {
   appearance: none;
   border: none;
   width: 100%;
-  cursor: pointer;
   border-radius: 14px;
   padding: 12px 14px;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 12px;
   text-align: left;
@@ -7901,57 +7704,12 @@ try {
   box-shadow:
     inset 0 0 14px rgba(255,255,255,0.018),
     0 8px 18px rgba(0,0,0,0.18);
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.dg-driver-row:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255,215,0,0.30);
-  background:
-    linear-gradient(90deg, rgba(255,215,0,0.08), rgba(160,90,255,0.05));
 }
 
 .dg-driver-name {
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.25px;
-}
-
-.dg-open-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 78px;
-  padding: 8px 14px;
-
-  border-radius: 999px;
-
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-
-  color: #ffe58a;
-
-  border: 1px solid rgba(255,215,0,0.28);
-
-  background: rgba(255,215,0,0.08);
-
-  box-shadow:
-    0 0 16px rgba(255,215,0,0.08);
-
-  text-transform: uppercase;
-
-  transition:
-    background .2s ease,
-    border-color .2s ease,
-    transform .15s ease;
-}
-
-.dg-driver-row:hover .dg-open-pill {
-  color: #d8c7ff;
-  border-color: rgba(160,90,255,0.30);
-  background: rgba(160,90,255,0.10);
 }
 
 .dg-mini-pill {
@@ -7972,10 +7730,6 @@ try {
 
 .dg-mini-pill.time {
   background: linear-gradient(180deg, #ff4b4b, #b91c1c);
-}
-
-.dg-mini-pill.dsq {
-  background: linear-gradient(180deg, #c084fc, #7e22ce);
 }
 
 .race-png-viewer.loading::before {
@@ -8646,213 +8400,6 @@ try {
       }
     }
 
-    .dg-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: rgba(0,0,0,0.82);
-  backdrop-filter: blur(8px);
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.dg-modal.open {
-  display: flex;
-}
-
-.dg-modal-card {
-  width: 100%;
-  max-width: 620px;
-  border-radius: 24px;
-  padding: 28px;
-  border: 1px solid rgba(255,215,0,0.30);
-
-  background:
-    radial-gradient(700px 240px at 10% 0%, rgba(255,215,0,0.18), transparent 55%),
-    radial-gradient(500px 240px at 90% 0%, rgba(160,90,255,0.18), transparent 55%),
-    linear-gradient(180deg, #11151d, #090b10);
-
-  box-shadow:
-    0 20px 60px rgba(0,0,0,0.55),
-    0 0 40px rgba(255,215,0,0.10);
-
-  text-align: center;
-}
-
-.dg-modal-flags {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.dg-modal-flags img {
-  width: 150px;
-  height: auto;
-  display: block;
-  filter:
-    drop-shadow(0 0 10px rgba(255,255,255,0.25))
-    drop-shadow(0 0 24px rgba(255,215,0,0.25));
-}
-
-.dg-modal-title {
-  font-family: 'VampireWars', sans-serif;
-
-  font-size: 44px;
-  font-weight: 400;
-
-  text-transform: uppercase;
-  letter-spacing: 3px;
-
-  margin-bottom: 22px;
-
-  color: #fff8dc;
-
-  text-shadow:
-    /* contorno oro */
-    1px 1px 0 rgba(255,215,0,0.90),
-    -1px 1px 0 rgba(255,215,0,0.90),
-    1px -1px 0 rgba(255,215,0,0.90),
-    -1px -1px 0 rgba(255,215,0,0.90),
-
-    /* glow più elegante */
-    0 0 6px rgba(255,215,0,0.45),
-    0 0 12px rgba(255,215,0,0.28),
-    0 0 20px rgba(255,215,0,0.14),
-
-    /* profondità */
-    0 4px 12px rgba(0,0,0,0.75);
-
-  filter:
-    drop-shadow(0 0 8px rgba(255,215,0,0.22));
-
-  transition: all 0.25s ease;
-}
-
-.dg-modal-kicker {
-  margin-top: -10px;
-  margin-bottom: 20px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: rgba(255,215,0,0.72);
-}
-
-.dg-modal-code {
-  display: inline-block;
-  padding: 14px 24px;
-  border-radius: 999px;
-  font-size: 28px;
-  font-weight: 900;
-  margin-bottom: 24px;
-}
-
-.dg-modal-code.time {
-  background: linear-gradient(180deg,#ef4444,#991b1b);
-}
-
-.dg-modal-code.dsq {
-  background: linear-gradient(180deg,#c084fc,#7e22ce);
-}
-
-.dg-modal-content {
-  text-align: left;
-  font-size: 16px;
-  line-height: 1.7;
-  color: rgba(255,255,255,0.92);
-}
-
-.dg-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.dg-field {
-  border-radius: 14px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255,255,255,0.06),
-      rgba(255,255,255,0.025)
-    );
-
-  box-shadow:
-    inset 0 0 18px rgba(255,255,255,0.025),
-    0 8px 20px rgba(0,0,0,0.18);
-}
-
-.dg-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.3px;
-  color: rgba(255,215,0,0.72);
-  font-weight: 900;
-  margin-bottom: 6px;
-}
-
-.dg-value {
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.dg-reason-box {
-  margin-top: 8px;
-  margin-bottom: 22px;
-
-  border-radius: 16px;
-  padding: 18px;
-
-  border: 1px solid rgba(255,215,0,0.16);
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255,215,0,0.08),
-      rgba(255,255,255,0.03)
-    );
-}
-
-.dg-reason-text {
-  margin-top: 8px;
-  font-size: 17px;
-  line-height: 1.5;
-  font-weight: 700;
-}
-
-.dg-discursive {
-  margin-top: 14px;
-  line-height: 1.7;
-  font-size: 16px;
-  opacity: 0.92;
-}
-
-.dg-modal-sign {
-  margin-top: 28px;
-  font-size: 18px;
-  font-weight: 900;
-  text-align: right;
-  opacity: 0.85;
-}
-
-.dg-modal-close {
-  margin-top: 24px;
-  border: none;
-  border-radius: 14px;
-  padding: 12px 22px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 900;
-  color: white;
-  background: linear-gradient(180deg,#444,#222);
-}
-
     #splashScreen {
   position: fixed;
   inset: 0;
@@ -8867,7 +8414,7 @@ try {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   z-index: 1;
   opacity: 0;
   animation: splashImageIn 1s ease-out 0.65s forwards;
@@ -8932,6 +8479,54 @@ try {
     0 0 16px rgba(255,215,0,0.55);
 
   animation: splashTextIn 1.4s ease-out 0.15s forwards;
+}
+
+.splash-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  width: min(420px, 72vw);
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 12px rgba(255, 190, 40, 0.18);
+  z-index: 3;
+  opacity: 0;
+animation: unionSplashTrackIn 0.25s ease 1s forwards;
+}
+
+@keyframes unionSplashTrackIn {
+  to {
+    opacity: 1;
+  }
+}
+.splash-progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    #8f5b00 0%,
+    #ffb300 45%,
+    #fff0a0 70%,
+    #ffb300 100%
+  );
+  box-shadow:
+    0 0 8px rgba(255, 183, 0, 0.9),
+    0 0 18px rgba(255, 153, 0, 0.65);
+  animation: unionSplashProgress 7s linear 1s forwards;
+}
+
+@keyframes unionSplashProgress {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
 }
 
 #splashHint {
@@ -9012,42 +8607,39 @@ try {
   <img
     class="splash-desktop"
     src="${splashDataUrl}"
-    alt="PRT Splash Desktop"
+    alt="UNION 2026 Splash Desktop"
   />
 
   <img
     class="splash-mobile"
     src="${splashMobileDataUrl || splashDataUrl}"
-    alt="PRT Splash Mobile"
+    alt="UNION 2026 Splash Mobile"
   />
 
-  <div id="splashText">POISON RACING TEAM</div>
-<div id="splashSubText">
-  IN CARICAMENTO<span id="splashDots"></span>
-  <br />
-  <span id="splashHint">l'attesa potrebbe durare fino a 60 secondi</span>
+  <div class="splash-progress">
+  <div class="splash-progress-bar"></div>
 </div>
 </div>
   <div class="shell">
     <div class="hero">
   <div class="hero-top">
     <div class="hero-title-wrap">
-      <div class="hero-badge">PRT Season 2K26</div>
-      <div class="hero-title">Portale Classifiche PRT</div>
+      <div class="hero-badge">UNION 2026 • ROUND 2</div>
+<div class="hero-title">Portale Classifiche UNION</div>
       <div class="hero-subtitle">
-        Seleziona dai pannelli sottostanti la classifica assoluta di lega oppure la classifica della singola gara.
+        Consulta le classifiche generali delle Leghe e i risultati delle singole gare del Round 2.
       </div>
     </div>
 
     <div class="hero-logo">
-      ${logoDataUrl ? `<img src="${logoDataUrl}" alt="PRT Logo" />` : ""}
+      ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
     </div>
   </div>
 </div>
 
 <div class="race-png-panel">
   <div>
-    <div class="race-png-title">Classifiche Assolute S2K26</div>
+    <div class="race-png-title">Classifiche Assolute UNION 2026 • Round 2</div>
     <div style="font-size:12px; opacity:0.72; margin-top:4px;">
       Seleziona una lega per aprire la relativa classifica assoluta.
     </div>
@@ -9060,56 +8652,32 @@ try {
 
 <div class="race-png-panel">
   <div class="race-png-head">
-  <div class="race-png-title">Classifiche Gara</div>
+  <div class="race-png-title">CLASSIFICHE GARA • ROUND 2</div>
 
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:6px;">
-    <div style="font-size:13px; opacity:0.82; font-weight:700;">
-      Seleziona Gara (1–13)
-    </div>
 
-    <select class="race-png-select" id="racePngSelect">
-        <option value="1">Gara 1</option>
-        <option value="2">Gara 2</option>
-        <option value="3">Gara 3</option>
-        <option value="4">Gara 4</option>
-        <option value="5">Gara 5</option>
-        <option value="6">Gara 6</option>
-        <option value="7">Gara 7</option>
-        <option value="8">Gara 8</option>
-        <option value="9">Gara 9</option>
-        <option value="10">Gara 10</option>
-        <option value="11">Gara 11</option>
-        <option value="12">Gara 12</option>
-        <option value="13">Gara 13</option>
-      </select>
+    <div style="font-size:13px; opacity:0.82; font-weight:700;">
+  Seleziona Gara (1–5)
+</div>
+
+<select class="race-png-select" id="racePngSelect">
+  <option value="1">Gara 1</option>
+  <option value="2">Gara 2</option>
+  <option value="3">Gara 3</option>
+  <option value="4">Gara 4</option>
+  <option value="5">Gara 5</option>
+</select>
     </div>
   </div>
 
   <div class="race-png-tabs" id="racePngTabs"></div>
+<div class="race-png-tabs" id="raceLobbyTabs"></div>
 
   <div class="race-png-viewer" id="racePngViewer">
   <img id="racePngImage" src="" alt="Classifica gara" />
 </div>
 
 <div class="race-dg-panel" id="raceDgPanel"></div>
-<div class="dg-modal" id="dgModal">
-  <div class="dg-modal-card">
-    <div class="dg-modal-flags">
-  <img src="/flags/13.png" alt="" />
-</div>
-    <div class="dg-modal-title">Poison Racing Team</div>
-
-    <div class="dg-modal-code" id="dgModalCode">P00</div>
-
-    <div class="dg-modal-content" id="dgModalContent"></div>
-
-    <div class="dg-modal-sign">La Direzione Gara</div>
-
-    <button class="dg-modal-close" id="dgModalClose" type="button">
-      Chiudi
-    </button>
-  </div>
-</div>
 </div>
 
     <div class="viewer-shell">
@@ -9134,14 +8702,14 @@ try {
 
 <div class="booting-text">
   Le leghe saranno visibili subito dopo il caricamento.
-  Il portale sta inizializzando i contenuti HTML salvati.
+  Il portale sta inizializzando le classifiche UNION 2026.
 </div>
         </div>
       </div>
 
       <div class="home-panel" id="homePanel" style="display:grid;">
         <div class="home-card">
-          ${logoDataUrl ? `<img src="${logoDataUrl}" alt="PRT Logo" />` : ""}
+          ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
           <div class="home-card-title">ADESSO PUOI SELEZIONARE UNA LEGA</div>
         </div>
       </div>
@@ -9160,6 +8728,15 @@ try {
     const isMovementRoundForHtml = ${isMovementRoundForHtml ? "true" : "false"};
     const orderedLeagues = ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"];
 
+const lobbiesByLeague = {
+  STAR: ["A1", "A5", "A10", "A17", "A29", "A34"],
+  ELITE: ["A2", "A8", "A12", "A18", "A30", "A35"],
+  "PRO GOLD": ["A3", "A14", "A21", "A24", "A28", "A31"],
+  "PRO SILVER": ["A4", "A9", "A13", "A22", "A25", "A36"],
+  "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
+  AMA: ["A7", "A11", "A19", "A23", "A27", "A33"]
+};
+
     const tabs = document.getElementById("tabs");
     const frame = document.getElementById("leagueFrame");
     const homePanel = document.getElementById("homePanel");
@@ -9168,108 +8745,93 @@ try {
     const bootingPanel = document.getElementById("bootingPanel");
     const racePngSelect = document.getElementById("racePngSelect");
 const racePngTabs = document.getElementById("racePngTabs");
+const raceLobbyTabs = document.getElementById("raceLobbyTabs");
 const racePngViewer = document.getElementById("racePngViewer");
 const racePngImage = document.getElementById("racePngImage");
 const raceDgPanel = document.getElementById("raceDgPanel");
-const dgModal = document.getElementById("dgModal");
-const dgModalCode = document.getElementById("dgModalCode");
-const dgModalContent = document.getElementById("dgModalContent");
-const dgModalClose = document.getElementById("dgModalClose");
 
-let selectedRacePng = "${currentRace}";
 
-function openDgModal(code, pilot, lap, timing, reason, sanction, type) {
-  if (!dgModal || !dgModalCode || !dgModalContent) return;
+let selectedRacePng = "${latestSavedRace}";
 
-  dgModalCode.textContent = code;
-
-  dgModalCode.className = "dg-modal-code " + type;
-
-  dgModalContent.innerHTML =
-
-  '<div class="dg-grid">' +
-
-    '<div class="dg-field">' +
-      '<div class="dg-label">Pilota</div>' +
-      '<div class="dg-value">' + pilot + '</div>' +
-    '</div>' +
-
-    '<div class="dg-field">' +
-      '<div class="dg-label">Giro</div>' +
-      '<div class="dg-value">' + lap + '</div>' +
-    '</div>' +
-
-    '<div class="dg-field">' +
-      '<div class="dg-label">Timing</div>' +
-      '<div class="dg-value">' + timing + '</div>' +
-    '</div>' +
-
-    '<div class="dg-field">' +
-      '<div class="dg-label">Sanzione</div>' +
-      '<div class="dg-value">' + sanction + '</div>' +
-    '</div>' +
-
-  '</div>' +
-
-  '<div class="dg-reason-box">' +
-    '<div class="dg-label">Motivo penalità</div>' +
-    '<div class="dg-reason-text">' + reason + '</div>' +
-  '</div>';
-
-  dgModal.classList.add("open");
-}
-
-if (dgModalClose) {
-  dgModalClose.addEventListener("click", function() {
-    dgModal.classList.remove("open");
-  });
-}
-
-if (dgModal) {
-  dgModal.addEventListener("click", function(e) {
-    if (e.target === dgModal) {
-      dgModal.classList.remove("open");
-    }
-  });
-}
 
 function renderRacePngTabs() {
   if (!racePngTabs) return;
 
   racePngTabs.innerHTML = "";
 
-  const raceLeagues =
-  selectedRacePng === "1"
-    ? ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"]
-      : orderedLeagues;
+  const raceLeagues = orderedLeagues;
 
   raceLeagues.forEach(function(league) {
+  const btn = document.createElement("button");
+  btn.className = "tab-btn saved preloaded";
+  btn.type = "button";
+  btn.textContent = league;
+
+  btn.addEventListener("click", function() {
+  const allLeagueTabs = racePngTabs.querySelectorAll("button");
+
+  allLeagueTabs.forEach(function(tab) {
+    tab.classList.remove("active-ready");
+  });
+
+  btn.classList.add("active-ready");
+
+  renderRaceLobbyTabs(league);
+
+  if (racePngImage) {
+    racePngImage.src = "";
+  }
+
+  if (racePngViewer) {
+    racePngViewer.classList.remove("visible");
+    racePngViewer.classList.remove("loading");
+  }
+
+  if (raceDgPanel) {
+  raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
+}
+});
+
+  racePngTabs.appendChild(btn);
+});
+}
+
+function renderRaceLobbyTabs(league) {
+  if (!raceLobbyTabs) return;
+
+  raceLobbyTabs.innerHTML = "";
+
+  const lobbies = lobbiesByLeague[league] || [];
+
+  lobbies.forEach(function(lobby) {
     const btn = document.createElement("button");
     btn.className = "tab-btn saved preloaded";
     btn.type = "button";
-    btn.textContent = league + " G" + selectedRacePng;
+    btn.textContent = lobby;
 
     btn.addEventListener("click", function() {
-      openRacePng(league);
+      openRacePng(league, lobby);
     });
 
-    racePngTabs.appendChild(btn);
+    raceLobbyTabs.appendChild(btn);
   });
 }
 
-function openRacePng(league) {
-  if (!racePngImage || !racePngViewer || !racePngTabs) return;
+function openRacePng(league, lobby) {
+  if (!racePngImage || !racePngViewer || !raceLobbyTabs) return;
 
-  const src = "/Gare/G" + selectedRacePng + "/" + league + ".png";
+  const src =
+    "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + ".png";
 
-  const allTabs = racePngTabs.querySelectorAll("button");
+  const allTabs = raceLobbyTabs.querySelectorAll("button");
 
   allTabs.forEach(function(btn) {
     btn.classList.remove("active-loading", "active-ready");
   });
 
   const activeBtn = Array.from(allTabs).find(function(btn) {
-    return btn.textContent.includes(league);
+    return btn.textContent === lobby;
   });
 
   if (activeBtn) {
@@ -9277,7 +8839,8 @@ function openRacePng(league) {
   }
 
   racePngImage.src = "";
-  racePngImage.alt = "Classifica Gara " + selectedRacePng + " " + league;
+  racePngImage.alt =
+    "Classifica Gara " + selectedRacePng + " " + league + " " + lobby;
 
   racePngViewer.classList.add("visible");
   racePngViewer.classList.add("loading");
@@ -9287,7 +8850,7 @@ function openRacePng(league) {
   raceDgPanel.innerHTML = "";
 
   const dgSrc =
-    "/Gare/G" + selectedRacePng + "/" + league + "-dg.json";
+  "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
 
   fetch(dgSrc)
     .then(function(response) {
@@ -9299,52 +8862,45 @@ function openRacePng(league) {
 
       let rowsHtml = "";
 
-      items.forEach(function(item, index) {
-        const type = item.type || "time";
-        const btnId = "dgPenaltyBtn_" + selectedRacePng + "_" + league + "_" + index;
+      items.forEach(function(item) {
+  rowsHtml +=
+    '<div class="dg-driver-row">' +
+      '<span class="dg-driver-name">' +
+        escapeHtml(item.pilot || "-") +
+      '</span>' +
+      '<span class="dg-mini-pill time">' +
+        escapeHtml(item.sanction || ("+" + (item.seconds || 0) + " sec")) +
+      '</span>' +
+    '</div>';
+});
 
-        rowsHtml +=
-          '<button class="dg-driver-row" id="' + btnId + '" type="button">' +
-            '<span class="dg-driver-name">' + escapeHtml(item.pilot || "-") + '</span>' +
-            '<span class="dg-mini-pill ' + escapeHtml(type) + '">' + escapeHtml(item.code || "-") + '</span>' +
-            '<span class="dg-open-pill">APRI</span>' +
-          '</button>';
-      });
+raceDgPanel.innerHTML =
+  '<div class="dg-accordion">' +
+    '<div class="dg-logo-wrap">' +
+      '<img src="/union-logo.png" alt="UNION 2026 Logo" />' +
+    '</div>' +
 
-      raceDgPanel.innerHTML =
-        '<details class="dg-accordion">' +
-          '<summary class="dg-accordion-summary">' +
-            '<div>' +
-              '<div class="dg-accordion-title">Provvedimenti Direzione Gara</div>' +
-              '<div class="dg-accordion-subtitle">Gara ' + selectedRacePng + ' • ' + league + '</div>' +
-            '</div>' +
-            '<span class="dg-accordion-action">Apri</span>' +
-          '</summary>' +
-          '<div class="dg-accordion-content">' +
-            rowsHtml +
-          '</div>' +
-        '</details>';
+    '<div class="dg-accordion-summary">' +
+      '<div>' +
+        '<div class="dg-accordion-title">PROVVEDIMENTI DIREZIONE GARA</div>' +
+        '<div class="dg-accordion-subtitle">Gara ' +
+          selectedRacePng +
+          ' • ' +
+          league +
+          ' • ' +
+          lobby +
+        '</div>' +
+      '</div>' +
+    '</div>' +
 
-      raceDgPanel.style.display = "grid";
+    '<div class="dg-accordion-content">' +
+      rowsHtml +
+    '</div>' +
 
-      items.forEach(function(item, index) {
-        const btnId = "dgPenaltyBtn_" + selectedRacePng + "_" + league + "_" + index;
-        const btn = document.getElementById(btnId);
+    '<div class="dg-signature">La Direzione Gara</div>' +
+  '</div>';
 
-        if (!btn) return;
-
-        btn.addEventListener("click", function() {
-          openDgModal(
-            item.code || "-",
-            item.pilot || "-",
-            item.lap || "-",
-            item.timing || "-",
-            item.reason || "-",
-            item.sanction || "-",
-            item.type || "time"
-          );
-        });
-      });
+raceDgPanel.style.display = "grid";
     })
     .catch(function() {
       raceDgPanel.style.display = "none";
@@ -9401,7 +8957,16 @@ if (racePngSelect) {
   racePngSelect.addEventListener("change", function() {
     selectedRacePng = racePngSelect.value;
     renderRacePngTabs();
+    if (raceLobbyTabs) {
+  raceLobbyTabs.innerHTML = "";
+}
+    if (racePngTabs) {
+  const allLeagueTabs = racePngTabs.querySelectorAll("button");
 
+  allLeagueTabs.forEach(function(tab) {
+    tab.classList.remove("active-loading", "active-ready");
+  });
+}
     if (racePngImage) racePngImage.src = "";
     if (racePngViewer) {
   racePngViewer.classList.remove("visible");
@@ -9409,6 +8974,7 @@ if (racePngSelect) {
 }
   if (raceDgPanel) {
   raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
 }
   });
 }
@@ -9657,12 +9223,17 @@ if (racePngImage) {
 
 if (raceDgPanel) {
   raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
 }
 
 if (racePngTabs) {
   racePngTabs.querySelectorAll("button").forEach(function(btn) {
     btn.classList.remove("active-loading", "active-ready");
   });
+}
+
+if (raceLobbyTabs) {
+  raceLobbyTabs.innerHTML = "";
 }
 
       if (bootingPanel) {
@@ -9687,7 +9258,7 @@ if (window.matchMedia("(max-width: 700px)").matches) {
 
   const seasonNode = allNodes.find((el) => {
     const text = (el.textContent || "").trim().toUpperCase();
-    return text === "PRT SEASON 2K26";
+    return text === "UNION 2026 • ROUND 2";
   });
 
   if (seasonNode) {
@@ -9699,7 +9270,7 @@ if (window.matchMedia("(max-width: 700px)").matches) {
 
       if (
         children.length >= 2 &&
-        rowText.includes("PRT SEASON 2K26")
+        rowText.includes("UNION 2026 • ROUND 2")
       ) {
         row.style.setProperty("display", "grid", "important");
         row.style.setProperty("grid-template-columns", "1fr", "important");
@@ -9722,7 +9293,7 @@ if (window.matchMedia("(max-width: 700px)").matches) {
   }
 }
 
-document.title = "PRT Season 2K26 - " + league;
+document.title = "UNION 2026 - " + league;
 
 renderLeagueMovements(league);
     }
@@ -9741,29 +9312,14 @@ renderLeagueMovements(league);
 
 // SPLASH SCREEN
 
-const splashDots = document.getElementById("splashDots");
-
-let dots = 0;
-
-function animateDots() {
-  if (!splashDots) return;
-
-  dots = (dots + 1) % 4;
-  splashDots.textContent = ".".repeat(dots);
-
-  setTimeout(animateDots, 500);
-}
-
-animateDots();
-
 setTimeout(() => {
   const splash = document.getElementById("splashScreen");
   if (splash) splash.style.display = "none";
 }, 8000);
   </script>
-
+AC
 <div id="prtAccessCounterBox">
-  <div class="prtAccessCounterLabel">👁️ ACCESSI PORTALE PRT</div>
+  <div class="prtAccessCounterLabel">👁️ ACCESSI PORTALE UNION</div>
   <div id="prtAccessCounterNumber" class="prtAccessCounterNumber"></div>
 </div>
 
@@ -9771,8 +9327,8 @@ setTimeout(() => {
 #prtAccessCounterBox{
   display:none;
   position:fixed;
-  right:18px;
-  bottom:18px;
+  right:160px;
+bottom:150px;
   z-index:9999;
   padding:12px 16px;
   border-radius:16px;
@@ -9782,8 +9338,26 @@ setTimeout(() => {
   color:#fff;
   text-align:center;
   font-family:Arial,sans-serif;
-  opacity:1;
-  transition:opacity 2.5s ease;
+  opacity:0;
+animation: unionCounterSplash 6.6s ease 1s forwards;
+}
+
+@keyframes unionCounterSplash {
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 .prtAccessCounterLabel{
@@ -9807,9 +9381,9 @@ setTimeout(() => {
 
 <script>
 (function(){
-  const BASE_VISITS = 378;
-  const NAMESPACE = "prt-s2k26";
-  const COUNTER_NAME = "accessi-portale-prt";
+  const BASE_VISITS = 0;
+const NAMESPACE = "union-2026-r2";
+const COUNTER_NAME = "accessi-portale-union";
 
   const boxEl = document.getElementById("prtAccessCounterBox");
   const numberEl = document.getElementById("prtAccessCounterNumber");
@@ -9851,32 +9425,79 @@ setTimeout(() => {
 </body>
 </html>`
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
+  const outputHtml = preview
+  ? html.replace(
+      "<head>",
+      `<head>
+<base href="${window.location.origin}/">`
+    )
+  : html
 
-  try {
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "prt_s2k26_portale_generale.html"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  } finally {
+const blob = new Blob([outputHtml], { type: "text/html;charset=utf-8" })
+const url = URL.createObjectURL(blob)
+
+if (preview) {
+  window.open(url, "_blank", "noopener,noreferrer")
+
+  setTimeout(() => {
     URL.revokeObjectURL(url)
-  }
+  }, 60000)
+
+  return
+}
+
+try {
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "union_2026_r2_portale_classifiche.html"
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+} finally {
+  URL.revokeObjectURL(url)
+}
 }
 
 function openExportModal(type: "png" | "championship-html") {
-  setExportTextsDraft(exportTexts)
+  const circuitByRace: Record<number, string> = {
+    1: "Red Bull Ring",
+    2: "Watkins Glen",
+    3: "Suzuka Circuit",
+    4: "Autopolis",
+    5: "Nürburgring GP",
+  }
+
+  const selectedLeagueRows = driverChampionshipByLeague[selectedLeague] || []
+
+const latestRaceWithResults = [1, 2, 3, 4, 5]
+  .filter((raceNumber) =>
+    selectedLeagueRows.some((driver) => driver.raceResults[raceNumber] != null)
+  )
+  .pop()
+
+setExportTextsDraft({
+  ...exportTexts,
+  mainTitle:
+    type === "championship-html"
+      ? `UNION 2026 - ROUND 2 | ${selectedLeague}`
+      : exportTexts.mainTitle,
+  sideLabel:
+    type === "championship-html"
+      ? latestRaceWithResults
+        ? `STANDINGS • GARA ${latestRaceWithResults}`
+        : "ELENCO PILOTI"
+      : circuitByRace[currentRace] || exportTexts.sideLabel,
+})
+
   setPendingHeaderExportType(type)
   setShowExportModal(true)
 }
 
   async function confirmHeaderExport() {
   const nextTexts = {
-    mainTitle: (exportTextsDraft.mainTitle || "ALBIXXIMO RACE TOOL").trim(),
-    sideLabel: (exportTextsDraft.sideLabel || "RACE CSV EXTRACTOR").trim(),
-    subtitle: (exportTextsDraft.subtitle || "PRT Timing Assistant").trim(),
+    mainTitle: (exportTextsDraft.mainTitle || "UNION RACE TOOL").trim(),
+    sideLabel: (exportTextsDraft.sideLabel || "Circuito UNION").trim(),
+    subtitle: (exportTextsDraft.subtitle || "UNION Timing Assistant").trim(),
   }
 
   setExportTexts(nextTexts)
@@ -10081,12 +9702,13 @@ function exportChampionshipBackup() {
   savedAt: new Date().toISOString(),
   championshipState,
   currentRace,
-  selectedLeague,
-  exportTexts,
+selectedLeague,
+selectedLobby,
+exportTexts,
   driverLeagueMap: workbenchDriverLeagueMap,
-  driverAliasMap,
-  driverRatingMap,
-  uploadedLeagueHtmls,
+driverAliasMap,
+driverTeamOverrides,
+uploadedLeagueHtmls,
 }
 
     const json = JSON.stringify(backup, null, 2)
@@ -10208,6 +9830,16 @@ setChampionshipState({
 setCurrentRace(race)
 setSelectedLeague(league)
 
+const validLobbies = UNION_LOBBIES_BY_RANK[league] as readonly string[]
+
+const importedLobby =
+  parsed.selectedLobby &&
+  validLobbies.includes(parsed.selectedLobby)
+    ? parsed.selectedLobby
+    : UNION_LOBBIES_BY_RANK[league][0]
+
+setSelectedLobby(importedLobby)
+
 if (parsed.exportTexts) {
   setExportTexts(parsed.exportTexts)
 }
@@ -10295,9 +9927,11 @@ setDriverAliasMap(
       }
 )
 
-setDriverRatingMap(
-  parsed.driverRatingMap && typeof parsed.driverRatingMap === "object"
-    ? parsed.driverRatingMap
+setDriverTeamOverrides(
+  parsed.driverTeamOverrides &&
+  typeof parsed.driverTeamOverrides === "object" &&
+  !Array.isArray(parsed.driverTeamOverrides)
+    ? parsed.driverTeamOverrides
     : {}
 )
 
@@ -11271,8 +10905,8 @@ const lastCreatedMovementText = useMemo(() => {
 
   <label
     style={{
-      display: "inline-flex",
-      alignItems: "center",
+  display: "none",
+  alignItems: "center",
       gap: 10,
       padding: "10px 12px",
       borderRadius: 14,
@@ -12453,7 +12087,7 @@ const lastCreatedMovementText = useMemo(() => {
     lineHeight: 1.45,
   }}
 >
-  In esportazione PNG il dettaglio penalità nel formato <b>P05 Lap3 04:47</b> viene mostrato solo in <b>modalità PRT</b>. In <b>UNION</b> nel PNG resta visibile solo il totale penalità.
+  In esportazione PNG viene mostrato solo il totale delle penalità applicate dalla Direzione Gara.
   <br />
   Le penalità possono essere inserite anche per i piloti <b>doppiati</b> senza gap finale manuale, ma <b>non influenzano la classifica</b> finché il gap non viene compilato.
 </div>
@@ -12766,7 +12400,7 @@ const lastCreatedMovementText = useMemo(() => {
       </div>
 
       <div style={{ fontSize: 12, opacity: 0.72, lineHeight: 1.45 }}>
-  Fonte ufficiale dei piloti per ogni lega. I DNP automatici vengono generati confrontando i presenti nella gara con questo cassetto.
+  Fonte ufficiale dei piloti per ogni Rank. Le assenze vengono rilevate confrontando i piloti attesi con quelli effettivamente presenti in gara.
 </div>
     </div>
 
@@ -13545,8 +13179,6 @@ const lastCreatedMovementText = useMemo(() => {
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  driverRatingMap={driverRatingMap}
-  setDriverRatingMap={setDriverRatingMap}
   exporting={false}
 />
 
@@ -13601,7 +13233,25 @@ const lastCreatedMovementText = useMemo(() => {
     </button>
 
     <button
-  onClick={downloadChampionshipGeneralHtmlExport}
+  onClick={() => downloadChampionshipGeneralHtmlExport(true)}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(56,189,248,0.35)",
+    background: "rgba(56,189,248,0.14)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    boxShadow: "0 0 18px rgba(56,189,248,0.10)",
+  }}
+>
+  Anteprima portale
+</button>
+    
+    <button
+  onClick={() => downloadChampionshipGeneralHtmlExport()}
   disabled={!canExportGeneralHtml}
   style={{
     padding: "12px 16px",
@@ -13782,8 +13432,6 @@ const lastCreatedMovementText = useMemo(() => {
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  driverRatingMap={driverRatingMap}
-  setDriverRatingMap={setDriverRatingMap}
   exporting={true}
 />
   </div>
@@ -14096,9 +13744,11 @@ const lastCreatedMovementText = useMemo(() => {
         <div style={{ marginTop: 8, fontSize: 13, opacity: 0.78, lineHeight: 1.45 }}>
           <b>Gara:</b> {currentRace}
           <br />
-          Verranno eliminati tutti i salvataggi di tutti i Rank e di tutte le Lobby relativi a questa gara.
-          <br />
-          La schermata corrente tornerà pulita, come un reset locale.
+          Verranno eliminati tutti i risultati salvati di tutti i Rank e di tutte le Lobby relativi a questa gara.
+<br />
+I piloti previsti assegnati alle Lobby resteranno invariati.
+<br />
+La schermata corrente tornerà pulita, come un reset locale.
         </div>
       </div>
 
@@ -15802,8 +15452,6 @@ const changed = currentValue !== originalValue
   currentRace={currentRace}
   championshipRacesIncludedLabel={championshipRacesIncludedLabel}
   driverChampionshipByLeague={driverChampionshipByLeague}
-  driverRatingMap={driverRatingMap}
-  setDriverRatingMap={setDriverRatingMap}
   exporting={true}
 />
 
