@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
-const COUNTER_KEY = "prt:s2k26:portal:accessi"
-const START_VALUE = 1349
+const COUNTER_KEY = "union:2026:r2:portal:accessi"
+const START_VALUE = 0
 
 export async function GET() {
   try {

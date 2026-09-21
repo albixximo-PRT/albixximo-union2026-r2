@@ -9827,7 +9827,7 @@ const COUNTER_NAME = "accessi-portale-union";
   const boxEl = document.getElementById("prtAccessCounterBox");
   const numberEl = document.getElementById("prtAccessCounterNumber");
 
-  fetch(\`https://api.counterapi.dev/v1/\${NAMESPACE}/\${COUNTER_NAME}/up\`)
+  fetch("/api/portal-counter")
     .then(r => r.json())
     .then(data => {
       const realVisits = Number(data?.count || data?.value || 0);
