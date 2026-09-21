@@ -9821,7 +9821,7 @@ animation: unionCounterSplash 6.6s ease 1s forwards;
 <script>
 (function(){
   const BASE_VISITS = 0;
-const NAMESPACE = "union-2026-r2";
+const NAMESPACE = "prt-s2k26";
 const COUNTER_NAME = "accessi-portale-union";
 
   const boxEl = document.getElementById("prtAccessCounterBox");
