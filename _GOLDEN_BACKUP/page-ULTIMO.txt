@@ -1719,25 +1719,76 @@ function AppHeader({
               minWidth: 0,
             }}
           >
-            {mainTitle}
+            {mainTitle.includes(" | ") ? (
+  <>
+    <span>{mainTitle.split(" | ")[0]}</span>
+
+    <span
+  style={{
+    display: "inline-block",
+    width: 1,
+    height: 38,
+    margin: "0 16px",
+    borderRadius: 999,
+    background:
+      "linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,1) 25%, rgba(255,255,255,0.95) 50%, rgba(160,90,255,0.9) 75%, rgba(160,90,255,0.10) 100%)",
+    boxShadow:
+      "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
+    transform: "skewX(-14deg)",
+    verticalAlign: "middle",
+  }}
+/>
+
+    <span>{mainTitle.split(" | ")[1]}</span>
+  </>
+) : (
+  mainTitle
+)}
           </div>
 
           <span
-            style={{
-              fontSize: 14,
-              padding: "6px 10px",
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.06)",
-              opacity: 0.95,
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {sideLabel}
-          </span>
+  style={{
+    fontSize: 14,
+    padding: sideLabel === "ELENCO PILOTI" ? "5px 12px 6px" : "6px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.06)",
+    opacity: 0.95,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    marginLeft: sideLabel === "ELENCO PILOTI" ? 6 : 0,
+    display: "inline-flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: 1.05,
+  }}
+>
+  {sideLabel === "ELENCO PILOTI" ? (
+    <>
+      <span style={{ fontSize: 13, fontWeight: 800 }}>
+        ELENCO PILOTI
+      </span>
+
+      <span
+        style={{
+          marginTop: 3,
+          fontSize: 8,
+          fontWeight: 600,
+          letterSpacing: 0.45,
+          opacity: 0.62,
+          textTransform: "none",
+        }}
+      >
+        in ordine alfabetico
+      </span>
+    </>
+  ) : (
+    sideLabel
+  )}
+</span>
         </div>
 
         <div style={{ marginTop: 5, fontSize: 13, opacity: 0.9, whiteSpace: "nowrap" }}>
@@ -4699,9 +4750,13 @@ function ChampionshipTableBlock({
 }) {
   const leagueRows = driverChampionshipByLeague[selectedLeague] || []
 
-  if (leagueRows.length === 0) return null
+if (leagueRows.length === 0) return null
 
-  const s = PRT_CHAMPIONSHIP_TABLE_STYLES
+const hasChampionshipResults = leagueRows.some(
+  (driver) => Object.keys(driver.raceResults).length > 0
+)
+
+const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
   const championshipCircuits: Record<
   number,
@@ -4953,8 +5008,22 @@ function ChampionshipTableBlock({
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "center" }}>
-                      <PosBadge pos={index + 1} />
-                    </div>
+  {hasChampionshipResults ? (
+    <PosBadge pos={index + 1} />
+  ) : (
+    <span
+      style={{
+        fontSize: 12,
+        fontWeight: 900,
+        fontFamily:
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        opacity: 0.9,
+      }}
+    >
+      {index + 1}
+    </span>
+  )}
+</div>
                   </TableCell>
 
                                     <TableCell
@@ -5041,18 +5110,18 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
     ...(exporting ? s.garaCellExport : s.garaCell),
   }}
 >
-  {1 <= currentRace ? (
-    <span
-      style={{
-        ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
-        fontWeight: exporting ? 700 : 600,
-      }}
-    >
-      {renderChampionshipRaceCell(driver.raceResults[1] ?? null, exporting)}
-    </span>
-  ) : (
-    "-"
-  )}
+  {hasChampionshipResults && 1 <= currentRace ? (
+  <span
+    style={{
+      ...(exporting ? s.raceCellInnerExport : s.raceCellInner),
+      fontWeight: exporting ? 700 : 600,
+    }}
+  >
+    {renderChampionshipRaceCell(driver.raceResults[1] ?? null, exporting)}
+  </span>
+) : (
+  "-"
+)}
 </TableCell>
 
 <TableCell
@@ -7219,7 +7288,7 @@ body {
   }
 }
 
-async function downloadChampionshipGeneralHtmlExport() {
+async function downloadChampionshipGeneralHtmlExport(preview = false) {
   const latestSavedRace = [1, 2, 3, 4, 5]
   .filter((raceNumber) => {
     const raceState = championshipState.races[raceNumber]
@@ -7473,7 +7542,7 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 
     .tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
 }
@@ -8719,8 +8788,9 @@ function renderRacePngTabs() {
   }
 
   if (raceDgPanel) {
-    raceDgPanel.style.display = "none";
-  }
+  raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
+}
 });
 
   racePngTabs.appendChild(btn);
@@ -8904,6 +8974,7 @@ if (racePngSelect) {
 }
   if (raceDgPanel) {
   raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
 }
   });
 }
@@ -9152,12 +9223,17 @@ if (racePngImage) {
 
 if (raceDgPanel) {
   raceDgPanel.style.display = "none";
+  raceDgPanel.innerHTML = "";
 }
 
 if (racePngTabs) {
   racePngTabs.querySelectorAll("button").forEach(function(btn) {
     btn.classList.remove("active-loading", "active-ready");
   });
+}
+
+if (raceLobbyTabs) {
+  raceLobbyTabs.innerHTML = "";
 }
 
       if (bootingPanel) {
@@ -9236,27 +9312,12 @@ renderLeagueMovements(league);
 
 // SPLASH SCREEN
 
-const splashDots = document.getElementById("splashDots");
-
-let dots = 0;
-
-function animateDots() {
-  if (!splashDots) return;
-
-  dots = (dots + 1) % 4;
-  splashDots.textContent = ".".repeat(dots);
-
-  setTimeout(animateDots, 500);
-}
-
-animateDots();
-
 setTimeout(() => {
   const splash = document.getElementById("splashScreen");
   if (splash) splash.style.display = "none";
 }, 8000);
   </script>
-
+AC
 <div id="prtAccessCounterBox">
   <div class="prtAccessCounterLabel">👁️ ACCESSI PORTALE UNION</div>
   <div id="prtAccessCounterNumber" class="prtAccessCounterNumber"></div>
@@ -9266,8 +9327,8 @@ setTimeout(() => {
 #prtAccessCounterBox{
   display:none;
   position:fixed;
-  right:170px;
-bottom:165px;
+  right:160px;
+bottom:150px;
   z-index:9999;
   padding:12px 16px;
   border-radius:16px;
@@ -9364,19 +9425,37 @@ const COUNTER_NAME = "accessi-portale-union";
 </body>
 </html>`
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
+  const outputHtml = preview
+  ? html.replace(
+      "<head>",
+      `<head>
+<base href="${window.location.origin}/">`
+    )
+  : html
 
-  try {
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "union_2026_r2_portale_classifiche.html"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  } finally {
+const blob = new Blob([outputHtml], { type: "text/html;charset=utf-8" })
+const url = URL.createObjectURL(blob)
+
+if (preview) {
+  window.open(url, "_blank", "noopener,noreferrer")
+
+  setTimeout(() => {
     URL.revokeObjectURL(url)
-  }
+  }, 60000)
+
+  return
+}
+
+try {
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "union_2026_r2_portale_classifiche.html"
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+} finally {
+  URL.revokeObjectURL(url)
+}
 }
 
 function openExportModal(type: "png" | "championship-html") {
@@ -9388,10 +9467,27 @@ function openExportModal(type: "png" | "championship-html") {
     5: "Nürburgring GP",
   }
 
-  setExportTextsDraft({
-    ...exportTexts,
-    sideLabel: circuitByRace[currentRace] || exportTexts.sideLabel,
-  })
+  const selectedLeagueRows = driverChampionshipByLeague[selectedLeague] || []
+
+const latestRaceWithResults = [1, 2, 3, 4, 5]
+  .filter((raceNumber) =>
+    selectedLeagueRows.some((driver) => driver.raceResults[raceNumber] != null)
+  )
+  .pop()
+
+setExportTextsDraft({
+  ...exportTexts,
+  mainTitle:
+    type === "championship-html"
+      ? `UNION 2026 - ROUND 2 | ${selectedLeague}`
+      : exportTexts.mainTitle,
+  sideLabel:
+    type === "championship-html"
+      ? latestRaceWithResults
+        ? `STANDINGS • GARA ${latestRaceWithResults}`
+        : "ELENCO PILOTI"
+      : circuitByRace[currentRace] || exportTexts.sideLabel,
+})
 
   setPendingHeaderExportType(type)
   setShowExportModal(true)
@@ -13137,7 +13233,25 @@ const lastCreatedMovementText = useMemo(() => {
     </button>
 
     <button
-  onClick={downloadChampionshipGeneralHtmlExport}
+  onClick={() => downloadChampionshipGeneralHtmlExport(true)}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(56,189,248,0.35)",
+    background: "rgba(56,189,248,0.14)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    boxShadow: "0 0 18px rgba(56,189,248,0.10)",
+  }}
+>
+  Anteprima portale
+</button>
+    
+    <button
+  onClick={() => downloadChampionshipGeneralHtmlExport()}
   disabled={!canExportGeneralHtml}
   style={{
     padding: "12px 16px",

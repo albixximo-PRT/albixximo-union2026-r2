@@ -1809,10 +1809,10 @@ function AppHeader({
       </div>
 
       <a
-  href="/union-logo.png"
+  href="/logoapex.png"
   target="_blank"
   rel="noreferrer"
-  title="UNION 2026 Logo"
+  title="APEX Logo"
         style={{
           display: "flex",
           alignItems: "center",
@@ -1822,8 +1822,8 @@ function AppHeader({
         }}
       >
         <img
-  src="/union-logo.png"
-  alt="UNION 2026"
+  src="/logoapex.png"
+  alt="APEX"
           style={{
             height: 110,
             width: "auto",
@@ -7612,6 +7612,98 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
   border-radius: 14px;
 }
 
+.race-waiting-panel {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 42px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 215, 0, 0.72);
+  background:
+    radial-gradient(
+      600px 180px at 50% 0%,
+      rgba(255, 215, 0, 0.10),
+      transparent 65%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,0.035),
+      rgba(0,0,0,0.18)
+    );
+  box-shadow:
+    0 0 10px rgba(255, 215, 0, 0.25),
+    0 0 32px rgba(255, 185, 0, 0.12),
+    inset 0 0 28px rgba(255, 215, 0, 0.035);
+}
+
+.race-waiting-pill {
+  padding: 7px 15px;
+  margin-bottom: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 215, 0, 0.80);
+  background: rgba(255, 215, 0, 0.10);
+  color: #ffe36e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.18);
+}
+
+.race-waiting-title {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: 0.8px;
+  line-height: 1.15;
+}
+
+.race-waiting-meta {
+  margin-top: 12px;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+}
+
+.race-waiting-text {
+  margin-top: 20px;
+  color: rgba(255,255,255,0.68);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+@media (max-width: 640px) {
+  .race-waiting-panel {
+    min-height: 220px;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+    padding: 32px 22px;
+  }
+
+  .race-waiting-pill {
+    margin-bottom: 16px;
+  }
+
+  .race-waiting-title {
+    font-size: 19px;
+    line-height: 1.2;
+  }
+
+  .race-waiting-meta {
+    font-size: 13px;
+  }
+
+  .race-waiting-text {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
 .race-dg-panel {
   display: none;
   margin-top: 14px;
@@ -7802,12 +7894,28 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
     }
 
     .tab-btn.active {
-      background: linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10));
-      border-color: rgba(255,215,0,0.42);
-      box-shadow: 0 0 18px rgba(255,215,0,0.12);
-    }
+  background: linear-gradient(
+    180deg,
+    rgba(255,215,0,0.38),
+    rgba(255,180,0,0.16)
+  );
+  border-color: rgba(255,235,80,1);
+box-shadow:
+  0 0 10px rgba(255,230,60,0.95),
+  0 0 28px rgba(255,195,0,0.65),
+  inset 0 0 22px rgba(255,225,70,0.18);
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255,255,255,0.35);
+}
+.tab-btn.active:hover {
+  border-color: rgba(255,235,80,1);
+  box-shadow:
+    0 0 10px rgba(255,230,60,0.95),
+    0 0 28px rgba(255,195,0,0.65),
+    inset 0 0 22px rgba(255,225,70,0.18);
+}    
 
-    .tab-btn:disabled {
+.tab-btn:disabled {
       opacity: 0.45;
       cursor: not-allowed;
       box-shadow: none;
@@ -7980,6 +8088,255 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
       animation: portalLoadShine 2.8s ease-in-out infinite;
     }
 
+    .sponsors-strip {
+  width: calc(100% - 28px);
+  margin: 8px 14px 0;
+  padding: 4px 26px 7px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255,215,0,0.025) 0%,
+      rgba(255,255,255,0.035) 50%,
+      rgba(160,90,255,0.025) 100%
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.035),
+    0 8px 28px rgba(0,0,0,0.18);
+
+  overflow: hidden;
+}
+
+/* CSI BOLOGNA */
+
+.sponsors-csi {
+  width: 100%;
+  height: 78px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.sponsors-csi img {
+  display: block;
+  width: auto;
+  height: 62px;
+  max-width: 205px;
+  object-fit: contain;
+
+  transform: translateY(1px);
+
+  filter:
+    drop-shadow(0 0 1px rgba(255,245,170,1))
+    drop-shadow(0 0 2px rgba(255,220,40,1))
+    drop-shadow(0 0 4px rgba(255,185,0,0.95))
+    drop-shadow(0 0 7px rgba(255,145,0,0.65));
+}
+/* LINEA GLOW ORO */
+
+.sponsors-glow-line {
+  width: min(560px, 38%);
+  height: 2px;
+  margin: 2px auto 4px;
+  flex-shrink: 0;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255,215,0,0) 0%,
+      rgba(255,215,0,0.45) 16%,
+      rgba(255,235,135,1) 50%,
+      rgba(255,215,0,0.45) 84%,
+      rgba(255,215,0,0) 100%
+    );
+
+  box-shadow:
+    0 0 5px rgba(255,215,0,0.95),
+    0 0 12px rgba(255,190,0,0.55),
+    0 0 20px rgba(255,160,0,0.25);
+}
+
+/* SPONSOR */
+
+.sponsors-row {
+  width: 100%;
+  height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 12px;
+
+  padding: 0 10px;
+}
+
+.sponsors-row img {
+  display: block;
+  width: auto;
+  object-fit: contain;
+  flex: 0 1 auto;
+}
+
+/* DIMENSIONI INDIVIDUALI */
+
+.sponsor-giansante {
+  height: 78px;
+  max-width: 145px;
+}
+
+.sponsor-terrybet {
+  height: 190px;
+  max-width: 360px;
+}
+
+.sponsor-cockpit {
+  height: 115px;
+  max-width: 265px;
+}
+
+.sponsor-eng {
+  height: 165px;
+  max-width: 320px;
+}
+
+.sponsor-travel {
+  height: 67px;
+  max-width: 120px;
+}
+
+.sponsor-pizzolon {
+  height: 105px;
+  max-width: 180px;
+}
+
+.sponsor-edil {
+  height: 140px;
+  max-width: 330px;
+}
+
+.sponsor-pomati {
+  height: 180px;
+  max-width: 390px;
+}
+
+/* RIFINITURA POSIZIONE SPONSOR DESKTOP */
+
+.sponsor-eng {
+  transform: translateX(24px);
+}
+
+.sponsor-travel {
+  transform: translateX(22px);
+}
+
+.sponsor-pizzolon {
+  transform: translateX(28px);
+}
+
+.sponsor-edil {
+  transform: translateX(-22px);
+}
+
+.sponsor-pomati {
+  transform: translateX(-30px);
+}
+/* TABLET */
+
+@media (max-width: 1100px) {
+  .sponsors-strip {
+    padding: 6px 16px 12px;
+  }
+
+  .sponsors-row {
+    height: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 22px;
+  }
+}
+
+/* TELEFONO */
+
+@media (max-width: 700px) {
+  .sponsors-strip {
+    width: calc(100% - 20px);
+    margin: 8px 10px 0;
+    padding: 8px 12px 14px;
+  }
+
+  .sponsors-csi {
+    height: 70px;
+  }
+
+  .sponsors-csi img {
+    height: 64px;
+    max-width: 205px;
+  }
+
+  .sponsors-glow-line {
+    width: 68%;
+    margin: 0 auto 10px;
+  }
+
+  .sponsors-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: auto;
+    gap: 14px 18px;
+    padding: 0;
+  }
+
+  .sponsors-row img {
+    justify-self: center;
+    max-width: 145px;
+  }
+
+  .sponsor-giansante {
+    height: 60px;
+  }
+
+  .sponsor-terrybet {
+    height: 54px;
+  }
+
+  .sponsor-cockpit {
+    height: 56px;
+  }
+
+  .sponsor-eng {
+    height: 58px;
+  }
+
+  .sponsor-travel {
+    height: 62px;
+  }
+
+  .sponsor-pizzolon {
+    height: 60px;
+  }
+
+  .sponsor-edil {
+    height: 54px;
+  }
+
+  .sponsor-pomati {
+    height: 58px;
+  }
+}
+    
     .movements-wrap {
       display: none;
       width: 100%;
@@ -8563,6 +8920,12 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     font-size: 20px;
     padding: 0 12px;
   }
+
+  .splash-progress {
+    bottom: 15%;
+    width: min(320px, 72vw);
+    height: 6px;
+  }
 }
 
 @keyframes splashHintGlow {
@@ -8707,18 +9070,38 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
         </div>
       </div>
 
-      <div class="home-panel" id="homePanel" style="display:grid;">
-        <div class="home-card">
-          ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
-          <div class="home-card-title">ADESSO PUOI SELEZIONARE UNA LEGA</div>
-        </div>
-      </div>
-
       <div class="movements-wrap" id="movementsWrap"></div>
 
       <div class="iframe-wrap" id="iframeWrap">
   <div id="leagueFrame"></div>
 </div>
+      
+      <div class="sponsors-strip" id="sponsorsStrip">
+
+  <div class="sponsors-csi">
+    <img src="/csi.png" alt="CSI Bologna" />
+    <div class="sponsors-glow-line"></div>
+  </div>
+
+  <div class="sponsors-row">
+    <img class="sponsor-giansante" src="/giansante.png" alt="Giansante Elettricità" />
+    <img class="sponsor-terrybet" src="/terrybet.png" alt="Terrybet News" />
+    <img class="sponsor-cockpit" src="/cockpit.png" alt="Cockpit Tech Solution" />
+    <img class="sponsor-eng" src="/eng.png" alt="Engineering Sim Racing" />
+    <img class="sponsor-travel" src="/travel.png" alt="B Just Travel" />
+    <img class="sponsor-pizzolon" src="/pizzolon.png" alt="Pizzolon" />
+    <img class="sponsor-edil" src="/edil.png" alt="Edil Valle Piana" />
+    <img class="sponsor-pomati" src="/pomati.png" alt="Pomati Chocolate Technology" />
+  </div>
+
+</div>
+<div class="home-panel" id="homePanel" style="display:none;">
+  <div class="home-card">
+    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
+    <div class="home-card-title">ADESSO PUOI SELEZIONARE UNA LEGA</div>
+  </div>
+</div>
+
     </div>
   </div>
 
@@ -8771,10 +9154,10 @@ function renderRacePngTabs() {
   const allLeagueTabs = racePngTabs.querySelectorAll("button");
 
   allLeagueTabs.forEach(function(tab) {
-    tab.classList.remove("active-ready");
-  });
+  tab.classList.remove("active");
+});
 
-  btn.classList.add("active-ready");
+btn.classList.add("active");
 
   renderRaceLobbyTabs(league);
 
@@ -8811,8 +9194,16 @@ function renderRaceLobbyTabs(league) {
     btn.textContent = lobby;
 
     btn.addEventListener("click", function() {
-      openRacePng(league, lobby);
-    });
+  const allLobbyTabs = raceLobbyTabs.querySelectorAll("button");
+
+  allLobbyTabs.forEach(function(tab) {
+  tab.classList.remove("active");
+});
+
+btn.classList.add("active");
+
+  openRacePng(league, lobby);
+});
 
     raceLobbyTabs.appendChild(btn);
   });
@@ -8911,8 +9302,15 @@ raceDgPanel.style.display = "grid";
   const img = new Image();
 
   img.onload = function() {
-    racePngImage.src = src;
-    racePngViewer.classList.remove("loading");
+  const waitingPanel = racePngViewer.querySelector(".race-waiting-panel");
+
+  if (waitingPanel) {
+    waitingPanel.remove();
+  }
+
+  racePngImage.style.display = "block";
+  racePngImage.src = src;
+  racePngViewer.classList.remove("loading");
 
     if (activeBtn) {
       activeBtn.classList.remove("active-loading");
@@ -8921,12 +9319,35 @@ raceDgPanel.style.display = "grid";
   };
 
   img.onerror = function() {
-    racePngViewer.classList.remove("loading");
+  racePngViewer.classList.remove("loading");
 
-    if (activeBtn) {
-      activeBtn.classList.remove("active-loading");
-    }
-  };
+  racePngImage.src = "";
+  racePngImage.style.display = "none";
+
+  let waitingPanel = racePngViewer.querySelector(".race-waiting-panel");
+
+  if (!waitingPanel) {
+    waitingPanel = document.createElement("div");
+    waitingPanel.className = "race-waiting-panel";
+    racePngViewer.appendChild(waitingPanel);
+  }
+
+  waitingPanel.innerHTML =
+    '<div class="race-waiting-pill">RISULTATI IN ATTESA</div>' +
+    '<div class="race-waiting-title">CLASSIFICA NON ANCORA DISPONIBILE</div>' +
+    '<div class="race-waiting-meta">GARA ' +
+      selectedRacePng +
+      ' &nbsp;•&nbsp; ' +
+      escapeHtml(league) +
+      ' &nbsp;•&nbsp; ' +
+      escapeHtml(lobby) +
+    '</div>' +
+    '<div class="race-waiting-text">La classifica ufficiale sarà pubblicata non appena disponibile.</div>';
+
+  if (activeBtn) {
+    activeBtn.classList.remove("active-loading");
+  }
+};
 
   img.src = src;
 
@@ -8997,9 +9418,9 @@ renderRacePngTabs();
     bootingPanel.style.display = "none";
   }
 
-  if (homePanel && !activeLeague) {
-    homePanel.style.display = "grid";
-  }
+  if (homePanel) {
+  homePanel.style.display = "none";
+}
 }
 
     function renderLeagueMovements(league) {
@@ -9178,33 +9599,33 @@ Object.entries(relegatedFromGroups).forEach(([targetLeague, items]) => {
 }
 
     function renderTabs() {
-      const existingButtons = tabs.querySelectorAll("[data-league]");
+  const existingButtons = tabs.querySelectorAll("[data-league]");
 
-      existingButtons.forEach(function(btn) {
-        const league = btn.getAttribute("data-league");
-        const hasPage = !!(pages[league] && String(pages[league]).trim());
+  existingButtons.forEach(function(btn) {
+    const league = btn.getAttribute("data-league");
+    const hasPage = !!(pages[league] && String(pages[league]).trim());
 
-        btn.className =
-          "tab-btn" +
-          (hasPage ? " saved preloaded" : "") +
-          (activeLeague === league ? " active" : "");
+    btn.className =
+      "tab-btn" +
+      (hasPage ? " saved preloaded" : "") +
+      (activeLeague === league ? " active" : "");
 
-        const isLoaded = !!frame.srcdoc && activeLeague === league;
+    btn.innerHTML = hasPage
+      ? league + ' <span class="tab-check">✓</span>'
+      : league + ' <span class="tab-missing">—</span>';
 
-btn.innerHTML = hasPage
-  ? league + ' <span class="tab-check">✓</span>'
-  : league + ' <span class="tab-missing">—</span>';
-        btn.disabled = !hasPage;
-        btn.title = hasPage ? "Apri " + league : league + " non salvata";
+    btn.disabled = !hasPage;
+    btn.title = hasPage ? "Apri " + league : league + " non salvata";
 
-        if (hasPage && !btn.dataset.bound) {
-          btn.addEventListener("click", function() {
-            openLeague(league);
-          });
-          btn.dataset.bound = "true";
-        }
+    if (hasPage && !btn.dataset.bound) {
+      btn.addEventListener("click", function() {
+        openLeague(league);
       });
+
+      btn.dataset.bound = "true";
     }
+  });
+}
 
     function openLeague(league) {
       if (!pages[league]) return;
@@ -9237,11 +9658,14 @@ if (raceLobbyTabs) {
 }
 
       if (bootingPanel) {
-        bootingPanel.style.display = "none";
-      }
+  bootingPanel.style.display = "none";
+}
 
-      homePanel.style.display = "none";
-      iframeWrap.classList.add("visible");
+if (homePanel) {
+  homePanel.style.display = "none";
+}
+
+iframeWrap.classList.add("visible");
       const parser = new DOMParser();
 const parsed = parser.parseFromString(pages[league], "text/html");
 
@@ -9316,8 +9740,8 @@ setTimeout(() => {
   const splash = document.getElementById("splashScreen");
   if (splash) splash.style.display = "none";
 }, 8000);
-  </script>
-AC
+    </script>
+
 <div id="prtAccessCounterBox">
   <div class="prtAccessCounterLabel">👁️ ACCESSI PORTALE UNION</div>
   <div id="prtAccessCounterNumber" class="prtAccessCounterNumber"></div>
@@ -9373,8 +9797,23 @@ animation: unionCounterSplash 6.6s ease 1s forwards;
 
 @media (max-width:700px){
   #prtAccessCounterBox{
-    right:10px;
-    bottom:10px;
+    left:auto;
+    right:10%;
+    bottom:18%;
+    transform:none;
+    width:auto;
+    min-width:150px;
+    padding:7px 10px;
+    border-radius:12px;
+  }
+
+  .prtAccessCounterLabel{
+    font-size:8px;
+  }
+
+  .prtAccessCounterNumber{
+    margin-top:2px;
+    font-size:20px;
   }
 }
 </style>
@@ -9449,7 +9888,7 @@ if (preview) {
 try {
   const a = document.createElement("a")
   a.href = url
-  a.download = "union_2026_r2_portale_classifiche.html"
+  a.download = "union_r2.html"
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
