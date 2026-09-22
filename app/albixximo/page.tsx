@@ -9379,7 +9379,7 @@ raceDgPanel.style.display = "grid";
       ' &nbsp;•&nbsp; ' +
       escapeHtml(lobby) +
     '</div>' +
-    '<div class="race-waiting-text">La classifica ufficiale sarà pubblicata non appena disponibile.</div>';
+    '<div class="race-waiting-text">La classifica definitiva sarà pubblicata dopo la verifica e la validazione dei dati da parte della Direzione Gara</div>';
 
   if (activeBtn) {
     activeBtn.classList.remove("active-loading");
