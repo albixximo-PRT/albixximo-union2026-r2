@@ -1747,6 +1747,7 @@ function AppHeader({
           </div>
 
           <span
+  className="app-header-side-label"
   style={{
     fontSize: 14,
     padding: sideLabel === "ELENCO PILOTI" ? "5px 12px 6px" : "6px 10px",
@@ -1773,10 +1774,11 @@ function AppHeader({
       </span>
 
       <span
-        style={{
-          marginTop: 3,
-          fontSize: 8,
-          fontWeight: 600,
+  className="alphabetical-hint"
+  style={{
+    marginTop: 3,
+    fontSize: 8,
+    fontWeight: 600,
           letterSpacing: 0.45,
           opacity: 0.62,
           textTransform: "none",
@@ -1809,6 +1811,7 @@ function AppHeader({
       </div>
 
       <a
+  className="apex-header-logo"
   href="/logoapex.png"
   target="_blank"
   rel="noreferrer"
@@ -3820,13 +3823,13 @@ const PRT_CHAMPIONSHIP_TABLE_STYLES = {
   } satisfies React.CSSProperties,
 
   tableWrapExport: {
-    borderRadius: 15,
-    border: "1px solid rgba(255,255,255,0.10)",
-    overflowX: "auto",
-    overflowY: "hidden",
-    WebkitOverflowScrolling: "touch",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.20)",
-  } satisfies React.CSSProperties,
+  borderRadius: 15,
+  border: "1px solid rgba(255,255,255,0.10)",
+  overflowX: "auto",
+  overflowY: "hidden",
+  WebkitOverflowScrolling: "touch",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.20)",
+} satisfies React.CSSProperties,
 
   table: {
     width: "100%",
@@ -3858,11 +3861,14 @@ const PRT_CHAMPIONSHIP_TABLE_STYLES = {
   } satisfies React.CSSProperties,
 
   theadExport: {
-    background:
-      "linear-gradient(180deg, rgba(20,24,34,0.995), rgba(10,12,18,0.995))",
-    boxShadow:
-      "inset 0 -1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.18)",
-  } satisfies React.CSSProperties,
+  position: "sticky",
+  top: 0,
+  zIndex: 50,
+  background:
+    "linear-gradient(180deg, rgba(20,24,34,0.995), rgba(10,12,18,0.995))",
+  boxShadow:
+    "inset 0 -1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.18)",
+} satisfies React.CSSProperties,
 
   thBase: {
     padding: "12px 4px",
@@ -4852,7 +4858,7 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 ) : null}
         </div>
 
-        <div
+                <div
           style={{
             ...s.headMeta,
             ...(exporting ? s.headMetaExport : {}),
@@ -4863,17 +4869,26 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
       </div>
 
       <div
+  className="mobile-scroll-arrow"
+  aria-hidden="true"
+>
+  ❯
+</div>
+
+      <div
         ref={exporting ? championshipExportTableRef : undefined}
         style={{
           ...s.tableWrap,
           ...(exporting ? s.tableWrapExport : {}),
         }}
       >
+
         <table
-          style={{
-            ...(exporting ? s.tableExport : s.table),
-          }}
-        >
+  className="absolute-standings-table"
+  style={{
+    ...(exporting ? s.tableExport : s.table),
+  }}
+>
           <thead
             style={{
               ...(exporting ? s.theadExport : s.thead),
@@ -8786,6 +8801,7 @@ box-shadow:
 }
 
 @media (orientation: portrait) {
+
   .splash-desktop {
     display: none !important;
   }
@@ -8793,6 +8809,27 @@ box-shadow:
   .splash-mobile {
     display: block !important;
   }
+
+  .mobile-scroll-arrow {
+    display: block !important;
+    position: fixed !important;
+    right: 10px !important;
+    top: 52% !important;
+    transform: translateY(-50%);
+    z-index: 9999 !important;
+
+    font-size: 34px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    color: #ffd700 !important;
+    text-shadow:
+      0 0 8px rgba(255,215,0,0.85),
+      0 0 18px rgba(255,215,0,0.50);
+
+    pointer-events: none !important;
+  }
+
 }
 
 #splashText {
@@ -9003,9 +9040,9 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 <div class="race-png-panel">
   <div>
     <div class="race-png-title">Classifiche Assolute UNION 2026 • Round 2</div>
-    <div style="font-size:12px; opacity:0.72; margin-top:4px;">
-      Seleziona una lega per aprire la relativa classifica assoluta.
-    </div>
+    <div class="absolute-rank-hint" style="font-size:12px; opacity:0.72; margin-top:4px;">
+  Seleziona una lega per aprire la relativa classifica assoluta.
+</div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -9034,7 +9071,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
   </div>
 
   <div class="race-png-tabs" id="racePngTabs"></div>
-<div class="race-png-tabs" id="raceLobbyTabs"></div>
+<div class="race-png-tabs race-lobby-tabs" id="raceLobbyTabs"></div>
 
   <div class="race-png-viewer" id="racePngViewer">
   <img id="racePngImage" src="" alt="Classifica gara" />
@@ -9677,6 +9714,111 @@ const bodyContent = parsed.body.innerHTML;
 
 frame.innerHTML = styles + bodyContent;
 
+const mobileScrollArrow = frame.querySelector(".mobile-scroll-arrow");
+const horizontalScrollWrap = mobileScrollArrow?.nextElementSibling;
+
+if (mobileScrollArrow && horizontalScrollWrap) {
+  const updateMobileScrollArrow = () => {
+    const scrollLeft = horizontalScrollWrap.scrollLeft;
+    const clientWidth = horizontalScrollWrap.clientWidth;
+    const scrollWidth = horizontalScrollWrap.scrollWidth;
+
+    const isAtRight =
+      scrollLeft + clientWidth >= scrollWidth - 4;
+
+    mobileScrollArrow.style.setProperty(
+      "opacity",
+      isAtRight ? "0" : "1",
+      "important"
+    );
+  };
+
+  horizontalScrollWrap.addEventListener(
+    "scroll",
+    updateMobileScrollArrow,
+    { passive: true }
+  );
+
+  updateMobileScrollArrow();
+}
+
+const standingsTable = frame.querySelector(".absolute-standings-table");
+const standingsWrap = standingsTable?.parentElement;
+const standingsHead = standingsTable?.querySelector("thead");
+
+if (standingsTable && standingsWrap && standingsHead) {
+  const floatingHeaderWrap = document.createElement("div");
+
+  floatingHeaderWrap.style.position = "fixed";
+  floatingHeaderWrap.style.top = "0";
+  floatingHeaderWrap.style.overflow = "hidden";
+  floatingHeaderWrap.style.zIndex = "99998";
+  floatingHeaderWrap.style.display = "none";
+  floatingHeaderWrap.style.pointerEvents = "none";
+
+  const floatingTable = standingsTable.cloneNode(true);
+
+  floatingTable.querySelector("tbody")?.remove();
+
+  floatingTable.style.width = standingsTable.scrollWidth + "px";
+  floatingTable.style.minWidth = standingsTable.scrollWidth + "px";
+  floatingTable.style.margin = "0";
+
+  floatingHeaderWrap.appendChild(floatingTable);
+  document.body.appendChild(floatingHeaderWrap);
+
+  const updateFloatingHeader = () => {
+  const tableRect = standingsTable.getBoundingClientRect();
+  const wrapRect = standingsWrap.getBoundingClientRect();
+  const headHeight = standingsHead.getBoundingClientRect().height;
+
+  const isLandscapeMobile =
+  window.matchMedia("(orientation: landscape)").matches &&
+  window.matchMedia("(pointer: coarse)").matches;
+
+  // In landscape mobile NON usiamo l'header flottante
+  if (isLandscapeMobile) {
+    floatingHeaderWrap.style.display = "none";
+    return;
+  }
+
+  const shouldShow =
+    tableRect.top < 0 &&
+    tableRect.bottom > headHeight;
+
+  if (!shouldShow) {
+    floatingHeaderWrap.style.display = "none";
+    return;
+  }
+
+  floatingHeaderWrap.style.display = "block";
+
+  floatingHeaderWrap.style.left =
+    (wrapRect.left + standingsWrap.clientLeft) + "px";
+
+  floatingHeaderWrap.style.width =
+    wrapRect.width + "px";
+
+  floatingHeaderWrap.style.height =
+    headHeight + "px";
+
+  floatingTable.style.transform =
+    "translateX(-" + standingsWrap.scrollLeft + "px)";
+};
+
+window.addEventListener("scroll", updateFloatingHeader, {
+  passive: true
+});
+
+standingsWrap.addEventListener("scroll", updateFloatingHeader, {
+  passive: true
+});
+
+window.addEventListener("resize", updateFloatingHeader);
+
+updateFloatingHeader();
+}
+
 if (window.matchMedia("(max-width: 700px)").matches) {
   const allNodes = Array.from(frame.querySelectorAll("*"));
 
@@ -9795,26 +9937,168 @@ animation: unionCounterSplash 6.6s ease 1s forwards;
   font-weight:900;
 }
 
-@media (max-width:700px){
+@media (orientation: portrait){
   #prtAccessCounterBox{
-    left:auto;
-    right:10%;
-    bottom:18%;
-    transform:none;
-    width:auto;
-    min-width:150px;
-    padding:7px 10px;
-    border-radius:12px;
+  left:auto;
+  right:8%;
+  bottom:20%;
+  transform:none;
+  width:auto;
+  min-width:220px;
+padding:12px 16px;
+border-radius:16px;
+}
+
+.prtAccessCounterLabel{
+  font-size:11px;
+}
+
+.prtAccessCounterNumber{
+  margin-top:4px;
+  font-size:30px;
+}
+}
+@media (orientation: landscape) and (pointer: coarse) {
+  #prtAccessCounterBox {
+    left: 65% !important;
+    right: auto !important;
+  }
+}
+@media (orientation: portrait) {
+
+  .hero-subtitle,
+  .absolute-rank-hint {
+    display: none !important;
   }
 
-  .prtAccessCounterLabel{
-    font-size:8px;
+  .hero-badge {
+    font-size: 22px !important;
+    padding: 12px 22px !important;
   }
 
-  .prtAccessCounterNumber{
-    margin-top:2px;
-    font-size:20px;
+  .tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
   }
+
+  .tab-btn {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+  }
+
+  .apex-header-logo {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    justify-content: center !important;
+  }
+
+  .alphabetical-hint {
+    display: none !important;
+  }
+
+  .app-header-side-label {
+  position: absolute !important;
+  right: 18px !important;
+  top: 42px !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  z-index: 5 !important;
+}
+
+.absolute-standings-table th:nth-child(1),
+.absolute-standings-table td:nth-child(1) {
+  font-size: 18px !important;
+}
+
+.absolute-standings-table th:nth-child(2),
+.absolute-standings-table td:nth-child(2) {
+  font-size: 16px !important;
+  transform: translateX(-24px);
+}
+
+.absolute-standings-table th:nth-child(2) span,
+.absolute-standings-table td:nth-child(2) span {
+  font-size: 15px !important;
+}
+
+.absolute-standings-table th:nth-child(3),
+.absolute-standings-table td:nth-child(3) {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  transform: translateX(-24px);
+}
+
+.absolute-standings-table th:nth-child(4),
+.absolute-standings-table td:nth-child(4) {
+  font-size: 19px !important;
+  font-weight: 900 !important;
+  transform: translateX(-24px);
+}
+
+.mobile-scroll-arrow {
+  display: block !important;
+  position: sticky !important;
+  right: 10px !important;
+  top: 52vh !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin-left: auto !important;
+  overflow: visible !important;
+  z-index: 99999 !important;
+
+  font-size: 34px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+
+  color: #ffd700 !important;
+  text-shadow:
+    0 0 8px rgba(255,215,0,0.85),
+    0 0 18px rgba(255,215,0,0.50);
+
+  pointer-events: none !important;
+}
+
+.race-lobby-tabs {
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 6px !important;
+}
+
+.race-lobby-tabs .tab-btn {
+  font-size: 15px !important;
+  padding: 7px 5px !important;
+  min-height: 0 !important;
+
+  background: linear-gradient(
+    180deg,
+    rgba(115, 70, 190, 0.95),
+    rgba(55, 30, 105, 0.95)
+  ) !important;
+
+  border-color: rgba(180, 125, 255, 0.75) !important;
+  box-shadow: 0 0 14px rgba(150, 90, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+  .race-lobby-tabs .tab-btn.active,
+.race-lobby-tabs .tab-btn.active-ready {
+  background: linear-gradient(
+    180deg,
+    rgba(255,215,0,0.30),
+    rgba(90,55,120,0.95)
+  ) !important;
+
+  border-color: rgba(255,235,80,1) !important;
+
+  box-shadow:
+    0 0 10px rgba(255,230,60,0.95),
+    0 0 26px rgba(255,195,0,0.70),
+    inset 0 0 18px rgba(255,225,70,0.18) !important;
+
+  color: #ffffff !important;
+}
+
+}
+
 }
 </style>
 
