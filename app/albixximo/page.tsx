@@ -10996,6 +10996,14 @@ function openConfirmSaveLeagueModal() {
   if (finalRows.length === 0) return
 
   const hasUnresolvedAuto = finalRows.some((row) => {
+    const raceValue = tempoLikeGt7(row).trim().toUpperCase()
+
+    const isAbsence =
+      raceValue === "ASS-I" ||
+      raceValue === "ASS-G"
+
+    if (isAbsence) return false
+
     const auto = String(row.auto || "").trim()
 
     return !UNION_GR2_CARS.some(
