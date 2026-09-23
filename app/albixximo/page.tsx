@@ -3020,7 +3020,8 @@ const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v
 const UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY =
   "albixximo_union2026_driver_team_override_v1"
 const UNION_DRIVER_ALIAS_MAP_STORAGE_KEY = "albixximo_union2026_driver_alias_map_v1"
-
+const UNION_DRIVER_ID_CORRECTIONS_STORAGE_KEY =
+  "union-driver-id-corrections-v1"
 const vampireWarsFontStyle = `
   @font-face {
     font-family: 'VampireWars';
@@ -3147,7 +3148,9 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 })
 
 const [unknownDriverSelections, setUnknownDriverSelections] = useState<Record<string, string>>({})
-
+const [driverIdCorrections, setDriverIdCorrections] = useState<
+  Record<string, string>
+>({})
 const [uploadedLeagueHtmls, setUploadedLeagueHtmls] = useState<
   Partial<Record<ChampionshipLeagueKey, string>>
 >({})
@@ -3375,6 +3378,22 @@ if (rawDriverAliasMap) {
   }
 }
 
+const rawDriverIdCorrections = window.localStorage.getItem(
+  UNION_DRIVER_ID_CORRECTIONS_STORAGE_KEY
+)
+
+if (rawDriverIdCorrections) {
+  const parsedDriverIdCorrections = JSON.parse(rawDriverIdCorrections)
+
+  if (
+    parsedDriverIdCorrections &&
+    typeof parsedDriverIdCorrections === "object" &&
+    !Array.isArray(parsedDriverIdCorrections)
+  ) {
+    setDriverIdCorrections(parsedDriverIdCorrections)
+  }
+}
+
 const rawDriverTeamOverrides = window.localStorage.getItem(
   UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY
 )
@@ -3431,6 +3450,39 @@ useEffect(() => {
     JSON.stringify(driverAliasMap)
   )
 }, [driverAliasMap])
+
+useEffect(() => {
+  if (typeof window === "undefined") return
+
+  window.localStorage.setItem(
+    UNION_DRIVER_ID_CORRECTIONS_STORAGE_KEY,
+    JSON.stringify(driverIdCorrections)
+  )
+}, [driverIdCorrections])
+
+useEffect(() => {
+  if (Object.keys(driverIdCorrections).length === 0) return
+
+  setWorkbenchDriverLeagueMap((prev) => {
+    const next = cloneDriverLeagueMap(prev)
+
+    for (const [key, correctedId] of Object.entries(driverIdCorrections)) {
+      const separatorIndex = key.indexOf(":")
+      if (separatorIndex < 0) continue
+
+      const league = key.slice(0, separatorIndex) as ChampionshipLeagueKey
+      const originalNormalizedId = key.slice(separatorIndex + 1)
+
+      next[league] = (next[league] || []).map((pilot) =>
+        normalizeDriverLookupName(pilot) === originalNormalizedId
+          ? correctedId
+          : pilot
+      )
+    }
+
+    return next
+  })
+}, [driverIdCorrections])
 
 useEffect(() => {
   if (typeof window === "undefined") return
@@ -5274,7 +5326,13 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
   })
 
   const aliasMapForLeague = driverAliasMap[selectedLeague] || {}
-
+  const correctedDriverIdsForLeague = Object.entries(driverIdCorrections)
+  .filter(([key]) => key.startsWith(`${selectedLeague}:`))
+  .reduce<Record<string, string>>((acc, [key, correctedId]) => {
+    const originalId = key.slice(selectedLeague.length + 1)
+    acc[normalizeDriverLookupName(correctedId)] = originalId
+    return acc
+  }, {})
   const unresolvedMap = new Map<string, UnresolvedDriverCandidate>()
 
   const baseRows = previewRows.map((r) => {
@@ -5287,13 +5345,17 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
     if (!hasManualPilot && resolvedPilot) {
       const normalizedRaw = normalizeDriverLookupName(resolvedPilot)
 
-      const aliasResolvedOfficial = aliasMapForLeague[normalizedRaw]
-      if (aliasResolvedOfficial) {
-        resolvedPilot = aliasResolvedOfficial
-      } else {
-        const exactOfficial = officialLeaguePilots.find(
-          (pilot) => normalizeDriverLookupName(pilot) === normalizedRaw
-        )
+      const correctedOfficial = correctedDriverIdsForLeague[normalizedRaw]
+const aliasResolvedOfficial = aliasMapForLeague[normalizedRaw]
+
+if (correctedOfficial) {
+  resolvedPilot = correctedOfficial
+} else if (aliasResolvedOfficial) {
+  resolvedPilot = aliasResolvedOfficial
+} else {
+  const exactOfficial = officialLeaguePilots.find(
+    (pilot) => normalizeDriverLookupName(pilot) === normalizedRaw
+  )
 
         if (exactOfficial) {
           resolvedPilot = exactOfficial
@@ -14676,6 +14738,70 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
         >
           Salva come alias
         </button>
+
+        <button
+  onClick={() => {
+    const selectedOfficial =
+      unknownDriverSelections[activeUnknownDriver.id] ||
+      activeUnknownDriver.suggestedOfficialName
+
+    if (!selectedOfficial) return
+
+    const correctionKey =
+      `${activeUnknownDriver.league}:${normalizeDriverLookupName(selectedOfficial)}`
+
+    setDriverIdCorrections((prev) => ({
+      ...prev,
+      [correctionKey]: activeUnknownDriver.rawName,
+    }))
+
+    setWorkbenchDriverLeagueMap((prev) => ({
+  ...prev,
+  [activeUnknownDriver.league]: (
+    prev[activeUnknownDriver.league] || []
+  ).map((pilot) =>
+    normalizeDriverLookupName(pilot) ===
+    normalizeDriverLookupName(selectedOfficial)
+      ? activeUnknownDriver.rawName
+      : pilot
+  ),
+}))
+    
+    setRows((prev) => {
+      const selectedOfficialKey = normalizeDriverLookupName(selectedOfficial)
+
+      return prev.map((row: ExtractRow) => {
+        const rowKey = normalizeDriverLookupName(row.pilota)
+
+        if (rowKey !== selectedOfficialKey) return row
+
+        return {
+          ...row,
+          pilota: activeUnknownDriver.rawName,
+        }
+      })
+    })
+
+    setUnknownDriverSelections((prev) => {
+      const next = { ...prev }
+      delete next[activeUnknownDriver.id]
+      return next
+    })
+  }}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(160,90,255,0.35)",
+    background: "rgba(160,90,255,0.20)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  }}
+>
+  Correggi ID GT7
+</button>
 
       </div>
 
