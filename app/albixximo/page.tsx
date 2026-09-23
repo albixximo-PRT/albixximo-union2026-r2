@@ -474,6 +474,91 @@ function normalizePilot(s: string) {
   return (s || "").trim().toLowerCase()
 }
 
+async function optimizeOcrFiles(files: File[]): Promise<File[]> {
+  const MAX_TOTAL_BYTES = 4 * 1024 * 1024
+
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+
+  // Se il pacchetto è già entro 4 MB, non tocchiamo nulla
+  if (totalSize <= MAX_TOTAL_BYTES) {
+    return files
+  }
+
+  const qualities = [0.88, 0.82, 0.76]
+  const maxWidths = [2560, 2304, 2048]
+
+  let currentFiles = files
+
+  for (let attempt = 0; attempt < qualities.length; attempt++) {
+    const optimizedFiles = await Promise.all(
+      currentFiles.map(async (file) => {
+        if (!file.type.startsWith("image/")) {
+          return file
+        }
+
+        const bitmap = await createImageBitmap(file)
+
+        try {
+          const scale = Math.min(1, maxWidths[attempt] / bitmap.width)
+
+          const width = Math.round(bitmap.width * scale)
+          const height = Math.round(bitmap.height * scale)
+
+          const canvas = document.createElement("canvas")
+          canvas.width = width
+          canvas.height = height
+
+          const ctx = canvas.getContext("2d")
+
+          if (!ctx) {
+            return file
+          }
+
+          ctx.drawImage(bitmap, 0, 0, width, height)
+
+          const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(
+              resolve,
+              "image/jpeg",
+              qualities[attempt]
+            )
+          })
+
+          if (!blob) {
+            return file
+          }
+
+          const baseName = file.name.replace(/\.[^.]+$/, "")
+
+          return new File(
+            [blob],
+            `${baseName}-ocr.jpg`,
+            {
+              type: "image/jpeg",
+              lastModified: file.lastModified,
+            }
+          )
+        } finally {
+          bitmap.close()
+        }
+      })
+    )
+
+    currentFiles = optimizedFiles
+
+    const optimizedTotal = currentFiles.reduce(
+      (sum, file) => sum + file.size,
+      0
+    )
+
+    if (optimizedTotal <= MAX_TOTAL_BYTES) {
+      return currentFiles
+    }
+  }
+
+  return currentFiles
+}
+
 function getPrtRowStableKey(sourcePosGara: number) {
   return `row-${sourcePosGara}`
 }
@@ -10281,9 +10366,11 @@ async function run(targetLeague?: ChampionshipLeagueKey) {
   setShowQualiModal(false)
 
   try {
-    const fd = new FormData()
-    for (const f of files) fd.append("files", f)
-      fd.append("shortLobbyMode", String(shortLobbyMode))
+    const optimizedFiles = await optimizeOcrFiles(files)
+
+const fd = new FormData()
+for (const f of optimizedFiles) fd.append("files", f)
+fd.append("shortLobbyMode", String(shortLobbyMode))
 
     const res = await fetch("/api/albixximo", { method: "POST", body: fd })
     const data = await res.json()
