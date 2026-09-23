@@ -484,79 +484,101 @@ async function optimizeOcrFiles(files: File[]): Promise<File[]> {
     return files
   }
 
-  const qualities = [0.88, 0.82, 0.76]
-  const maxWidths = [2560, 2304, 2048]
+  const optimizeFile = async (
+    file: File,
+    quality: number,
+    maxWidth?: number
+  ): Promise<File> => {
+    if (!file.type.startsWith("image/")) {
+      return file
+    }
 
-  let currentFiles = files
+    const bitmap = await createImageBitmap(file)
 
-  for (let attempt = 0; attempt < qualities.length; attempt++) {
-    const optimizedFiles = await Promise.all(
-      currentFiles.map(async (file) => {
-        if (!file.type.startsWith("image/")) {
-          return file
-        }
+    try {
+      // Prima preserviamo completamente la risoluzione originale
+      const scale = maxWidth
+        ? Math.min(1, maxWidth / bitmap.width)
+        : 1
 
-        const bitmap = await createImageBitmap(file)
+      const width = Math.round(bitmap.width * scale)
+      const height = Math.round(bitmap.height * scale)
 
-        try {
-          const scale = Math.min(1, maxWidths[attempt] / bitmap.width)
+      const canvas = document.createElement("canvas")
+      canvas.width = width
+      canvas.height = height
 
-          const width = Math.round(bitmap.width * scale)
-          const height = Math.round(bitmap.height * scale)
+      const ctx = canvas.getContext("2d")
 
-          const canvas = document.createElement("canvas")
-          canvas.width = width
-          canvas.height = height
+      if (!ctx) {
+        return file
+      }
 
-          const ctx = canvas.getContext("2d")
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
 
-          if (!ctx) {
-            return file
-          }
+      ctx.drawImage(bitmap, 0, 0, width, height)
 
-          ctx.drawImage(bitmap, 0, 0, width, height)
-
-          const blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob(
-              resolve,
-              "image/jpeg",
-              qualities[attempt]
-            )
-          })
-
-          if (!blob) {
-            return file
-          }
-
-          const baseName = file.name.replace(/\.[^.]+$/, "")
-
-          return new File(
-            [blob],
-            `${baseName}-ocr.jpg`,
-            {
-              type: "image/jpeg",
-              lastModified: file.lastModified,
-            }
-          )
-        } finally {
-          bitmap.close()
-        }
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", quality)
       })
-    )
 
-    currentFiles = optimizedFiles
+      if (!blob) {
+        return file
+      }
 
-    const optimizedTotal = currentFiles.reduce(
-      (sum, file) => sum + file.size,
-      0
-    )
+      const baseName = file.name.replace(/\.[^.]+$/, "")
 
-    if (optimizedTotal <= MAX_TOTAL_BYTES) {
-      return currentFiles
+      return new File(
+        [blob],
+        `${baseName}-ocr.jpg`,
+        {
+          type: "image/jpeg",
+          lastModified: file.lastModified,
+        }
+      )
+    } finally {
+      bitmap.close()
     }
   }
 
-  return currentFiles
+  // Tentativo 1:
+  // risoluzione ORIGINALE, solo conversione JPEG ad alta qualità
+  let optimizedFiles = await Promise.all(
+    files.map((file) => optimizeFile(file, 0.92))
+  )
+
+  let optimizedTotal = optimizedFiles.reduce(
+    (sum, file) => sum + file.size,
+    0
+  )
+
+  if (optimizedTotal <= MAX_TOTAL_BYTES) {
+    return optimizedFiles
+  }
+
+  // Tentativo 2:
+  // ancora risoluzione ORIGINALE, compressione leggermente maggiore
+  optimizedFiles = await Promise.all(
+    files.map((file) => optimizeFile(file, 0.86))
+  )
+
+  optimizedTotal = optimizedFiles.reduce(
+    (sum, file) => sum + file.size,
+    0
+  )
+
+  if (optimizedTotal <= MAX_TOTAL_BYTES) {
+    return optimizedFiles
+  }
+
+  // Tentativo 3:
+  // solo come ultima possibilità riduciamo moderatamente la larghezza
+  optimizedFiles = await Promise.all(
+    files.map((file) => optimizeFile(file, 0.88, 3200))
+  )
+
+  return optimizedFiles
 }
 
 function getPrtRowStableKey(sourcePosGara: number) {
