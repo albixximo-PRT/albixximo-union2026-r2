@@ -5965,13 +5965,23 @@ const driverCarMismatches = useMemo(() => {
   }
 
   // ---------------- AUTO ----------------
-  const autos = finalRows.map((r) => (r.auto || "").trim())
 
-const hasUnresolvedAuto = autos.some(
-  (value) =>
+const hasUnresolvedAuto = finalRows.some((r) => {
+  const raceValue = tempoLikeGt7(r).trim().toUpperCase()
+
+  const isAbsence =
+    raceValue === "ASS-I" ||
+    raceValue === "ASS-G"
+
+  if (isAbsence) return false
+
+  const value = (r.auto || "").trim()
+
+  return (
     !value ||
     !UNION_GR2_CARS.some((car) => car === value)
-)
+  )
+})
 
 if (hasUnresolvedAuto) {
   auto = "error"
