@@ -474,86 +474,6 @@ function normalizePilot(s: string) {
   return (s || "").trim().toLowerCase()
 }
 
-async function optimizeOcrFiles(files: File[]): Promise<File[]> {
-  const MAX_TOTAL_BYTES = 4 * 1024 * 1024
-  const TARGET_WIDTH = 2048
-  const JPEG_QUALITY = 0.92
-
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0)
-
-  // Se il pacchetto è già entro 4 MB, lasciamo gli originali intatti
-  if (totalSize <= MAX_TOTAL_BYTES) {
-    return files
-  }
-
-  return Promise.all(
-    files.map(async (file) => {
-      if (!file.type.startsWith("image/")) {
-        return file
-      }
-
-      const bitmap = await createImageBitmap(file)
-
-      try {
-        const scale = Math.min(1, TARGET_WIDTH / bitmap.width)
-
-        const width = Math.round(bitmap.width * scale)
-        const height = Math.round(bitmap.height * scale)
-
-        const canvas = document.createElement("canvas")
-        canvas.width = width
-        canvas.height = height
-
-        const ctx = canvas.getContext("2d")
-
-        if (!ctx) {
-          return file
-        }
-
-        ctx.imageSmoothingEnabled = true
-        ctx.imageSmoothingQuality = "high"
-
-        ctx.drawImage(
-          bitmap,
-          0,
-          0,
-          bitmap.width,
-          bitmap.height,
-          0,
-          0,
-          width,
-          height
-        )
-
-        const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob(
-            resolve,
-            "image/jpeg",
-            JPEG_QUALITY
-          )
-        })
-
-        if (!blob) {
-          return file
-        }
-
-        const baseName = file.name.replace(/\.[^.]+$/, "")
-
-        return new File(
-          [blob],
-          `${baseName}-ocr.jpg`,
-          {
-            type: "image/jpeg",
-            lastModified: file.lastModified,
-          }
-        )
-      } finally {
-        bitmap.close()
-      }
-    })
-  )
-}
-
 function getPrtRowStableKey(sourcePosGara: number) {
   return `row-${sourcePosGara}`
 }
@@ -10361,11 +10281,9 @@ async function run(targetLeague?: ChampionshipLeagueKey) {
   setShowQualiModal(false)
 
   try {
-    const optimizedFiles = await optimizeOcrFiles(files)
-
-const fd = new FormData()
-for (const f of optimizedFiles) fd.append("files", f)
-fd.append("shortLobbyMode", String(shortLobbyMode))
+    const fd = new FormData()
+    for (const f of files) fd.append("files", f)
+      fd.append("shortLobbyMode", String(shortLobbyMode))
 
     const res = await fetch("/api/albixximo", { method: "POST", body: fd })
     const data = await res.json()
