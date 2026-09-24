@@ -5307,7 +5307,27 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
 
   const previewRows = useMemo<DisplayRow[]>(() => {
     const csvRows = parseCsvRows(csv)
+console.log(
+  "🔵 UNION DEBUG ROWS",
+  rows.map((r) => ({
+    pos: r.posGara,
+    pilota: r.pilota,
+    auto: r.auto,
+    distacco: r.distaccoDalPrimo,
+    bestLap: r.migliorGiroGara,
+  }))
+)
 
+console.log(
+  "🟣 UNION DEBUG CSV",
+  csvRows.map((r) => ({
+    pos: r.posGara,
+    pilota: r.pilota,
+    auto: r.auto,
+    distacco: r.distaccoDalPrimo,
+    bestLap: r.migliorGiroGara,
+  }))
+)
     if (csvRows.length === 0) {
       return rows.map((r) => ({
         ...r,
