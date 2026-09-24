@@ -80,6 +80,7 @@ type SavedLeagueSnapshot = {
   lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
 absenceOverrides: AbsenceOverrideMap
+verifiedAbsences?: Record<string, boolean>
 manualDsqOverrides: ManualDsqOverrideMap
 manualGaraOverride: string
   manualLegaOverride: string
@@ -2589,6 +2590,7 @@ function ResultsTable({
   forceHideMeta = false,
   tableTitle = "Classifica (output)",
   onAbsenceClick,
+  verifiedAbsences,
 }: {
   previewRows: DisplayRow[]
   bestRaceLap: string
@@ -2600,6 +2602,7 @@ function ResultsTable({
   forceHideMeta?: boolean
   tableTitle?: string
   onAbsenceClick?: (row: DisplayRow) => void
+  verifiedAbsences?: Record<string, boolean>
 }) {
   const showMeta = !forceHideMeta && (prtMode || unionMode)
   const showLobby = !forceHideMeta && unionMode
@@ -2923,14 +2926,41 @@ const rowStyle = getPrtTableRowStyle(
         onClick={() => onAbsenceClick(r)}
         title="Clicca per cambiare il tipo di assenza"
         style={{
-          padding: 0,
-          margin: 0,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-        }}
+  padding: 0,
+  margin: 0,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  font: "inherit",
+  color: "inherit",
+  lineHeight: "inherit",
+}}
       >
-        {renderTempoCell(tempo, false, compactStatusPills)}
+        <span
+  style={{
+    position: "relative",
+    display: "inline-flex",
+  }}
+>
+  {renderTempoCell(tempo, false, compactStatusPills)}
+
+  {!verifiedAbsences?.[getPrtRowStableKey(r.sourcePosGara)] && (
+    <span
+      title="Assenza da verificare"
+      style={{
+        position: "absolute",
+        top: -4,
+        right: -5,
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: "#ffffff",
+        boxShadow: "0 0 6px rgba(255,255,255,0.9)",
+        pointerEvents: "none",
+      }}
+    />
+  )}
+</span>
       </button>
     )
   }
@@ -3077,6 +3107,7 @@ export default function Page() {
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
   const [absenceOverrides, setAbsenceOverrides] = useState<AbsenceOverrideMap>({})
+  const [verifiedAbsences, setVerifiedAbsences] = useState<Record<string, boolean>>({})
   const [manualDsqOverrides, setManualDsqOverrides] =
   useState<ManualDsqOverrideMap>({})
   const [showExportModal, setShowExportModal] = useState(false)
@@ -11071,6 +11102,7 @@ function confirmSaveCurrentLeague() {
 lapOverrides,
 dnfOverrides,
 absenceOverrides,
+verifiedAbsences,
 manualDsqOverrides,
 manualGaraOverride,
 manualLegaOverride,
@@ -11167,6 +11199,7 @@ clearCurrentWorkbench(false)
   setLapOverrides(snapshot.lapOverrides || {})
 setDnfOverrides(snapshot.dnfOverrides || {})
 setAbsenceOverrides(snapshot.absenceOverrides || {})
+setVerifiedAbsences(snapshot.verifiedAbsences || {})
 setManualDsqOverrides(snapshot.manualDsqOverrides || {})
 
   setManualPilotOverrides(snapshot.manualPilotOverrides || {})
@@ -12729,12 +12762,18 @@ const lastCreatedMovementText = useMemo(() => {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const currentValue = tempoLikeGt7(row).trim().toUpperCase()
 
+  setVerifiedAbsences((prev) => ({
+    ...prev,
+    [key]: true,
+  }))
+
   setAbsenceOverrides((prev) => ({
     ...prev,
     [key]: currentValue === "ASS-G" ? "ASS-I" : "ASS-G",
   }))
 }}
     tableTitle="Classifica (output)"
+    verifiedAbsences={verifiedAbsences}
   />
 )}
 
