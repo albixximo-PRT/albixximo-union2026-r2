@@ -5750,7 +5750,7 @@ const maxSourcePos = rowsWithPole.reduce(
     distaccoDalPrimo: "DSQ",
   }
 }
-    if (absenceValue) {
+    if (absenceValue && !manualDistaccoOverrides[r.sourcePosGara]) {
   return {
     ...r,
     posGara: i + 1,
@@ -5893,7 +5893,7 @@ const maxSourcePos = rowsWithPole.reduce(
     distaccoDalPrimo: "DSQ",
   }
 }
-    if (absenceValue) {
+    if (absenceValue && !manualDistaccoOverrides[item.row.sourcePosGara]) {
   return {
     ...item.row,
     posGara: updatedComparable.length + idx + 1,
@@ -11503,7 +11503,7 @@ function openDistaccoCorrectionModal() {
 function applyDistaccoCorrections() {
   const cleaned: Record<number, string> = {}
 
-  for (const row of previewRows) {
+  for (const row of displayRows) {
     const draftValue = String(manualDistaccoDraft[row.sourcePosGara] ?? "").trim()
     const originalValue = String(row.distaccoDalPrimo ?? "").trim()
 
