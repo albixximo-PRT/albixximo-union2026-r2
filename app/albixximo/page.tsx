@@ -5740,6 +5740,18 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(r.sourcePosGara)
     const rawTempo = tempoLikeGt7(r)
     const upperTempo = rawTempo.trim().toUpperCase()
+    const manualStatus = String(
+  manualDistaccoOverrides[r.sourcePosGara] ?? ""
+).trim().toUpperCase()
+
+if (manualStatus === "NC") {
+  return {
+    ...r,
+    posGara: i + 1,
+    tempoTotaleGara: "NC",
+    distaccoDalPrimo: "NC",
+  }
+}
     const absenceValue =
   upperTempo === "ASS-I" || upperTempo === "ASS-G"
     ? absenceOverrides[key] || upperTempo
@@ -5883,6 +5895,18 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(item.row.sourcePosGara)
     const rawTempo = tempoLikeGt7(item.row)
     const upperTempo = rawTempo.trim().toUpperCase()
+    const manualStatus = String(
+  manualDistaccoOverrides[item.row.sourcePosGara] ?? ""
+).trim().toUpperCase()
+
+if (manualStatus === "NC") {
+  return {
+    ...item.row,
+    posGara: updatedComparable.length + idx + 1,
+    tempoTotaleGara: "NC",
+    distaccoDalPrimo: "NC",
+  }
+}
     const absenceValue =
   upperTempo === "ASS-I" || upperTempo === "ASS-G"
     ? absenceOverrides[key] || upperTempo
@@ -11515,6 +11539,22 @@ function applyDistaccoCorrections() {
     }
   }
 
+  setAbsenceOverrides((prev) => {
+  const next = { ...prev }
+
+  for (const row of displayRows) {
+    const value = String(cleaned[row.sourcePosGara] ?? "")
+      .trim()
+      .toUpperCase()
+
+    if (value === "NC") {
+      const key = getPrtRowStableKey(row.sourcePosGara)
+      delete next[key]
+    }
+  }
+
+  return next
+})
   setManualDistaccoOverrides(cleaned)
   setShowDistaccoModal(false)
 }
