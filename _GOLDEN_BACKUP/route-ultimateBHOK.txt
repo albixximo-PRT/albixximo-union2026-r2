@@ -67,7 +67,11 @@ async function callOcrSpace(apiKey: string, jpegBuffer: Buffer, engine: "1" | "2
       fd.append("OCREngine", engine)
       fd.append("scale", "false")
       fd.append("isTable", "false")
-      fd.append("file", new Blob([new Uint8Array(jpegBuffer)], { type: "image/jpeg" }), "gt7.jpg")
+      fd.append(
+  "file",
+  new Blob([new Uint8Array(jpegBuffer)], { type: "image/jpeg" }),
+  "gt7.jpg"
+)
 
       const res = await fetchWithTimeout(
         endpoint,
@@ -269,7 +273,8 @@ function normalizePilot(s: string) {
     .replace(/\bM__Apex\b/gi, "M_ApeX_")
     .replace(/\bGrollo_?78\b/gi, "Grollo78")
     .replace(/\bZzic3Fr0St--\b/gi, "ZzIc3Fr0St-_-")
-    .replace(/\bBOSC_ILMALEDETTO\b/gi, "Bcsc_ILMALEDETTO")
+    .replace(/\bmani\b/gi, "Grollo78")
+
     .trim()
 }
 
@@ -299,17 +304,15 @@ function cleanCar(s: string) {
     .replace(/\s+/g, " ")
     .replace(/["“”]/g, "'")
     .replace(/\s+'/g, " '")
-    .replace(/\*/g, "'")
     .replace(/\b(Megane)\b/gi, "Mégane")
     .replace(/\bHuracan\b/gi, "Huracán")
+    .replace(/\bNSX\s+CONCEPT\s*GT\b/gi, "NSX CONCEPT-GT")
     .replace(/\bGr ?4\b/gi, "Gr.4")
     .replace(/\bGT ?4\b/gi, "GT4")
     .replace(/\bTC ?'?24\b/gi, "TC '24")
     .replace(/\bTrophy ?'?11\b/gi, "Trophy '11")
     .replace(/\bCup ?'?16\b/gi, "Cup '16")
     .replace(/\bClubsport ?'?16\b/gi, "Clubsport '16")
-    .replace(/\(991\)\s*\*?17\b/gi, "(991) '17")
-    .replace(/\(992\)\s*22\b/gi, "(992) '22")
     .replace(/\s+\)/g, ")")
     .trim()
 }
@@ -326,6 +329,7 @@ const KNOWN_CARS = [
   "Mégane Trophy '11",
   "Swift Sport Gr.4",
   "458 Italia Gr.4",
+  "458 Italia GT3 '13",
   "TT Cup '16",
   "4C Gr.4",
   "ELANTRA N TC '24",
@@ -336,10 +340,31 @@ const KNOWN_CARS = [
   "MAZDA3 Gr.4",
   "GT-R Gr.4",
   "650S Gr.4",
+    "TS050 - Hybrid '16",
+  "919 Hybrid '16",
+  "GR010 HYBRID '21",
+  "R18 '16",
+  "908 HDi FAP '10",
+  "RCZ Gr.B Rally Car",
+  "Lancer Evolution Final Gr.B Rally Car",
+  "WRX Gr.B Rally Car",
+  "GT-R Gr.B Rally Car",
+  "NSX Gr.B Rally Car",
+  "86 Gr.B Rally Car",
+    "296 GT3 '23",
   "911 GT3 R (992) '22",
-  "911 RSR (991) '17",
+  "R.S.01 GT3 '16",
+  "Beetle Gr.3",
   "R8 LMS Evo '19",
+  "Mercedes-AMG GT3 '20",
+  "911 RSR (991) '17",
   "GR Supra Racing Concept '18",
+  "S-FR Racing Concept '16",
+    "NSX CONCEPT-GT '16",
+  "RC F GT500 '16",
+  "RS 5 Turbo DTM '19",
+  "GT-R NISMO GT500 '16",
+  "F3500-B",
 ]
 
 function normalizeCarLoose(s: string) {
@@ -348,7 +373,6 @@ function normalizeCarLoose(s: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/["“”]/g, "'")
-    .replace(/\*/g, "'")
     .replace(/\s+/g, " ")
     .trim()
 }
@@ -396,6 +420,18 @@ function looksLikeKnownCarToken(s: string) {
   if (!t) return false
 
   return (
+    t.includes("f3500-b") ||
+        t.includes("ts050") ||
+    t.includes("919 hybrid") ||
+    t.includes("gr010") ||
+    t.includes("r18") ||
+    t.includes("908 hdi") ||
+        t.includes("gr.b") ||
+    t.includes("grb") ||
+    t.includes("rally car") ||
+    t.includes("rcz") ||
+    t.includes("lancer evolution") ||
+    t.includes("wrx") ||
     t.includes("gr.4") ||
     t.includes("gr4") ||
     t.includes("gt4") ||
@@ -411,14 +447,33 @@ function looksLikeKnownCarToken(s: string) {
     t.includes("gtr") ||
     t.includes("650s") ||
     t.includes("atenza") ||
+        t.includes("296") ||
+    t.includes("911 gt3 r") ||
+    t.includes("(992)") ||
+    t.includes("r.s.01") ||
+    t.includes("rs.01") ||
+    t.includes("beetle") ||
+    t.includes("r8 lms") ||
+    t.includes("lms evo") ||
+    t.includes("mercedes-amg") ||
+    t.includes("amg gt3") ||
+    t.includes("911 rsr") ||
+    t.includes("(991)") ||
+    t.includes("supra racing concept") ||
+    t.includes("gr supra") ||
+    t.includes("s-fr") ||
+t.includes("racing concept") ||
     t.includes("silvia") ||
     t.includes("touring car") ||
+        t.includes("concept-gt") ||
+    t.includes("concept gt") ||
+    t.includes("gt500") ||
+    t.includes("rc f") ||
+    t.includes("rs 5") ||
+    t.includes("turbo dtm") ||
+    t.includes("nismo gt500") ||
     t.includes("tt cup") ||
-    t.includes("4c") ||
-    t.includes("911 gt3 r") ||
-    t.includes("911 rsr") ||
-    t.includes("r8 lms evo") ||
-    t.includes("gr supra racing concept")
+    t.includes("4c")
   )
 }
 
@@ -443,6 +498,27 @@ function normalizeGapText(s: string) {
   return normalizeTimeText(s)
     .replace(/^\+\./, "+0.")
     .replace(/^\+(\d)\.(\d{3})$/, "+$1.$2")
+}
+
+function parseRaceTotalToMs(s: string): number | null {
+  const t = normalizeTimeText((s || "").trim())
+  if (!t) return null
+
+  const h = t.match(/^(\d+):(\d{2}):(\d{2})\.(\d{3})$/)
+  if (h) {
+    const hh = Number(h[1]), mm = Number(h[2]), ss = Number(h[3]), ms = Number(h[4])
+    if ([hh, mm, ss, ms].some(Number.isNaN)) return null
+    return (((hh * 60 + mm) * 60 + ss) * 1000 + ms)
+  }
+
+  const m = t.match(/^(\d+):(\d{2})\.(\d{3})$/)
+  if (m) {
+    const mm = Number(m[1]), ss = Number(m[2]), ms = Number(m[3])
+    if ([mm, ss, ms].some(Number.isNaN)) return null
+    return ((mm * 60 + ss) * 1000 + ms)
+  }
+
+  return null
 }
 
 function formatMsToRaceTime(ms: number): string {
@@ -482,32 +558,6 @@ function parseGapToMs(gap: string): number | null {
     const ms = Number(long[3])
     if ([min, sec, ms].some(Number.isNaN)) return null
     return (min * 60 + sec) * 1000 + ms
-  }
-
-  return null
-}
-
-function parseLapTimeToMs(s: string): number | null {
-  const t = normalizeTimeText((s || "").trim())
-  if (!t) return null
-
-  const mmss = t.match(/^(\d{1,2}):(\d{2})\.(\d{3})$/)
-  if (mmss) {
-    const mm = Number(mmss[1])
-    const ss = Number(mmss[2])
-    const ms = Number(mmss[3])
-    if ([mm, ss, ms].some(Number.isNaN)) return null
-    return (mm * 60 + ss) * 1000 + ms
-  }
-
-  const hhmmss = t.match(/^(\d+):(\d{2}):(\d{2})\.(\d{3})$/)
-  if (hhmmss) {
-    const hh = Number(hhmmss[1])
-    const mm = Number(hhmmss[2])
-    const ss = Number(hhmmss[3])
-    const ms = Number(hhmmss[4])
-    if ([hh, mm, ss, ms].some(Number.isNaN)) return null
-    return (((hh * 60 + mm) * 60) + ss) * 1000 + ms
   }
 
   return null
@@ -557,6 +607,7 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
 
   const isName = (s: string) => {
     const t = String(s || "").trim()
+
     if (!t) return false
     if (/^\d+$/.test(t)) return false
     if (/^\+/.test(t)) return false
@@ -564,6 +615,7 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     if (/^[\-\.\s]+$/.test(t)) return false
     if (/DISTACCO|MIGLIOR|GRAN|UNION|Dragon|Chiudi|Avanti|Alterna|Blue Moon|Speedway|Interno/i.test(t)) return false
     if (looksLikeKnownCarToken(t)) return false
+
     return /[A-Za-z]/.test(t)
   }
 
@@ -643,46 +695,6 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     })
   }
   return out
-}
-
-/* -------------------- UNION ONLY: robust pole from screen 1 -------------------- */
-
-function extractUnionPolePilot(rawText: string): string {
-  const parsed = parseQualificaFromColumnText(rawText)
-  const p1 = parsed.find((r) => r.pos === 1 && r.pilota)
-  if (p1?.pilota) return normalizePilot(p1.pilota)
-
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .filter((l) => !/^POLE$/i.test(l))
-    .filter((l) => !/^BEST\s*LAP$/i.test(l))
-    .filter((l) => !/^DNF$/i.test(l))
-    .filter((l) => !/^CHIUDI$/i.test(l))
-    .filter((l) => !/^AVANTI$/i.test(l))
-    .filter((l) => !/^ALTERNA/i.test(l))
-
-  const isName = (s: string) => {
-    const t = String(s || "").trim()
-    if (!t) return false
-    if (/^\d+$/.test(t)) return false
-    if (/^\+/.test(t)) return false
-    if (t.includes(":")) return false
-    if (/^[\-\.\s]+$/.test(t)) return false
-    if (/DISTACCO|MIGLIOR|GRAN|UNION|Dragon|Chiudi|Avanti|Alterna|Blue Moon|Speedway|Interno/i.test(t)) return false
-    if (looksLikeKnownCarToken(t)) return false
-    return /[A-Za-z]/.test(t)
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i] !== "1") continue
-    for (let j = i + 1; j < Math.min(lines.length, i + 8); j++) {
-      if (isName(lines[j])) return normalizePilot(lines[j])
-    }
-  }
-
-  return ""
 }
 
 function extractQualiTimesByPos(rawText: string) {
@@ -891,9 +903,15 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
   const looksLikeModel = (s: string) => {
     const t = normalizeCarLoose(s)
     return (
+      t.includes("f3500-b") ||
       /\b(gt3|rsr|lms|evo)\b/i.test(t) ||
       /\br8\b/i.test(t) ||
       /\b911\b/i.test(t) ||
+            t.includes("ts050") ||
+      t.includes("919 hybrid") ||
+      t.includes("gr010") ||
+      t.includes("r18") ||
+      t.includes("908 hdi") ||
       t.includes("gr.4") ||
       t.includes("gr4") ||
       t.includes("gt4") ||
@@ -909,26 +927,39 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
       t.includes("gt-r") ||
       t.includes("650s") ||
       t.includes("atenza") ||
+      t.includes("s-fr") ||
+t.includes("racing concept") ||
       t.includes("silvia") ||
       t.includes("touring car") ||
       t.includes("tt cup") ||
       t === "4c" ||
-      t.startsWith("4c ") ||
-      t.includes("911 gt3 r") ||
-      t.includes("911 rsr") ||
-      t.includes("r8 lms evo") ||
-      t.includes("gr supra racing concept")
+            t.includes("concept-gt") ||
+      t.includes("concept gt") ||
+      t.includes("gt500") ||
+      t.includes("rc f") ||
+      t.includes("rs 5") ||
+      t.includes("turbo dtm") ||
+      t.includes("nismo gt500") ||
+      t.startsWith("4c ")
     )
   }
 
-  const hasId = (s: string) =>
-    /\(\d{3}\)/.test(s) || /'\d{2}\b/.test(s) || /\b\d{2}\b/.test(s) || /\bGr\.?4\b/i.test(s)
+    const hasId = (s: string) =>
+    /\(\d{3}\)/.test(s) ||
+    /'\d{2}\b/.test(s) ||
+    /\b\d{2}\b/.test(s) ||
+    /\bGT3\b/i.test(s) ||
+    /\bGr\.?4\b/i.test(s) ||
+    /\bGr\.?B\b/i.test(s) ||
+      /F3500-B/i.test(s) ||
+    /Rally\s+Car/i.test(s)
 
   const isCompleteCar = (s: string) => looksLikeModel(s) && hasId(s)
 
   const looksLikeCarStart = (tok: string) => {
     const t = normalizeCarLoose(tok)
     return (
+      t.includes("f3500-b") ||
       t === "911" ||
       t === "r8" ||
       /^911\b/.test(t) ||
@@ -954,10 +985,11 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
       t.includes("gt-r") ||
       t.includes("gtr") ||
       t.includes("650s") ||
-      t.includes("gr supra") ||
-      t.includes("911 gt3") ||
-      t.includes("911 rsr") ||
-      t.includes("r8 lms")
+            t.includes("nsx concept") ||
+      t.includes("rc f") ||
+      t.includes("rs 5") ||
+      t.includes("gt-r nismo") ||
+      t.includes("nismo")
     )
   }
 
@@ -1026,11 +1058,10 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
         distacco = tempoCell
       } else if (/in\s+gara/i.test(tempoCell)) {
         distacco = "BOX"
-      } else {
+            } else {
         const giroMatch = tempoCell.match(/^(\d+)\s*giro/i) || tempoCell.match(/^(\d+)\s*giri/i)
         if (giroMatch) distacco = `${giroMatch[1]}giro`
         else if (/non\s*finito/i.test(tempoCell)) distacco = "DNF"
-        else if (/doppiato/i.test(tempoCell)) distacco = "1giro"
         else distacco = tempoCell
       }
     }
@@ -1048,6 +1079,160 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
   return out
 }
 
+function parseGaraShortLobby(rawText: string): RaceRow[] {
+  console.log("SHORT LOBBY MODE ATTIVO")
+
+  /*
+   * Il parser normale continua a occuparsi di:
+   * - posizioni
+   * - piloti
+   * - auto
+   *
+   * Qui ricostruiamo soltanto:
+   * - tempo totale del vincitore
+   * - distacchi
+   * - migliori giri
+   */
+  const baseRows = parseGaraFromColumnText(rawText)
+
+  if (!baseRows.length || baseRows.length > 8) {
+    console.log(
+      "SHORT LOBBY → numero righe non valido:",
+      baseRows.length
+    )
+
+    return baseRows
+  }
+
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const idxBest = lines.findIndex((line) =>
+    /MIGLIOR\s+GIRO/i.test(line)
+  )
+
+  if (idxBest === -1) {
+    console.log("SHORT LOBBY → intestazione MIGLIOR GIRO non trovata")
+    return baseRows
+  }
+
+  /*
+   * Nelle lobby corte OCR.space può restituire:
+   *
+   * TEMPO
+   * PENALITA
+   * MIGLIOR GIRO
+   * tempo totale
+   * distacchi
+   * migliori giri
+   *
+   * quindi leggiamo tutti i valori successivi all'ultima intestazione.
+   */
+  const valueLines = lines
+    .slice(idxBest + 1)
+    .map((line) => normalizeTimeText(line))
+    .filter(Boolean)
+
+  const totalTimeRegex =
+    /^(?:\d+:)?\d{1,2}:\d{2}\.\d{3}$/
+
+  const gapRegex =
+    /^\+\d+(?::\d{2})?\.\d{3}$/
+
+  const lapTimeRegex =
+    /^\d{1,2}:\d{2}\.\d{3}$/
+
+  /*
+   * Il tempo totale del vincitore è il primo tempo assoluto
+   * chiaramente superiore a un normale giro.
+   */
+  const winnerTotal = valueLines.find((value) => {
+    if (!totalTimeRegex.test(value)) return false
+
+    const ms = parseRaceTotalToMs(value)
+    return ms != null && ms >= 10 * 60 * 1000
+  }) ?? ""
+
+  /*
+   * I distacchi sono riconoscibili direttamente dal segno +.
+   */
+  const gaps = valueLines
+    .filter((value) => gapRegex.test(value))
+    .map((value) => normalizeGapText(value))
+    .slice(0, Math.max(0, baseRows.length - 1))
+
+  /*
+   * Prendiamo tutti i tempi compatibili con un giro,
+   * escludendo il tempo totale della gara.
+   *
+   * Potrebbero esserci anche valori della colonna PENALITA,
+   * come 1:00.000. Per questo individuiamo il gruppo di tempi
+   * più omogeneo, che corrisponde ai veri migliori giri.
+   */
+  const lapCandidates = valueLines
+    .filter((value) => lapTimeRegex.test(value))
+    .filter((value) => value !== winnerTotal)
+    .map((value) => ({
+      value,
+      ms: parseLapTimeToMs(value),
+    }))
+    .filter(
+      (
+        item
+      ): item is {
+        value: string
+        ms: number
+      } => item.ms != null
+    )
+
+  let bestLapCandidates: string[] = []
+
+  if (lapCandidates.length) {
+    let bestCluster: typeof lapCandidates = []
+
+    for (const reference of lapCandidates) {
+      const cluster = lapCandidates.filter((candidate) => {
+        const ratio = candidate.ms / reference.ms
+        return ratio >= 0.75 && ratio <= 1.25
+      })
+
+      if (cluster.length > bestCluster.length) {
+        bestCluster = cluster
+      }
+    }
+
+    bestLapCandidates = bestCluster
+      .slice(0, baseRows.length)
+      .map((item) => normalizeTimeText(item.value))
+  }
+
+  const repairedRows = baseRows.map((row, index) => {
+    if (index === 0) {
+      return {
+        ...row,
+        tempoTotale: winnerTotal,
+        distacco: "",
+        migliorGiro: bestLapCandidates[index] ?? "",
+      }
+    }
+
+    return {
+      ...row,
+      tempoTotale: "",
+      distacco: gaps[index - 1] ?? "",
+      migliorGiro: bestLapCandidates[index] ?? "",
+    }
+  })
+
+  console.log("SHORT LOBBY → tempo vincitore:", winnerTotal)
+  console.log("SHORT LOBBY → distacchi:", gaps)
+  console.log("SHORT LOBBY → migliori giri:", bestLapCandidates)
+
+  return repairedRows
+}
+
 /* -------------------- Classification -------------------- */
 
 function classifyText(text: string): "quali" | "race" | "unknown" {
@@ -1057,7 +1242,7 @@ function classifyText(text: string): "quali" | "race" | "unknown" {
   if (isQuali && !isRace) return "quali"
   if (isRace) return "race"
   if (t.includes("DISTACCO")) return "quali"
-  if (t.includes("PENALIT") || t.includes("NON FINITO") || t.includes("IN GARA") || t.includes("DOPPIATO")) return "race"
+  if (t.includes("PENALIT") || t.includes("NON FINITO") || t.includes("IN GARA")) return "race"
   return "unknown"
 }
 
@@ -1092,28 +1277,25 @@ type UnionCsvRow = {
   lega: string
 }
 
-function normalizeLeague(raw: string, unionMode: boolean) {
+function normalizeUnionLeague(raw: string) {
   const s = (raw || "").toUpperCase().replace(/\s+/g, " ").trim()
 
-  if (unionMode) {
-    if (/(^|\b)PRO[\s\-_]?GOLD(\b|$)/i.test(s)) return "PRO-GOLD"
-    if (/(^|\b)PRO[\s\-_]?SILVER(\b|$)/i.test(s)) return "PRO-SILVER"
-    if (/(^|\b)PRO[\s\-_]?AMA(\b|$)/i.test(s)) return "PRO-AMA"
-    if (/(^|\b)STAR(\b|$)/i.test(s)) return "STAR"
-    if (/(^|\b)ELITE(\b|$)/i.test(s)) return "ELITE"
-    if (/(^|\b)AMA(\b|$)/i.test(s)) return "AMA"
-    return ""
-  }
+  if (/(^|\b)PRO[\s\-_]?GOLD(\b|$)/i.test(s)) return "PRO-GOLD"
+  if (/(^|\b)PRO[\s\-_]?SILVER(\b|$)/i.test(s)) return "PRO-SILVER"
+  if (/(^|\b)PRO[\s\-_]?AMA(\b|$)/i.test(s)) return "PRO-AMA"
 
-  if (/(^|\b)ELITE(\b|$)/i.test(s)) return "ELITE"
   if (/(^|\b)PLATINUM(\b|$)/i.test(s)) return "PLATINUM"
   if (/(^|\b)MASTER(\b|$)/i.test(s)) return "MASTER"
+  if (/(^|\b)STAR(\b|$)/i.test(s)) return "STAR"
+  if (/(^|\b)ELITE(\b|$)/i.test(s)) return "ELITE"
   if (/(^|\b)PRO(\b|$)/i.test(s)) return "PRO"
   if (/(^|\b)GT(\b|$)/i.test(s)) return "GT"
+  if (/(^|\b)AMA(\b|$)/i.test(s)) return "AMA"
+
   return ""
 }
 
-function extractMetaFromText(text: string, unionMode: boolean): Partial<UnionMeta> {
+function extractUnionMetaFromText(text: string): Partial<UnionMeta> {
   const raw = String(text || "")
   const upper = raw.toUpperCase()
 
@@ -1133,32 +1315,28 @@ function extractMetaFromText(text: string, unionMode: boolean): Partial<UnionMet
     lobby = `A${String(Number(lobbyMatch[1])).padStart(2, "0")}`
   }
 
-  const legaCandidates = unionMode
-    ? [
-        "PRO GOLD",
-        "PRO-GOLD",
-        "PRO_GOLD",
-        "PRO SILVER",
-        "PRO-SILVER",
-        "PRO_SILVER",
-        "PRO AMA",
-        "PRO-AMA",
-        "PRO_AMA",
-        "STAR",
-        "ELITE",
-        "AMA",
-      ]
-    : [
-        "ELITE",
-        "PLATINUM",
-        "MASTER",
-        "PRO",
-        "GT",
-      ]
+  const legaCandidates = [
+    "PRO GOLD",
+    "PRO-GOLD",
+    "PRO_GOLD",
+    "PRO SILVER",
+    "PRO-SILVER",
+    "PRO_SILVER",
+    "PRO AMA",
+    "PRO-AMA",
+    "PRO_AMA",
+    "PLATINUM",
+    "MASTER",
+    "STAR",
+    "ELITE",
+    "PRO",
+    "GT",
+    "AMA",
+  ]
 
   for (const c of legaCandidates) {
     if (upper.includes(c)) {
-      lega = normalizeLeague(c, unionMode)
+      lega = normalizeUnionLeague(c)
       break
     }
   }
@@ -1166,13 +1344,13 @@ function extractMetaFromText(text: string, unionMode: boolean): Partial<UnionMet
   return { gara, lobby, lega }
 }
 
-function mergeMeta(texts: string[], unionMode: boolean): UnionMeta {
+function mergeUnionMeta(texts: string[]): UnionMeta {
   let gara = ""
   let lobby = ""
   let lega = ""
 
   for (const text of texts) {
-    const meta = extractMetaFromText(text, unionMode)
+    const meta = extractUnionMetaFromText(text)
     if (!gara && meta.gara) gara = meta.gara
     if (!lobby && meta.lobby) lobby = meta.lobby
     if (!lega && meta.lega) lega = meta.lega
@@ -1214,6 +1392,32 @@ function formatGapMs(ms: number): string {
 
   if (mm > 0) return `+${mm}:${pad2(ss)}.${pad3(milli)}`
   return `+${ss}.${pad3(milli)}`
+}
+
+function parseLapTimeToMs(s: string): number | null {
+  const t = normalizeTimeText((s || "").trim())
+  if (!t) return null
+
+  const mmss = t.match(/^(\d{1,2}):(\d{2})\.(\d{3})$/)
+  if (mmss) {
+    const mm = Number(mmss[1])
+    const ss = Number(mmss[2])
+    const ms = Number(mmss[3])
+    if ([mm, ss, ms].some(Number.isNaN)) return null
+    return (mm * 60 + ss) * 1000 + ms
+  }
+
+  const hhmmss = t.match(/^(\d+):(\d{2}):(\d{2})\.(\d{3})$/)
+  if (hhmmss) {
+    const hh = Number(hhmmss[1])
+    const mm = Number(hhmmss[2])
+    const ss = Number(hhmmss[3])
+    const ms = Number(hhmmss[4])
+    if ([hh, mm, ss, ms].some(Number.isNaN)) return null
+    return (((hh * 60 + mm) * 60) + ss) * 1000 + ms
+  }
+
+  return null
 }
 
 function synthesizeUnionCsvRows(rows: ExtractRow[]): ExtractRow[] {
@@ -1344,27 +1548,15 @@ function findFastestLapPilot(rows: ExtractRow[]) {
   return bestPilot
 }
 
-function isUnionModeFromForm(formData: FormData) {
-  const unionModeRaw = String(formData.get("unionMode") || "").toLowerCase().trim()
-  const unionRaw = String(formData.get("union") || "").toLowerCase().trim()
-  const modeRaw = String(formData.get("mode") || "").toLowerCase().trim()
-
-  return (
-    unionModeRaw === "true" ||
-    unionModeRaw === "1" ||
-    unionRaw === "true" ||
-    unionRaw === "1" ||
-    modeRaw === "union"
-  )
-}
-
 /* -------------------- Route Handler -------------------- */
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const files = formData.getAll("files").filter(Boolean) as File[]
-    const unionMode = isUnionModeFromForm(formData)
+
+    const shortLobbyMode =
+  String(formData.get("shortLobbyMode") || "").toLowerCase() === "true"
 
     if (!files.length) {
       return Response.json({ error: "Nessun file ricevuto" }, { status: 400 })
@@ -1422,34 +1614,97 @@ export async function POST(req: NextRequest) {
       const text = ocr.text
       allTexts.push(text)
 
-      // UNION ONLY: il primo file è autoritativo per la PP
-      if (unionMode && idx === 0 && !polePilot) {
-        polePilot = extractUnionPolePilot(text)
-      }
-
       const kind = classifyText(text)
       const U = (text || "").toUpperCase()
-      const hasRaceHeaders = U.includes("TEMPO") || U.includes("PENALIT") || U.includes("PENALITA") || U.includes("DOPPIATO")
+      const hasRaceHeaders = U.includes("TEMPO") || U.includes("PENALIT") || U.includes("PENALITA")
 
       debugChunks.push(`FILE #${idx + 1} (${kind.toUpperCase()}) — ${f.name}\n\n${text}`)
 
       if (kind === "quali") {
-        if (unionMode) {
-          // UNION: uso la qualifica solo per prendere il P1 del primo screen utile
-          if (!polePilot) {
-            const p1 = extractUnionPolePilot(text)
-            if (p1) polePilot = p1
+        qualiTexts.push(text)
+
+        const part = parseQualificaFromColumnText(text)
+        if (!polePilot) {
+          const p1 = part.find((r) => r.pos === 1 && r.pilota)
+          if (p1?.pilota) polePilot = p1.pilota
+        }
+        for (const r of part) {
+          mergeQualiRowSafe(qualiRowsMerged, r)
+        }
+
+        const preppedAlt = await preprocessForOcrQualiAlt(input)
+        const ocrAlt = await ocrWithRetry(apiKey, preppedAlt)
+        if (ocrAlt.ok) {
+          if (ocrAlt.endpointUsed) {
+            ocrConnections.push({
+              fileIndex: idx + 1,
+              fileName: f.name,
+              stage: "qualiAlt",
+              serverUsed: ocrAlt.serverUsed,
+              endpoint: ocrAlt.endpointUsed,
+              engine: "2",
+            })
           }
-        } else {
-          // PRT: invariato
+
+          const textAlt = ocrAlt.text
+          qualiTexts.push(textAlt)
+
+          const partAlt = parseQualificaFromColumnText(textAlt)
+          if (!polePilot) {
+            const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
+            if (p1Alt?.pilota) polePilot = p1Alt.pilota
+          }
+
+          for (const r of partAlt) {
+            mergeQualiRowSafe(qualiRowsMerged, r)
+          }
+
+          debugChunks.push(`FILE #${idx + 1} QUALI ALT — ${f.name}\n\n${textAlt}`)
+        }
+
+        const preppedTimes = await preprocessForOcrQualiTimesOnly(input)
+        const ocrTimes = await ocrWithRetry(apiKey, preppedTimes)
+        if (ocrTimes.ok) {
+          if (ocrTimes.endpointUsed) {
+            ocrConnections.push({
+              fileIndex: idx + 1,
+              fileName: f.name,
+              stage: "qualiTimes",
+              serverUsed: ocrTimes.serverUsed,
+              endpoint: ocrTimes.endpointUsed,
+              engine: "2",
+            })
+          }
+
+          const textTimes = ocrTimes.text
+          qualiTexts.push(textTimes)
+          qualiTimesOnlyTexts.push(textTimes)
+          debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY — ${f.name}\n\n${textTimes}`)
+        }
+      } else if (kind === "race") {
+        const part = shortLobbyMode
+  ? parseGaraShortLobby(text)
+  : parseGaraFromColumnText(text)
+        for (const r of part) {
+          raceRowsMerged.set(r.pos, { ...r, auto: normalizeKnownCar(r.auto) })
+        }
+      } else {
+        const q = parseQualificaFromColumnText(text)
+        const g = hasRaceHeaders
+  ? shortLobbyMode
+    ? parseGaraShortLobby(text)
+    : parseGaraFromColumnText(text)
+  : []
+
+        if (!hasRaceHeaders) {
           qualiTexts.push(text)
 
-          const part = parseQualificaFromColumnText(text)
           if (!polePilot) {
-            const p1 = part.find((r) => r.pos === 1 && r.pilota)
+            const p1 = q.find((r) => r.pos === 1 && r.pilota)
             if (p1?.pilota) polePilot = p1.pilota
           }
-          for (const r of part) {
+
+          for (const r of q) {
             mergeQualiRowSafe(qualiRowsMerged, r)
           }
 
@@ -1480,7 +1735,7 @@ export async function POST(req: NextRequest) {
               mergeQualiRowSafe(qualiRowsMerged, r)
             }
 
-            debugChunks.push(`FILE #${idx + 1} QUALI ALT — ${f.name}\n\n${textAlt}`)
+            debugChunks.push(`FILE #${idx + 1} QUALI ALT UNKNOWN — ${f.name}\n\n${textAlt}`)
           }
 
           const preppedTimes = await preprocessForOcrQualiTimesOnly(input)
@@ -1500,157 +1755,72 @@ export async function POST(req: NextRequest) {
             const textTimes = ocrTimes.text
             qualiTexts.push(textTimes)
             qualiTimesOnlyTexts.push(textTimes)
-            debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY — ${f.name}\n\n${textTimes}`)
-          }
-        }
-      } else if (kind === "race") {
-        const part = parseGaraFromColumnText(text)
-        for (const r of part) {
-          raceRowsMerged.set(r.pos, { ...r, auto: normalizeKnownCar(r.auto) })
-        }
-      } else {
-        const q = parseQualificaFromColumnText(text)
-        const g = hasRaceHeaders ? parseGaraFromColumnText(text) : []
-
-        if (!hasRaceHeaders) {
-          if (unionMode) {
-            if (!polePilot) {
-              const p1 = extractUnionPolePilot(text)
-              if (p1) polePilot = p1
-            }
-          } else {
-            qualiTexts.push(text)
-
-            if (!polePilot) {
-              const p1 = q.find((r) => r.pos === 1 && r.pilota)
-              if (p1?.pilota) polePilot = p1.pilota
-            }
-
-            for (const r of q) {
-              mergeQualiRowSafe(qualiRowsMerged, r)
-            }
-
-            const preppedAlt = await preprocessForOcrQualiAlt(input)
-            const ocrAlt = await ocrWithRetry(apiKey, preppedAlt)
-            if (ocrAlt.ok) {
-              if (ocrAlt.endpointUsed) {
-                ocrConnections.push({
-                  fileIndex: idx + 1,
-                  fileName: f.name,
-                  stage: "qualiAlt",
-                  serverUsed: ocrAlt.serverUsed,
-                  endpoint: ocrAlt.endpointUsed,
-                  engine: "2",
-                })
-              }
-
-              const textAlt = ocrAlt.text
-              qualiTexts.push(textAlt)
-
-              const partAlt = parseQualificaFromColumnText(textAlt)
-              if (!polePilot) {
-                const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
-                if (p1Alt?.pilota) polePilot = p1Alt.pilota
-              }
-
-              for (const r of partAlt) {
-                mergeQualiRowSafe(qualiRowsMerged, r)
-              }
-
-              debugChunks.push(`FILE #${idx + 1} QUALI ALT UNKNOWN — ${f.name}\n\n${textAlt}`)
-            }
-
-            const preppedTimes = await preprocessForOcrQualiTimesOnly(input)
-            const ocrTimes = await ocrWithRetry(apiKey, preppedTimes)
-            if (ocrTimes.ok) {
-              if (ocrTimes.endpointUsed) {
-                ocrConnections.push({
-                  fileIndex: idx + 1,
-                  fileName: f.name,
-                  stage: "qualiTimes",
-                  serverUsed: ocrTimes.serverUsed,
-                  endpoint: ocrTimes.endpointUsed,
-                  engine: "2",
-                })
-              }
-
-              const textTimes = ocrTimes.text
-              qualiTexts.push(textTimes)
-              qualiTimesOnlyTexts.push(textTimes)
-              debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY UNKNOWN — ${f.name}\n\n${textTimes}`)
-            }
+            debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY UNKNOWN — ${f.name}\n\n${textTimes}`)
           }
         } else if (g.length >= q.length && g.length > 0) {
           for (const r of g) {
             raceRowsMerged.set(r.pos, { ...r, auto: normalizeKnownCar(r.auto) })
           }
         } else {
-          if (unionMode) {
-            if (!polePilot) {
-              const p1 = extractUnionPolePilot(text)
-              if (p1) polePilot = p1
-            }
-          } else {
-            qualiTexts.push(text)
+          qualiTexts.push(text)
 
-            if (!polePilot) {
-              const p1 = q.find((r) => r.pos === 1 && r.pilota)
-              if (p1?.pilota) polePilot = p1.pilota
+          if (!polePilot) {
+            const p1 = q.find((r) => r.pos === 1 && r.pilota)
+            if (p1?.pilota) polePilot = p1.pilota
+          }
+
+          for (const r of q) {
+            mergeQualiRowSafe(qualiRowsMerged, r)
+          }
+
+          const preppedAlt = await preprocessForOcrQualiAlt(input)
+          const ocrAlt = await ocrWithRetry(apiKey, preppedAlt)
+          if (ocrAlt.ok) {
+            if (ocrAlt.endpointUsed) {
+              ocrConnections.push({
+                fileIndex: idx + 1,
+                fileName: f.name,
+                stage: "qualiAlt",
+                serverUsed: ocrAlt.serverUsed,
+                endpoint: ocrAlt.endpointUsed,
+                engine: "2",
+              })
             }
 
-            for (const r of q) {
+            const textAlt = ocrAlt.text
+            qualiTexts.push(textAlt)
+
+            const partAlt = parseQualificaFromColumnText(textAlt)
+            if (!polePilot) {
+              const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
+              if (p1Alt?.pilota) polePilot = p1Alt.pilota
+            }
+
+            for (const r of partAlt) {
               mergeQualiRowSafe(qualiRowsMerged, r)
             }
 
-            const preppedAlt = await preprocessForOcrQualiAlt(input)
-            const ocrAlt = await ocrWithRetry(apiKey, preppedAlt)
-            if (ocrAlt.ok) {
-              if (ocrAlt.endpointUsed) {
-                ocrConnections.push({
-                  fileIndex: idx + 1,
-                  fileName: f.name,
-                  stage: "qualiAlt",
-                  serverUsed: ocrAlt.serverUsed,
-                  endpoint: ocrAlt.endpointUsed,
-                  engine: "2",
-                })
-              }
+            debugChunks.push(`FILE #${idx + 1} QUALI ALT FALLBACK — ${f.name}\n\n${textAlt}`)
+          }
 
-              const textAlt = ocrAlt.text
-              qualiTexts.push(textAlt)
-
-              const partAlt = parseQualificaFromColumnText(textAlt)
-              if (!polePilot) {
-                const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
-                if (p1Alt?.pilota) polePilot = p1Alt.pilota
-              }
-
-              for (const r of partAlt) {
-                mergeQualiRowSafe(qualiRowsMerged, r)
-              }
-
-              debugChunks.push(`FILE #${idx + 1} QUALI ALT FALLBACK — ${f.name}\n\n${textAlt}`)
+          const preppedTimes = await preprocessForOcrQualiTimesOnly(input)
+          const ocrTimes = await ocrWithRetry(apiKey, preppedTimes)
+          if (ocrTimes.ok) {
+            if (ocrTimes.endpointUsed) {
+              ocrConnections.push({
+                fileIndex: idx + 1,
+                fileName: f.name,
+                stage: "qualiTimes",
+                serverUsed: ocrTimes.serverUsed,
+                endpoint: ocrTimes.endpointUsed,
+                engine: "2",
+              })
             }
 
-            const preppedTimes = await preprocessForOcrQualiTimesOnly(input)
-            const ocrTimes = await ocrWithRetry(apiKey, preppedTimes)
-            if (ocrTimes.ok) {
-              if (ocrTimes.endpointUsed) {
-                ocrConnections.push({
-                  fileIndex: idx + 1,
-                  fileName: f.name,
-                  stage: "qualiTimes",
-                  serverUsed: ocrTimes.serverUsed,
-                  endpoint: ocrTimes.endpointUsed,
-                  engine: "2",
-                })
-              }
-
-              const textTimes = ocrTimes.text
-              qualiTexts.push(textTimes)
-              qualiTimesOnlyTexts.push(textTimes)
-              debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY FALLBACK — ${f.name}\n\n${textTimes}`)
-            }
+            const textTimes = ocrTimes.text
+            qualiTexts.push(textTimes)
+            qualiTimesOnlyTexts.push(textTimes)
+            debugChunks.push(`FILE #${idx + 1} QUALI TIMES ONLY FALLBACK — ${f.name}\n\n${textTimes}`)
           }
         }
       }
@@ -1681,97 +1851,75 @@ export async function POST(req: NextRequest) {
       qualiByPosDirect.set(q.pos, q)
     }
 
-    const qualiPosMapsTimesOnly = unionMode
-      ? []
-      : qualiTimesOnlyTexts.map((t) => extractQualiTimesByPos(t))
-    const qualiByPosTimesOnly = unionMode
-      ? new Map<number, string>()
-      : mergeQualiPosMaps(...qualiPosMapsTimesOnly)
+    const qualiPosMapsTimesOnly = qualiTimesOnlyTexts.map((t) => extractQualiTimesByPos(t))
+    const qualiByPosTimesOnly = mergeQualiPosMaps(...qualiPosMapsTimesOnly)
 
-    const qualiPosMapsAll = unionMode
-      ? []
-      : qualiTexts.map((t) => extractQualiTimesByPos(t))
-    const qualiByPosAll = unionMode
-      ? new Map<number, string>()
-      : mergeQualiPosMaps(...qualiPosMapsAll)
+    const qualiPosMapsAll = qualiTexts.map((t) => extractQualiTimesByPos(t))
+    const qualiByPosAll = mergeQualiPosMaps(...qualiPosMapsAll)
 
-    const qualiByPos = unionMode
-      ? new Map<number, string>()
-      : (qualiByPosTimesOnly.size > 0 ? qualiByPosTimesOnly : qualiByPosAll)
+    const qualiByPos = qualiByPosTimesOnly.size > 0 ? qualiByPosTimesOnly : qualiByPosAll
 
     const outBase: ExtractRow[] = raceRows.map((r) => {
-      const k = r.pilota ? pilotKey(r.pilota) : ""
+  const k = r.pilota ? pilotKey(r.pilota) : ""
 
-      const qExact = k ? qualiByPilot.get(k) : undefined
-      const qLoose = !qExact && r.pilota ? findQualiByPilotLoose(r.pilota, qualiRows) : undefined
-      const qPos = qualiByPosDirect.get(r.pos)
+  const qExact = k ? qualiByPilot.get(k) : undefined
+const qLoose = !qExact && r.pilota ? findQualiByPilotLoose(r.pilota, qualiRows) : undefined
 
-      const tempoQualifica = unionMode
-        ? ""
-        : (
-            normalizeTimeText((qExact?.tempo ?? "").trim()) ||
-            normalizeTimeText((qLoose?.tempo ?? "").trim()) ||
-            normalizeTimeText((qPos?.tempo ?? "").trim()) ||
-            normalizeTimeText((qualiByPos.get(r.pos) ?? "").trim()) ||
-            ""
-          )
+const tempoQualifica =
+  normalizeTimeText((qExact?.tempo ?? "").trim()) ||
+  normalizeTimeText((qLoose?.tempo ?? "").trim()) ||
+  ""
 
-      const raceAuto = normalizeKnownCar((r.auto || "").trim())
+  const raceAuto = normalizeKnownCar((r.auto || "").trim())
 
-      // In UNION non usare mai l'auto qualifica per riempire la tabella.
-      const qualiAutoByPilot = unionMode
-        ? ""
-        : normalizeKnownCar(
-            (qExact?.auto || "").trim() ||
-            (qLoose?.auto || "").trim()
-          )
+  const qualiAutoByPilot = normalizeKnownCar(
+    (qExact?.auto || "").trim() ||
+    (qLoose?.auto || "").trim()
+  )
 
-      const isWeakRaceAuto =
-        !raceAuto ||
-        raceAuto.length < 10 ||
-        /^(458|gr\.?4|gt4|trophy '?11|italia|huracán|huracan|cayman|elantra|atenza|silvia)$/i.test(raceAuto)
+  const isWeakRaceAuto =
+    !raceAuto ||
+    raceAuto.length < 10 ||
+    /^(458|gr\.?4|gt4|trophy '?11|italia|huracán|huracan|cayman|elantra|atenza|silvia)$/i.test(raceAuto)
 
-      const auto = normalizeKnownCar(
-        qualiAutoByPilot ||
-        (isWeakRaceAuto ? "" : raceAuto) ||
-        raceAuto ||
-        ""
-      )
+  const auto = normalizeKnownCar(
+    qualiAutoByPilot ||
+    (isWeakRaceAuto ? "" : raceAuto) ||
+    raceAuto ||
+    ""
+  )
 
-      const isPole =
-        !!polePilot &&
-        !!r.pilota &&
-        betterPilotMatch(r.pilota, polePilot)
+  const isPole =
+    !!polePilot &&
+    !!r.pilota &&
+    betterPilotMatch(r.pilota, polePilot)
 
-      return {
-        posGara: r.pos,
-        pilota: r.pilota ?? "",
-        auto,
-        tempoTotaleGara: r.tempoTotale ?? "",
-        distaccoDalPrimo: r.distacco ?? "",
-        migliorGiroGara: r.migliorGiro ?? "",
-        tempoQualifica,
-        pole: isPole ? "POLE" : "",
-      }
-    })
+  return {
+    posGara: r.pos,
+    pilota: r.pilota ?? "",
+    auto,
+    tempoTotaleGara: r.tempoTotale ?? "",
+    distaccoDalPrimo: r.distacco ?? "",
+    migliorGiroGara: r.migliorGiro ?? "",
+    tempoQualifica,
+    pole: isPole ? "POLE" : "",
+  }
+})
 
     const outTable = outBase.map((r) => ({
       ...r,
       tempoTotaleGara: (r.distaccoDalPrimo || "").toUpperCase() === "BOX" ? "BOX" : r.tempoTotaleGara,
     }))
 
-    const unionMeta = mergeMeta(allTexts, unionMode)
+    const unionMeta = mergeUnionMeta(allTexts)
     const fastestLapPilot = findFastestLapPilot(outBase)
     const outCsvRows = synthesizeUnionCsvRows(outBase)
 
     const unionCsvRows: UnionCsvRow[] = outCsvRows.map((r) => {
       const isPole =
-        !!r.pole ||
-        (
-          !!polePilot &&
-          !!r.pilota &&
-          betterPilotMatch(r.pilota, polePilot)
-        )
+        !!polePilot &&
+        !!r.pilota &&
+        betterPilotMatch(r.pilota, polePilot)
 
       const isFastest =
         !!fastestLapPilot &&
@@ -1798,25 +1946,13 @@ export async function POST(req: NextRequest) {
 
     const csv = toUnionCsv(unionCsvRows)
 
-    const qualiFound = unionMode
-      ? 0
-      : outTable.filter((r) => (r.tempoQualifica || "").trim().length > 0).length
+    const qualiFound = outTable.filter((r) => (r.tempoQualifica || "").trim().length > 0).length
+    const qualiMissing = Math.max(0, outTable.length - qualiFound)
+    const qualiComplete = qualiMissing === 0
 
-    const qualiMissing = unionMode
-      ? 0
-      : Math.max(0, outTable.length - qualiFound)
-
-    const qualiComplete = unionMode
-      ? true
-      : qualiMissing === 0
-
-    const warning = unionMode
+    const warning = qualiComplete
       ? ""
-      : (
-          qualiComplete
-            ? ""
-            : `⚠️ Qualifiche incomplete: trovate ${qualiFound} su ${outTable.length}. Controlla e completa manualmente i tempi mancanti prima dell’uso definitivo del CSV.`
-        )
+      : `⚠️ Qualifiche incomplete: trovate ${qualiFound} su ${outTable.length}. Controlla e completa manualmente i tempi mancanti prima dell’uso definitivo del CSV.`
 
     const uniqueServers = Array.from(
       new Set(
@@ -1835,9 +1971,9 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       tool: "Albixximo Race Tools — Race CSV Extractor PRO",
-      mode: unionMode ? "UNION" : "PRT",
       count: outTable.length,
       rows: outTable,
+      qualiRows,
       csv,
       polePilot,
       unionMeta,

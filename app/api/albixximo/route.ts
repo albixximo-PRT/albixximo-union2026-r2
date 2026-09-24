@@ -443,8 +443,8 @@ function looksLikeKnownCarToken(s: string) {
     t.includes("huracan") ||
     t.includes("mazda3") ||
     t.includes("mazda 3") ||
-    t.includes("gt-r") ||
-    t.includes("gtr") ||
+    t.includes("gt-r nismo") ||
+t.includes("nismo gt500") ||
     t.includes("650s") ||
     t.includes("atenza") ||
         t.includes("296") ||
