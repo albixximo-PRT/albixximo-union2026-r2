@@ -6812,33 +6812,6 @@ for (const driver of map.values()) {
 
   const currentLeague = normalizeLeagueKey(driver.league)
 
-  if (currentLeague) {
-  const activeMovement = activeRoundMovementByDriver.get(driverKey)
-
-  for (const raceNumber of savedRaceNumbersByLeague[currentLeague]) {
-
-    const movedIntoCurrentLeagueAfterThisRace =
-      raceNumber === currentRace &&
-      activeMovement?.toLeague === currentLeague &&
-      activeMovement.fromLeague !== currentLeague
-
-    if (movedIntoCurrentLeagueAfterThisRace) continue
-
-    if (!driver.raceResults[raceNumber]) {
-  driver.raceResults[raceNumber] = {
-    position: null,
-    status: "ASS-I",
-    pp: false,
-    gv: false,
-    points: 0,
-    rawText: "ASS-I",
-  }
-
-  driver.racePoints[raceNumber] = 0
-}
-  }
-}
-
   const activeMovement = (() => {
   const movementRounds = [5, 4, 3, 2, 1]
 
