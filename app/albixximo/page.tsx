@@ -11455,7 +11455,7 @@ function openAutoCorrectionModal() {
 function applyAutoCorrections() {
   const cleaned: Record<number, string> = {}
 
-  const hasUnresolvedAuto = previewRows.some((row) => {
+  const hasUnresolvedAuto = displayRows.some((row) => {
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -11469,7 +11469,7 @@ function applyAutoCorrections() {
     return
   }
 
-  for (const row of previewRows) {
+  for (const row of displayRows) {
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -11493,7 +11493,7 @@ function openQualiCorrectionModal() {
 function applyQualiCorrections() {
   const cleaned: Record<number, string> = {}
 
-  for (const row of previewRows) {
+  for (const row of displayRows) {
     const draftValue = String(manualQualiDraft[row.sourcePosGara] ?? "").trim()
     const originalValue = String(row.tempoQualifica ?? "").trim()
 
