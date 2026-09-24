@@ -5459,7 +5459,10 @@ return {
   pilota: resolvedPilot,
   auto: resolvedAuto,
 
-  tempoTotaleGara: r.tempoTotaleGara,
+  tempoTotaleGara:
+  manualDistaccoValue === "NC"
+    ? "NC"
+    : r.tempoTotaleGara,
 
 distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
 
