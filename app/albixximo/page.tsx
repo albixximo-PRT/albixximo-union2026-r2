@@ -5386,8 +5386,17 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
   const correctedDriverIdsForLeague = Object.entries(driverIdCorrections)
   .filter(([key]) => key.startsWith(`${selectedLeague}:`))
   .reduce<Record<string, string>>((acc, [key, correctedId]) => {
-    const originalId = key.slice(selectedLeague.length + 1)
-    acc[normalizeDriverLookupName(correctedId)] = originalId
+    const originalNormalizedId = key.slice(selectedLeague.length + 1)
+
+    const officialPilot = officialLeaguePilots.find(
+      (pilot) =>
+        normalizeDriverLookupName(pilot) === originalNormalizedId
+    )
+
+    if (officialPilot) {
+      acc[normalizeDriverLookupName(correctedId)] = officialPilot
+    }
+
     return acc
   }, {})
   const unresolvedMap = new Map<string, UnresolvedDriverCandidate>()
