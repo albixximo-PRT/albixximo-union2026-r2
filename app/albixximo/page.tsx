@@ -14911,7 +14911,16 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
   ),
 }))
     
-    setRows((prev) => {
+setExpectedLobbyDrivers((prev) =>
+  prev.map((pilot) =>
+    normalizeDriverLookupName(pilot) ===
+    normalizeDriverLookupName(selectedOfficial)
+      ? activeUnknownDriver.rawName
+      : pilot
+  )
+)    
+
+setRows((prev) => {
       const selectedOfficialKey = normalizeDriverLookupName(selectedOfficial)
 
       return prev.map((row: ExtractRow) => {
