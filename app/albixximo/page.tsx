@@ -16068,7 +16068,7 @@ const changed = currentValue !== originalValue
       <div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Correzione Distacco Manuale</div>
         <div style={{ marginTop: 6, fontSize: 13, opacity: 0.76 }}>
-          Inserisci un distacco manuale oppure uno stato come DOPPIATO, DNF, DNFV, BOX o DSQ.
+          Inserisci un distacco manuale oppure uno stato come DOPPIATO, NC, BOX o DSQ.
         </div>
       </div>
 
@@ -16177,7 +16177,7 @@ const changed = currentValue !== originalValue
                             [row.sourcePosGara]: e.target.value,
                           }))
                         }
-                        placeholder="Es. +12.345 / +1:14.960 / DOPPIATO / DNF / DNFV / BOX / DSQ"
+                        placeholder="Es. +12.345 / +1:14.960 / DOPPIATO / NC / BOX / DSQ"
                         style={{
                           width: "100%",
                           padding: "10px 12px",
@@ -16192,7 +16192,7 @@ const changed = currentValue !== originalValue
                       />
 
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {["DOPPIATO", "DNF", "DNFV", "BOX", "DSQ"].map((label) => (
+                        {["DOPPIATO", "NC", "BOX", "DSQ"].map((label) => (
                           <button
                             key={label}
                             onClick={() =>
