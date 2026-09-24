@@ -2588,6 +2588,7 @@ function ResultsTable({
   penalties,
   forceHideMeta = false,
   tableTitle = "Classifica (output)",
+  onAbsenceClick,
 }: {
   previewRows: DisplayRow[]
   bestRaceLap: string
@@ -2598,6 +2599,7 @@ function ResultsTable({
   penalties: PenaltyMap
   forceHideMeta?: boolean
   tableTitle?: string
+  onAbsenceClick?: (row: DisplayRow) => void
 }) {
   const showMeta = !forceHideMeta && (prtMode || unionMode)
   const showLobby = !forceHideMeta && unionMode
@@ -2910,7 +2912,31 @@ const rowStyle = getPrtTableRowStyle(
                     mono
                     style={exporting ? PRT_ROW_STYLES.tempoExport : PRT_ROW_STYLES.tempoLive}
                   >
-                    {renderTempoCell(tempo, exporting, compactStatusPills)}
+                    {(() => {
+  const upperTempo = tempo.trim().toUpperCase()
+  const isAbsence = upperTempo === "ASS-I" || upperTempo === "ASS-G"
+
+  if (!exporting && isAbsence && onAbsenceClick) {
+    return (
+      <button
+        type="button"
+        onClick={() => onAbsenceClick(r)}
+        title="Clicca per cambiare il tipo di assenza"
+        style={{
+          padding: 0,
+          margin: 0,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      >
+        {renderTempoCell(tempo, false, compactStatusPills)}
+      </button>
+    )
+  }
+
+  return renderTempoCell(tempo, exporting, compactStatusPills)
+})()}
                   </TableCell>
 
                   <TableCell
@@ -12699,6 +12725,15 @@ const lastCreatedMovementText = useMemo(() => {
     prtMode={prtMode}
     unionMode={unionMode}
     penalties={penalties}
+    onAbsenceClick={(row) => {
+  const key = getPrtRowStableKey(row.sourcePosGara)
+  const currentValue = tempoLikeGt7(row).trim().toUpperCase()
+
+  setAbsenceOverrides((prev) => ({
+    ...prev,
+    [key]: currentValue === "ASS-G" ? "ASS-I" : "ASS-G",
+  }))
+}}
     tableTitle="Classifica (output)"
   />
 )}
