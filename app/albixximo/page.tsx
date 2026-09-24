@@ -10472,6 +10472,7 @@ async function run(targetLeague?: ChampionshipLeagueKey) {
 
     const res = await fetch("/api/albixximo", { method: "POST", body: fd })
     const data = await res.json()
+    console.log("🟠 UNION DEBUG API RAW", data)
 
     if (!res.ok) {
       setError(JSON.stringify(data, null, 2))
