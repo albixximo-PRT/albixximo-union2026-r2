@@ -4453,7 +4453,7 @@ function renderChampionshipRaceCell(
   return renderMovementWrapper(
     <CompactChampionshipPill
       left="A"
-      variant="dsq"
+      variant="absenceRed"
       exporting={exporting}
     />,
     specialMovement,
