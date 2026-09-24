@@ -5601,11 +5601,12 @@ const maxSourcePos = rowsWithPole.reduce(
     posGara: rowsWithPole.length + index + 1,
     sourcePosGara: maxSourcePos + index + 1,
     pilota: pilot,
-    auto: "---",
+    auto: manualAutoOverrides[maxSourcePos + index + 1] || "---",
     tempoTotaleGara: "ASS-I",
     distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
-    tempoQualifica: "",
+    tempoQualifica:
+  manualQualiOverrides[maxSourcePos + index + 1] || "",
     pole: "",
   }))
 
@@ -5615,6 +5616,8 @@ const maxSourcePos = rowsWithPole.reduce(
   leagueDriverResolution.baseRows,
   expectedLobbyDrivers,
   selectedLeague,
+  manualAutoOverrides,
+  manualQualiOverrides,
 ])
     const hasManualPilotOverrides = useMemo(() => {
     return Object.keys(manualPilotOverrides).length > 0
