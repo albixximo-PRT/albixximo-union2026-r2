@@ -6950,6 +6950,21 @@ return Array.from(map.values())
       return b.totalPoints - a.totalPoints
     }
 
+    // 1B. A parità di punti, un risultato valido in gara
+    //     precede un'assenza / risultato senza posizione.
+    //     Esempio: 14° con 0 punti > ASS-I / ASS-G con 0 punti.
+    const aHasValidPosition = Object.values(a.raceResults).some(
+      (result) => result?.position != null
+    )
+
+    const bHasValidPosition = Object.values(b.raceResults).some(
+      (result) => result?.position != null
+    )
+
+    if (aHasValidPosition !== bHasValidPosition) {
+      return aHasValidPosition ? -1 : 1
+    }
+
     // 2. Al termine di Gara 5 entra in vigore lo spareggio ufficiale UNION:
     //    maggior numero di 1° posti, poi 2° posti, poi 3° posti, ecc.
     if (currentRace === 5) {
