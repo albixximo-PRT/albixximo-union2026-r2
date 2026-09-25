@@ -6929,14 +6929,10 @@ const snapshotPointsMap = snapshotPointsMapRaw
       if (!key) continue
 
       const baseCell = buildSavedRaceCell(row, snapshot.bestRaceLap || "")
-const normalizedPilotName =
-  normalizeDriverNameForChampionship(pilotName)
 
-const hasUnfoundedClaim =
-  snapshot.dgUnfoundedPilots?.includes(normalizedPilotName) ?? false
 
 const resolvedPoints =
-  (snapshotPointsMap[pilotName] ?? 0) - (hasUnfoundedClaim ? 5 : 0)
+  snapshotPointsMap[pilotName] ?? 0
 
 const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
 
@@ -7103,6 +7099,36 @@ if (activeMovement) {
     0
   )
 }
+
+// RECLAMI INFONDATI:
+// -5 punti sulla classifica assoluta per ogni reclamo infondato
+let unfoundedClaimsCount = 0
+
+for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
+  const raceState = championshipState.races[raceNumber]
+  if (!raceState) continue
+
+  const normalizedDriver =
+    normalizeDriverNameForChampionship(driver.pilota)
+
+  for (const league of CHAMPIONSHIP_LEAGUES) {
+    const lobbyState = raceState[league]
+    if (!lobbyState) continue
+
+    for (const snapshot of Object.values(lobbyState)) {
+      if (!snapshot) continue
+
+      const hasUnfoundedClaim =
+        snapshot.dgUnfoundedPilots?.includes(normalizedDriver) ?? false
+
+      if (hasUnfoundedClaim) {
+        unfoundedClaimsCount += 1
+      }
+    }
+  }
+}
+
+driver.totalPoints -= unfoundedClaimsCount * 5
 }
 // Frecce storiche promo/retro: solo grafica, non modifica punti
 for (const movementRound of [1, 2, 3, 4, 5]) {
