@@ -12188,6 +12188,12 @@ const lastCreatedMovementText = useMemo(() => {
   const isActive = selectedLeague === league
   const isSaved = savedLeagueStatus[league]
 
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+
+  const savedLobbyCount = leagueLobbies.filter(
+    (lobby) => !!currentRaceSnapshot[league]?.[lobby]
+  ).length
+
   return (
     <button
       key={league}
@@ -12224,7 +12230,48 @@ const lastCreatedMovementText = useMemo(() => {
       }}
       title={isSaved ? `Apri ${league}` : `${league} non ancora salvata`}
     >
-      {league} {isSaved ? "✅" : isActive ? "•" : ""}
+      <span
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    whiteSpace: "nowrap",
+  }}
+>
+  <span>
+    {league} {isSaved ? "✅" : isActive ? "•" : ""}
+  </span>
+
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 2,
+      height: 12,
+    }}
+  >
+    {leagueLobbies.map((lobby, index) => (
+      <span
+        key={lobby}
+        style={{
+          display: "block",
+          width: 2,
+          height: 10,
+          borderRadius: 1,
+          background:
+            index < savedLobbyCount
+              ? "rgba(34,197,94,0.95)"
+              : "rgba(255,255,255,0.20)",
+          boxShadow:
+            index < savedLobbyCount
+              ? "0 0 4px rgba(34,197,94,0.55)"
+              : "none",
+        }}
+      />
+    ))}
+  </span>
+</span>
     </button>
   )
 })}
