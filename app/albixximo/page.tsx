@@ -11525,6 +11525,22 @@ function applyAutoCorrections() {
   const cleaned: Record<number, string> = {}
 
   const hasUnresolvedAuto = displayRows.some((row) => {
+    const rowStatus = String(
+      manualDistaccoOverrides[row.sourcePosGara] ??
+      row.distaccoDalPrimo ??
+      row.tempoTotaleGara ??
+      ""
+    )
+      .trim()
+      .toUpperCase()
+
+    const isAbsence =
+      rowStatus === "ASS-I" ||
+      rowStatus === "ASS-G"
+
+    // Per un pilota assente l'auto non è obbligatoria.
+    if (isAbsence) return false
+
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -11539,6 +11555,23 @@ function applyAutoCorrections() {
   }
 
   for (const row of displayRows) {
+    const rowStatus = String(
+      manualDistaccoOverrides[row.sourcePosGara] ??
+      row.distaccoDalPrimo ??
+      row.tempoTotaleGara ??
+      ""
+    )
+      .trim()
+      .toUpperCase()
+
+    const isAbsence =
+      rowStatus === "ASS-I" ||
+      rowStatus === "ASS-G"
+
+    if (isAbsence) {
+      continue
+    }
+
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -15819,9 +15852,23 @@ setRows((prev) => {
 const originalValue = String(row.auto ?? "").trim()
 const changed = currentValue !== originalValue
 
-const unresolved = !UNION_GR2_CARS.some(
-  (car) => car === currentValue
+const rowStatus = String(
+  manualDistaccoOverrides[row.sourcePosGara] ??
+  row.distaccoDalPrimo ??
+  row.tempoTotaleGara ??
+  ""
 )
+  .trim()
+  .toUpperCase()
+
+const isAbsence =
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
+const unresolved =
+  !isAbsence &&
+  !UNION_GR2_CARS.some(
+    (car) => car === currentValue
+  )
 
                 return (
                   <tr
