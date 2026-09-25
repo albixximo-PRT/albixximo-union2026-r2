@@ -2346,14 +2346,17 @@ function renderPrtMetaCell({
 function renderPrtPenaltyCell({
   row,
   penalties,
+  dgMeasureTypes,
   exportPenaltyTimeTextStyle,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
+  dgMeasureTypes: Record<string, DgMeasureType>
   exportPenaltyTimeTextStyle: React.CSSProperties
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const penaltySeconds = penalties[key] || 0
+  const dgMeasureType = dgMeasureTypes[key] || "NONE"
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
@@ -2364,13 +2367,79 @@ function renderPrtPenaltyCell({
     return <Pill left="DSQ" variant="dsq" />
   }
 
-  if (penaltySeconds <= 0) {
+  if (dgMeasureType === "INFONDATO") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "5px 9px",
+          borderRadius: 999,
+          background: "rgba(220,53,69,0.92)",
+          border: "1px solid rgba(220,53,69,0.60)",
+          boxShadow: "0 0 14px rgba(220,53,69,0.24)",
+          color: "#ffffff",
+          fontSize: 10,
+          fontWeight: 900,
+          letterSpacing: 0.3,
+          whiteSpace: "nowrap",
+        }}
+      >
+        INFONDATO
+      </span>
+    )
+  }
+
+  if (
+    (dgMeasureType !== "P" && dgMeasureType !== "S") ||
+    penaltySeconds <= 0
+  ) {
     return "-"
   }
 
+  const isPenalty = dgMeasureType === "P"
+
   return (
-    <div style={exportPenaltyTimeTextStyle}>
-      {formatPenaltyDisplay(penaltySeconds)}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: 8,
+        width: "100%",
+      }}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 24,
+          height: 20,
+          borderRadius: 999,
+          background: isPenalty
+            ? "rgba(220,53,69,0.92)"
+            : "rgba(255,0,128,0.92)",
+          border: isPenalty
+            ? "1px solid rgba(220,53,69,0.60)"
+            : "1px solid rgba(255,0,128,0.60)",
+          boxShadow: isPenalty
+            ? "0 0 12px rgba(220,53,69,0.24)"
+            : "0 0 12px rgba(255,0,128,0.24)",
+          color: "#ffffff",
+          fontSize: 11,
+          fontWeight: 900,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        {dgMeasureType}
+      </span>
+
+      <div style={exportPenaltyTimeTextStyle}>
+        {formatPenaltyDisplay(penaltySeconds)}
+      </div>
     </div>
   )
 }
@@ -2590,6 +2659,7 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
+  dgMeasureTypes,
   forceHideMeta = false,
   tableTitle = "Classifica (output)",
   onAbsenceClick,
@@ -2602,6 +2672,7 @@ function ResultsTable({
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
+  dgMeasureTypes: Record<string, DgMeasureType>
   forceHideMeta?: boolean
   tableTitle?: string
   onAbsenceClick?: (row: DisplayRow) => void
@@ -2992,6 +3063,7 @@ return penaltySeconds === 0 && !isDsqRow
                     {renderPrtPenaltyCell({
   row: r,
   penalties,
+  dgMeasureTypes,
   exportPenaltyTimeTextStyle,
 })}
                   </TableCell>
@@ -12992,6 +13064,7 @@ boxShadow:
     prtMode={prtMode}
     unionMode={unionMode}
     penalties={penalties}
+    dgMeasureTypes={dgMeasureTypes}
     onAbsenceClick={(row) => {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const currentValue = tempoLikeGt7(row).trim().toUpperCase()
@@ -16644,6 +16717,7 @@ const changed = currentValue !== originalValue
           unionMode={unionMode}
           exporting={true}
           penalties={penalties}
+          dgMeasureTypes={dgMeasureTypes}
           forceHideMeta={!exportMetaInPng}
           tableTitle="Classifica definitiva"
         />
