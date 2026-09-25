@@ -80,6 +80,7 @@ type SavedLeagueSnapshot = {
   unionMeta: UnionMeta
 penalties: PenaltyMap
 dgMeasureTypes?: Record<string, DgMeasureType>
+dgUnfoundedPilots?: string[]
 lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
 absenceOverrides: AbsenceOverrideMap
@@ -2383,15 +2384,15 @@ function renderPrtPenaltyCell({
             alignItems: "center",
             justifyContent: "center",
             height: 20,
-            padding: "0 10px",
+            padding: "0 13px",
             borderRadius: 999,
             background: "rgba(220,53,69,0.92)",
             border: "1px solid rgba(220,53,69,0.60)",
             boxShadow: "0 0 14px rgba(220,53,69,0.24)",
             color: "#ffffff",
-            fontSize: 9,
+            fontSize: 10.5,
             fontWeight: 900,
-            letterSpacing: 0.25,
+            letterSpacing: 0.3,
             lineHeight: 1,
             whiteSpace: "nowrap",
           }}
@@ -2420,7 +2421,7 @@ function renderPrtPenaltyCell({
         width: "100%",
       }}
     >
-      {/* spazio speculare al tempo: mantiene P/S al centro reale */}
+      {/* Spazio speculare al tempo: mantiene P/S al centro reale */}
       <div />
 
       <span
@@ -6928,10 +6929,11 @@ const snapshotPointsMap = snapshotPointsMapRaw
       if (!key) continue
 
       const baseCell = buildSavedRaceCell(row, snapshot.bestRaceLap || "")
-const rowStableKey = getPrtRowStableKey(row.sourcePosGara)
+const normalizedPilotName =
+  normalizeDriverNameForChampionship(pilotName)
 
 const hasUnfoundedClaim =
-  snapshot.dgMeasureTypes?.[rowStableKey] === "INFONDATO"
+  snapshot.dgUnfoundedPilots?.includes(normalizedPilotName) ?? false
 
 const resolvedPoints =
   (snapshotPointsMap[pilotName] ?? 0) - (hasUnfoundedClaim ? 5 : 0)
@@ -11310,6 +11312,12 @@ function confirmSaveCurrentLeague() {
     unionMeta,
 penalties,
 dgMeasureTypes,
+dgUnfoundedPilots: finalRows
+  .filter((row) => {
+    const key = getPrtRowStableKey(row.sourcePosGara)
+    return dgMeasureTypes[key] === "INFONDATO"
+  })
+  .map((row) => normalizeDriverNameForChampionship(row.pilota)),
 lapOverrides,
 dnfOverrides,
 absenceOverrides,
