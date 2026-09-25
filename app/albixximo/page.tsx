@@ -12247,8 +12247,8 @@ const lastCreatedMovementText = useMemo(() => {
     style={{
       display: "inline-flex",
       alignItems: "center",
-      gap: 2,
-      height: 12,
+      gap: 3,
+      height: 14,
     }}
   >
     {leagueLobbies.map((lobby, index) => (
@@ -12256,17 +12256,17 @@ const lastCreatedMovementText = useMemo(() => {
         key={lobby}
         style={{
           display: "block",
-          width: 2,
-          height: 10,
+          width: 3,
+          height: 12,
           borderRadius: 1,
           background:
-            index < savedLobbyCount
-              ? "rgba(34,197,94,0.95)"
-              : "rgba(255,255,255,0.20)",
-          boxShadow:
-            index < savedLobbyCount
-              ? "0 0 4px rgba(34,197,94,0.55)"
-              : "none",
+  index < savedLobbyCount
+    ? "#39ff88"
+    : "rgba(255,255,255,0.20)",
+boxShadow:
+  index < savedLobbyCount
+    ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
+    : "none",
         }}
       />
     ))}
