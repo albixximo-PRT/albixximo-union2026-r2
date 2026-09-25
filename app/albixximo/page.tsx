@@ -67,6 +67,8 @@ const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
 
 type ChampionshipLeagueKey = UnionRankKey
 
+type DgMeasureType = "NONE" | "P" | "S" | "INFONDATO"
+
 type SavedLeagueSnapshot = {
   savedAt: string
   league: ChampionshipLeagueKey
@@ -76,8 +78,9 @@ type SavedLeagueSnapshot = {
   rows: ExtractRow[]
   finalRows: DisplayRow[]
   unionMeta: UnionMeta
-  penalties: PenaltyMap
-  lapOverrides: Record<string, string>
+penalties: PenaltyMap
+dgMeasureTypes?: Record<string, DgMeasureType>
+lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
 absenceOverrides: AbsenceOverrideMap
 verifiedAbsences?: Record<string, boolean>
@@ -3103,6 +3106,10 @@ export default function Page() {
   const [prtMode, setPrtMode] = useState(true)
   const [unionMode, setUnionMode] = useState(false)
   const [penalties, setPenalties] = useState<PenaltyMap>({})
+
+const [dgMeasureTypes, setDgMeasureTypes] = useState<
+  Record<string, DgMeasureType>
+>({})
   const [exportMetaInPng, setExportMetaInPng] = useState(false)
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
@@ -6826,7 +6833,14 @@ const snapshotPointsMap = snapshotPointsMapRaw
       if (!key) continue
 
       const baseCell = buildSavedRaceCell(row, snapshot.bestRaceLap || "")
-const resolvedPoints = snapshotPointsMap[pilotName] ?? 0
+const rowStableKey = getPrtRowStableKey(row.sourcePosGara)
+
+const hasUnfoundedClaim =
+  snapshot.dgMeasureTypes?.[rowStableKey] === "INFONDATO"
+
+const resolvedPoints =
+  (snapshotPointsMap[pilotName] ?? 0) - (hasUnfoundedClaim ? 5 : 0)
+
 const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
 
 let resolvedStatus: ChampionshipCellStatus | null = baseCell.status
@@ -11199,7 +11213,8 @@ function confirmSaveCurrentLeague() {
     rows,
     finalRows,
     unionMeta,
-    penalties,
+penalties,
+dgMeasureTypes,
 lapOverrides,
 dnfOverrides,
 absenceOverrides,
@@ -11297,7 +11312,8 @@ clearCurrentWorkbench(false)
     )
   )
 )
-  setLapOverrides(snapshot.lapOverrides || {})
+ setDgMeasureTypes(snapshot.dgMeasureTypes || {}) 
+setLapOverrides(snapshot.lapOverrides || {})
 setDnfOverrides(snapshot.dnfOverrides || {})
 setAbsenceOverrides(snapshot.absenceOverrides || {})
 setVerifiedAbsences(snapshot.verifiedAbsences || {})
@@ -11392,7 +11408,28 @@ function resetAllLeaguesInCurrentRace() {
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
 
-  function setUnionPenaltySeconds(sourcePosGara: number, value: string) {
+function setDgMeasureType(
+  sourcePosGara: number,
+  type: DgMeasureType
+) {
+  const key = getPrtRowStableKey(sourcePosGara)
+
+  setDgMeasureTypes((prev) => ({
+    ...prev,
+    [key]: type,
+  }))
+
+  // Il reclamo infondato non applica secondi al tempo gara.
+  if (type === "INFONDATO") {
+    setPenalties((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+}
+
+function setUnionPenaltySeconds(sourcePosGara: number, value: string) {
   const key = getPrtRowStableKey(sourcePosGara)
 
   setPenalties((prev) => {
@@ -13243,6 +13280,7 @@ boxShadow:
   ({ row, isDoppiato, doppiaggioLabel, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
             const dnfValue = dnfOverrides[key] || "NC"
             const penaltySeconds = penalties[key] || 0
+            const dgMeasureType = dgMeasureTypes[key] || "NONE"
             const unjustifiedAbsenceCount =
   unjustifiedAbsenceCounts[normalizeDriverNameForChampionship(row.pilota)] || 0
 
@@ -13281,6 +13319,33 @@ boxShadow:
       gap: 10,
     }}
   >
+    <select
+      value={dgMeasureType}
+      onChange={(e) =>
+        setDgMeasureType(
+          row.sourcePosGara,
+          e.target.value as DgMeasureType
+        )
+      }
+      style={{
+        width: 110,
+        padding: "8px 6px",
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(0,0,0,0.26)",
+        color: "white",
+        fontWeight: 900,
+        textAlign: "center",
+      }}
+    >
+      <option value="NONE">—</option>
+      <option value="P">PENALITÀ</option>
+      <option value="S">SEGNALAZIONE</option>
+      <option value="INFONDATO">INFONDATO</option>
+    </select>
+
+    {(dgMeasureType === "P" || dgMeasureType === "S") && (
+  <>
     <input
       type="number"
       min="0"
@@ -13320,13 +13385,15 @@ boxShadow:
         fontSize: 12,
         fontWeight: 900,
         color:
-  penaltySeconds > 0
-    ? "#ffb3b3"
-    : "rgba(255,255,255,0.55)",
+          penaltySeconds > 0
+            ? "#ffb3b3"
+            : "rgba(255,255,255,0.55)",
       }}
     >
       {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
     </div>
+  </>
+)}
   </div>
 </TableCell>
 
