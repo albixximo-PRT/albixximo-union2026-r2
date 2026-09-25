@@ -7063,6 +7063,33 @@ if (aHasValidPosition !== bHasValidPosition) {
   return aHasValidPosition ? -1 : 1
 }
 
+// 1D. A parità di punti e senza piazzamento valido,
+//     ASS-G (assenza giustificata / arancione) precede
+//     ASS-I (assenza ingiustificata / rossa).
+const getAbsencePriority = (driver: DriverChampionshipRow) => {
+  const results = Object.values(driver.raceResults)
+
+  const hasAssG = results.some(
+    (result) => result?.status === "ASS-G"
+  )
+
+  const hasAssI = results.some(
+    (result) => result?.status === "ASS-I"
+  )
+
+  if (hasAssG && !hasAssI) return 0
+  if (hasAssI && !hasAssG) return 1
+
+  return 2
+}
+
+const aAbsencePriority = getAbsencePriority(a)
+const bAbsencePriority = getAbsencePriority(b)
+
+if (aAbsencePriority !== bAbsencePriority) {
+  return aAbsencePriority - bAbsencePriority
+}
+
     // 2. Al termine di Gara 5 entra in vigore lo spareggio ufficiale UNION:
     //    maggior numero di 1° posti, poi 2° posti, poi 3° posti, ecc.
     if (currentRace === 5) {
