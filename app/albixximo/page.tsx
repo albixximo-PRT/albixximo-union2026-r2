@@ -2383,16 +2383,16 @@ function renderPrtPenaltyCell({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            height: 20,
-            padding: "0 13px",
+            height: 26,
+            padding: "0 16px",
             borderRadius: 999,
-            background: "rgba(220,53,69,0.92)",
-            border: "1px solid rgba(220,53,69,0.60)",
-            boxShadow: "0 0 14px rgba(220,53,69,0.24)",
+            background: "rgba(220,53,69,0.98)",
+            border: "1px solid rgba(255,90,105,0.85)",
+            boxShadow: "0 0 14px rgba(220,53,69,0.30)",
             color: "#ffffff",
-            fontSize: 10.5,
-            fontWeight: 900,
-            letterSpacing: 0.3,
+            fontSize: 11.5,
+            fontWeight: 950,
+            letterSpacing: 0.25,
             lineHeight: 1,
             whiteSpace: "nowrap",
           }}
@@ -2430,25 +2430,25 @@ function renderPrtPenaltyCell({
           alignItems: "center",
           justifyContent: "center",
           justifySelf: "center",
-          width: 32,
-          height: 20,
+          width: 38,
+          height: 26,
           borderRadius: 999,
 
           background: isPenalty
-            ? "rgba(220,53,69,0.94)"
-            : "rgba(105,105,255,0.96)",
+            ? "rgba(220,53,69,0.98)"
+            : "rgba(105,105,255,0.98)",
 
           border: isPenalty
-            ? "1px solid rgba(255,90,105,0.70)"
-            : "1px solid rgba(145,155,255,0.80)",
+            ? "1px solid rgba(255,90,105,0.85)"
+            : "1px solid rgba(155,165,255,0.90)",
 
           boxShadow: isPenalty
-            ? "0 0 13px rgba(220,53,69,0.28)"
-            : "0 0 14px rgba(105,120,255,0.34)",
+            ? "0 0 13px rgba(220,53,69,0.30)"
+            : "0 0 14px rgba(105,120,255,0.38)",
 
           color: "#ffffff",
-          fontSize: 12,
-          fontWeight: 900,
+          fontSize: 13,
+          fontWeight: 950,
           lineHeight: 1,
           flexShrink: 0,
         }}
