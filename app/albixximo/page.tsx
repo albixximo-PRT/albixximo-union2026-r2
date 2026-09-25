@@ -11596,10 +11596,11 @@ function applyQualiCorrections() {
   const cleaned: Record<number, string> = {}
 
   for (const row of displayRows) {
-    const draftValue = String(manualQualiDraft[row.sourcePosGara] ?? "").trim()
-    const originalValue = String(row.tempoQualifica ?? "").trim()
+    const draftValue = String(
+      manualQualiDraft[row.sourcePosGara] ?? ""
+    ).trim()
 
-    if (draftValue && draftValue !== originalValue) {
+    if (draftValue) {
       cleaned[row.sourcePosGara] = draftValue
     }
   }
@@ -11607,7 +11608,6 @@ function applyQualiCorrections() {
   setManualQualiOverrides(cleaned)
   setShowQualiModal(false)
 }
-
 function resetQualiCorrections() {
   setManualQualiOverrides({})
   setManualQualiDraft({})
