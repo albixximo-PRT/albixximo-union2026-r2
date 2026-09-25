@@ -7059,30 +7059,44 @@ if (aHasValidPosition !== bHasValidPosition) {
 }
 
 // 1D. A parità di punti e senza piazzamento valido,
-//     ASS-G (assenza giustificata / arancione) precede
-//     ASS-I (assenza ingiustificata / rossa).
-const getAbsencePriority = (driver: DriverChampionshipRow) => {
+//     ordina gli stati a 0 punti secondo priorità UNION:
+//     ASS-G (arancione) → BOX → NC → ASS-I (rosso).
+const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
   const results = Object.values(driver.raceResults)
 
   const hasAssG = results.some(
     (result) => result?.status === "ASS-G"
   )
 
+  const hasBox = results.some(
+    (result) => result?.status === "BOX"
+  )
+
+  const hasNc = results.some(
+    (result) => result?.status === "NC"
+  )
+
   const hasAssI = results.some(
     (result) => result?.status === "ASS-I"
   )
 
-  if (hasAssG && !hasAssI) return 0
-  if (hasAssI && !hasAssG) return 1
+  if (hasAssG) return 0
+  if (hasBox) return 1
+  if (hasNc) return 2
+  if (hasAssI) return 3
 
-  return 2
+  return 4
 }
 
-const aAbsencePriority = getAbsencePriority(a)
-const bAbsencePriority = getAbsencePriority(b)
+const aZeroStatusPriority = getZeroPointsStatusPriority(a)
+const bZeroStatusPriority = getZeroPointsStatusPriority(b)
 
-if (aAbsencePriority !== bAbsencePriority) {
-  return aAbsencePriority - bAbsencePriority
+if (
+  a.totalPoints === 0 &&
+  b.totalPoints === 0 &&
+  aZeroStatusPriority !== bZeroStatusPriority
+) {
+  return aZeroStatusPriority - bZeroStatusPriority
 }
 
     // 2. Al termine di Gara 5 entra in vigore lo spareggio ufficiale UNION:
