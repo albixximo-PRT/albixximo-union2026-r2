@@ -6246,6 +6246,10 @@ if (hasUnresolvedAuto) {
       const key = getPrtRowStableKey(row.sourcePosGara)
       const rawTempo = tempoLikeGt7(row)
       const isDoppiato = isDoppiatoValue(rawTempo)
+      const doppiaggioLabel =
+  /^\d+GIRO$/i.test(rawTempo.trim())
+    ? rawTempo.trim().toUpperCase()
+    : ""
 const isDnf = /^(DNF|DNF-I|DNFV)$/i.test(rawTempo.trim())
 const isAbsence = /^(ASS-I|ASS-G)$/i.test(rawTempo.trim())
 const absenceValue: AbsenceOverrideValue =
@@ -6259,6 +6263,7 @@ const absenceValue: AbsenceOverrideValue =
   row,
   key,
   isDoppiato,
+  doppiaggioLabel,
   isDnf,
   isAbsence,
   absenceValue,
@@ -13235,7 +13240,7 @@ boxShadow:
 
         <tbody>
           {dgInfo.map(
-  ({ row, isDoppiato, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
+  ({ row, isDoppiato, doppiaggioLabel, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
             const dnfValue = dnfOverrides[key] || "NC"
             const penaltySeconds = penalties[key] || 0
             const unjustifiedAbsenceCount =
@@ -13343,6 +13348,23 @@ boxShadow:
                             fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                           }}
                         />
+                        {doppiaggioLabel && (
+  <div
+    style={{
+      fontSize: 12,
+      fontWeight: 950,
+      letterSpacing: 0.5,
+      color: "#ffb347",
+    }}
+  >
+    DOPPIATO •{" "}
+    {doppiaggioLabel.replace(
+      /^(\d+)GIRO$/i,
+      (_match: string, n: string) =>
+        `${n} ${n === "1" ? "GIRO" : "GIRI"}`
+    )}
+  </div>
+)}
                         <div
                           style={{
                             fontSize: 11,
