@@ -6707,12 +6707,7 @@ const savedLeagueInCurrentRace = useMemo(() => {
 const savedLeagueStatus = useMemo(() => {
   return Object.fromEntries(
     CHAMPIONSHIP_LEAGUES.map((league) => {
-      const expectedLobbies =
-        championshipState.expectedDrivers?.[currentRace]?.[league] || {}
-
-      const activeLobbies = Object.entries(expectedLobbies)
-        .filter(([, drivers]) => (drivers || []).length > 0)
-        .map(([lobby]) => lobby)
+      const activeLobbies = UNION_LOBBIES_BY_RANK[league]
 
       const isComplete =
         activeLobbies.length > 0 &&
