@@ -361,10 +361,13 @@ const KNOWN_CARS = [
   "GR Supra Racing Concept '18",
   "S-FR Racing Concept '16",
     "NSX CONCEPT-GT '16",
-  "RC F GT500 '16",
-  "RS 5 Turbo DTM '19",
-  "GT-R NISMO GT500 '16",
-  "F3500-B",
+"RC F GT500 '16",
+"RS 5 Turbo DTM '19",
+"GT-R NISMO GT500 '16",
+"NSX GT500 '08",
+"GT-R GT500 '08",
+"SC430 GT500 '08",
+"F3500-B",
 ]
 
 function normalizeCarLoose(s: string) {
@@ -468,8 +471,9 @@ t.includes("racing concept") ||
         t.includes("concept-gt") ||
     t.includes("concept gt") ||
     t.includes("gt500") ||
-    t.includes("rc f") ||
-    t.includes("rs 5") ||
+t.includes("sc430") ||
+t.includes("rc f") ||
+t.includes("rs 5") ||
     t.includes("turbo dtm") ||
     t.includes("nismo gt500") ||
     t.includes("tt cup") ||
@@ -923,7 +927,6 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
       t.includes("huracan") ||
       t.includes("mazda3") ||
       t.includes("mazda 3") ||
-      t.includes("gtr") ||
       t.includes("gt-r") ||
       t.includes("650s") ||
       t.includes("atenza") ||
@@ -936,8 +939,9 @@ t.includes("racing concept") ||
             t.includes("concept-gt") ||
       t.includes("concept gt") ||
       t.includes("gt500") ||
-      t.includes("rc f") ||
-      t.includes("rs 5") ||
+t.includes("sc430") ||
+t.includes("rc f") ||
+t.includes("rs 5") ||
       t.includes("turbo dtm") ||
       t.includes("nismo gt500") ||
       t.startsWith("4c ")
@@ -983,8 +987,8 @@ t.includes("racing concept") ||
       t.includes("mazda3") ||
       t.includes("mazda 3") ||
       t.includes("gt-r") ||
-      t.includes("gtr") ||
-      t.includes("650s") ||
+t.includes("sc430") ||
+t.includes("650s") ||
             t.includes("nsx concept") ||
       t.includes("rc f") ||
       t.includes("rs 5") ||
