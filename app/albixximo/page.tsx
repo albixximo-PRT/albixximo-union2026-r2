@@ -2369,25 +2369,36 @@ function renderPrtPenaltyCell({
 
   if (dgMeasureType === "INFONDATO") {
     return (
-      <span
+      <div
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "5px 9px",
-          borderRadius: 999,
-          background: "rgba(220,53,69,0.92)",
-          border: "1px solid rgba(220,53,69,0.60)",
-          boxShadow: "0 0 14px rgba(220,53,69,0.24)",
-          color: "#ffffff",
-          fontSize: 10,
-          fontWeight: 900,
-          letterSpacing: 0.3,
-          whiteSpace: "nowrap",
+          width: "100%",
         }}
       >
-        INFONDATO
-      </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 20,
+            padding: "0 10px",
+            borderRadius: 999,
+            background: "rgba(220,53,69,0.92)",
+            border: "1px solid rgba(220,53,69,0.60)",
+            boxShadow: "0 0 14px rgba(220,53,69,0.24)",
+            color: "#ffffff",
+            fontSize: 9,
+            fontWeight: 900,
+            letterSpacing: 0.25,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          RECLAMO INFONDATO
+        </span>
+      </div>
     )
   }
 
@@ -2403,32 +2414,39 @@ function renderPrtPenaltyCell({
   return (
     <div
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
         alignItems: "center",
-        justifyContent: "flex-end",
-        gap: 8,
         width: "100%",
       }}
     >
+      {/* spazio speculare al tempo: mantiene P/S al centro reale */}
+      <div />
+
       <span
         style={{
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 24,
+          justifySelf: "center",
+          width: 32,
           height: 20,
           borderRadius: 999,
+
           background: isPenalty
-            ? "rgba(220,53,69,0.92)"
-            : "rgba(255,0,128,0.92)",
+            ? "rgba(220,53,69,0.94)"
+            : "rgba(105,105,255,0.96)",
+
           border: isPenalty
-            ? "1px solid rgba(220,53,69,0.60)"
-            : "1px solid rgba(255,0,128,0.60)",
+            ? "1px solid rgba(255,90,105,0.70)"
+            : "1px solid rgba(145,155,255,0.80)",
+
           boxShadow: isPenalty
-            ? "0 0 12px rgba(220,53,69,0.24)"
-            : "0 0 12px rgba(255,0,128,0.24)",
+            ? "0 0 13px rgba(220,53,69,0.28)"
+            : "0 0 14px rgba(105,120,255,0.34)",
+
           color: "#ffffff",
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 900,
           lineHeight: 1,
           flexShrink: 0,
@@ -2437,7 +2455,12 @@ function renderPrtPenaltyCell({
         {dgMeasureType}
       </span>
 
-      <div style={exportPenaltyTimeTextStyle}>
+      <div
+        style={{
+          ...exportPenaltyTimeTextStyle,
+          justifySelf: "end",
+        }}
+      >
         {formatPenaltyDisplay(penaltySeconds)}
       </div>
     </div>
@@ -2840,7 +2863,7 @@ const compactStatusPills = exporting && exportStatusPillCount > 2
                   ...currentPenaltyColumn,
                 }}
               >
-                Penalità
+                Direzione Gara
               </th>
 
               <th
