@@ -11308,6 +11308,18 @@ function saveExpectedLobbyDrivers() {
     )
   )
 
+  Object.entries(driverIdCorrections)
+    .filter(([key]) => key.startsWith(`${selectedLeague}:`))
+    .forEach(([, correctedId]) => {
+      const cleanCorrectedId = String(correctedId || "").trim()
+
+      if (cleanCorrectedId) {
+        allowedDrivers.add(
+          normalizeDriverNameForChampionship(cleanCorrectedId)
+        )
+      }
+    })
+
   const invalidDrivers = uniqueDrivers.filter(
     (driver) =>
       !allowedDrivers.has(normalizeDriverNameForChampionship(driver))
@@ -11322,19 +11334,19 @@ function saveExpectedLobbyDrivers() {
 
   setExpectedLobbyDrivers(uniqueDrivers)
 
-setChampionshipState((prev) => ({
-  ...prev,
-  expectedDrivers: {
-    ...prev.expectedDrivers,
-    [currentRace]: {
-      ...(prev.expectedDrivers?.[currentRace] || {}),
-      [selectedLeague]: {
-        ...(prev.expectedDrivers?.[currentRace]?.[selectedLeague] || {}),
-        [selectedLobby]: uniqueDrivers,
+  setChampionshipState((prev) => ({
+    ...prev,
+    expectedDrivers: {
+      ...prev.expectedDrivers,
+      [currentRace]: {
+        ...(prev.expectedDrivers?.[currentRace] || {}),
+        [selectedLeague]: {
+          ...(prev.expectedDrivers?.[currentRace]?.[selectedLeague] || {}),
+          [selectedLobby]: uniqueDrivers,
+        },
       },
     },
-  },
-}))
+  }))
 }
 
 function resetExpectedLobbyDrivers() {
