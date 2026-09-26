@@ -11234,15 +11234,8 @@ function removePilotFromLeagueDrawer(
 ) {
   const target = normalizeDriverNameForChampionship(pilotName)
 
-  setWorkbenchDriverLeagueMap((prev) => {
-  const next: DriverLeagueMap = {
-    STAR: [...prev.STAR],
-    ELITE: [...prev.ELITE],
-    "PRO GOLD": [...prev["PRO GOLD"]],
-    "PRO SILVER": [...prev["PRO SILVER"]],
-    "PRO AMA": [...prev["PRO AMA"]],
-    AMA: [...prev.AMA],
-  }
+  const removeFromMap = (prev: DriverLeagueMap): DriverLeagueMap => {
+    const next = cloneDriverLeagueMap(prev)
 
     next[league] = next[league].filter(
       (pilot) =>
@@ -11250,7 +11243,10 @@ function removePilotFromLeagueDrawer(
     )
 
     return next
-  })
+  }
+
+  setDriverLeagueMap((prev) => removeFromMap(prev))
+  setWorkbenchDriverLeagueMap((prev) => removeFromMap(prev))
 }
 
 function saveDriverTeamOverride(pilot: string) {
