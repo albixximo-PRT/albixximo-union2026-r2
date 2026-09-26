@@ -11261,6 +11261,47 @@ function removePilotFromLeagueDrawer(
   })
 }
 
+function editPilotIdFromLeagueDrawer(
+  league: ChampionshipLeagueKey,
+  pilotName: string
+) {
+  const newId = window.prompt("Modifica ID GT7", pilotName)?.trim()
+
+  if (!newId || newId === pilotName) return
+
+  const oldNormalized = normalizeDriverNameForChampionship(pilotName)
+  const newNormalized = normalizeDriverNameForChampionship(newId)
+
+  if (!newNormalized) return
+
+  setWorkbenchDriverLeagueMap((prev) => {
+    const next = cloneDriverLeagueMap(prev)
+
+    const alreadyExists = next[league].some(
+      (pilot) =>
+        normalizeDriverNameForChampionship(pilot) === newNormalized &&
+        normalizeDriverNameForChampionship(pilot) !== oldNormalized
+    )
+
+    if (alreadyExists) {
+      window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
+      return prev
+    }
+
+    next[league] = next[league]
+      .map((pilot) =>
+        normalizeDriverNameForChampionship(pilot) === oldNormalized
+          ? newId
+          : pilot
+      )
+      .sort((a, b) =>
+        a.localeCompare(b, "it", { sensitivity: "base" })
+      )
+
+    return next
+  })
+}
+
 function saveDriverTeamOverride(pilot: string) {
   const nextTeamCode = editingDriverTeamDraft.trim().toUpperCase()
 
@@ -14100,24 +14141,54 @@ boxShadow:
   </div>
 </div>
 
-      <button
-        onClick={() => removePilotFromLeagueDrawer(league, pilot)}
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 8,
-          border: "1px solid rgba(239,68,68,0.28)",
-          background: "rgba(239,68,68,0.14)",
-          color: "white",
-          cursor: "pointer",
-          fontWeight: 900,
-          flexShrink: 0,
-          lineHeight: 1,
-        }}
-        title={`Rimuovi ${pilot}`}
-      >
-        ×
-      </button>
+      <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => editPilotIdFromLeagueDrawer(league, pilot)}
+    style={{
+      width: 24,
+      height: 24,
+      borderRadius: 8,
+      border: "1px solid rgba(96,165,250,0.28)",
+      background: "rgba(96,165,250,0.14)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 900,
+      flexShrink: 0,
+      lineHeight: 1,
+    }}
+    title={`Modifica ID GT7 di ${pilot}`}
+  >
+    ✎
+  </button>
+
+  <button
+    type="button"
+    onClick={() => removePilotFromLeagueDrawer(league, pilot)}
+    style={{
+      width: 24,
+      height: 24,
+      borderRadius: 8,
+      border: "1px solid rgba(239,68,68,0.28)",
+      background: "rgba(239,68,68,0.14)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 900,
+      flexShrink: 0,
+      lineHeight: 1,
+    }}
+    title={`Rimuovi ${pilot}`}
+  >
+    ×
+  </button>
+</div>
     </div>
   </div>
 ))
