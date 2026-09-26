@@ -3359,6 +3359,8 @@ const [workbenchDriverLeagueMap, setWorkbenchDriverLeagueMap] = useState<DriverL
   AMA: [...UNION_DRIVER_NAMES_BY_RANK.AMA],
 }))
 
+const [driverLeagueMapHydrated, setDriverLeagueMapHydrated] = useState(false)
+
 function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   return {
     STAR: [...(source.STAR || [])],
@@ -3596,6 +3598,8 @@ if (rawDriverLeagueMap) {
   }
 }
 
+setDriverLeagueMapHydrated(true)
+
 const rawDriverAliasMap = window.localStorage.getItem(UNION_DRIVER_ALIAS_MAP_STORAGE_KEY)
 if (rawDriverAliasMap) {
   const parsedDriverAliasMap = JSON.parse(rawDriverAliasMap)
@@ -3679,11 +3683,13 @@ useEffect(() => {
 
 useEffect(() => {
   if (typeof window === "undefined") return
+  if (!driverLeagueMapHydrated) return
+
   window.localStorage.setItem(
-  UNION_DRIVER_RANK_MAP_STORAGE_KEY,
-  JSON.stringify(workbenchDriverLeagueMap)
-)
-}, [workbenchDriverLeagueMap])
+    UNION_DRIVER_RANK_MAP_STORAGE_KEY,
+    JSON.stringify(workbenchDriverLeagueMap)
+  )
+}, [workbenchDriverLeagueMap, driverLeagueMapHydrated])
 
 useEffect(() => {
   if (typeof window === "undefined") return
@@ -3762,7 +3768,9 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   }))
 
   setManualLegaOverride(selectedLeague)
+  if (driverLeagueMapHydrated) {
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
+}
   setUnknownDriverSelections({})
 }, [currentRace, selectedLeague, selectedLobby, championshipState])
 
