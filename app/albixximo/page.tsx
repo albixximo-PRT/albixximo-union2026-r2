@@ -3370,6 +3370,9 @@ function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   }
 }
 
+const [driverLeagueMapHydrated, setDriverLeagueMapHydrated] =
+  useState(false)
+
 const [driverTeamOverrides, setDriverTeamOverrides] =
   useState<UnionDriverTeamOverrideMap>({})
 
@@ -3653,9 +3656,11 @@ if (rawDriverTeamOverrides) {
 }
 
 setDriverTeamOverridesHydrated(true)
+setDriverLeagueMapHydrated(true)
 
   } catch {
-    // nessuna azione
+    setDriverTeamOverridesHydrated(true)
+    setDriverLeagueMapHydrated(true)
   }
 }, [])
 
@@ -3679,11 +3684,13 @@ useEffect(() => {
 
 useEffect(() => {
   if (typeof window === "undefined") return
+  if (!driverLeagueMapHydrated) return
+
   window.localStorage.setItem(
-  UNION_DRIVER_RANK_MAP_STORAGE_KEY,
-  JSON.stringify(workbenchDriverLeagueMap)
-)
-}, [workbenchDriverLeagueMap])
+    UNION_DRIVER_RANK_MAP_STORAGE_KEY,
+    JSON.stringify(workbenchDriverLeagueMap)
+  )
+}, [workbenchDriverLeagueMap, driverLeagueMapHydrated])
 
 useEffect(() => {
   if (typeof window === "undefined") return
@@ -11234,8 +11241,15 @@ function removePilotFromLeagueDrawer(
 ) {
   const target = normalizeDriverNameForChampionship(pilotName)
 
-  const removeFromMap = (prev: DriverLeagueMap): DriverLeagueMap => {
-    const next = cloneDriverLeagueMap(prev)
+  setWorkbenchDriverLeagueMap((prev) => {
+    const next: DriverLeagueMap = {
+      STAR: [...prev.STAR],
+      ELITE: [...prev.ELITE],
+      "PRO GOLD": [...prev["PRO GOLD"]],
+      "PRO SILVER": [...prev["PRO SILVER"]],
+      "PRO AMA": [...prev["PRO AMA"]],
+      AMA: [...prev.AMA],
+    }
 
     next[league] = next[league].filter(
       (pilot) =>
@@ -11243,10 +11257,7 @@ function removePilotFromLeagueDrawer(
     )
 
     return next
-  }
-
-  setDriverLeagueMap((prev) => removeFromMap(prev))
-  setWorkbenchDriverLeagueMap((prev) => removeFromMap(prev))
+  })
 }
 
 function saveDriverTeamOverride(pilot: string) {
