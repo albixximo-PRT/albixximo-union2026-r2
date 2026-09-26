@@ -11320,7 +11320,14 @@ function saveExpectedLobbyDrivers() {
       }
     })
 
-  const invalidDrivers = uniqueDrivers.filter(
+  console.log("DEBUG SAVE LOBBY", {
+  selectedLeague,
+  uniqueDrivers,
+  workbenchRank: workbenchDriverLeagueMap[selectedLeague],
+  corrections: driverIdCorrections,
+  allowedDrivers: Array.from(allowedDrivers),
+})
+    const invalidDrivers = uniqueDrivers.filter(
     (driver) =>
       !allowedDrivers.has(normalizeDriverNameForChampionship(driver))
   )
