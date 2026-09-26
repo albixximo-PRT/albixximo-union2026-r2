@@ -1181,7 +1181,13 @@ function Pill({
   )
 }
 
-function PosBadge({ pos }: { pos: number }) {
+function PosBadge({
+  pos,
+  exporting = false,
+}: {
+  pos: number
+  exporting?: boolean
+}) {
   const base: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
@@ -1191,7 +1197,7 @@ function PosBadge({ pos }: { pos: number }) {
     borderRadius: 12,
     border: "1px solid rgba(255,255,255,0.12)",
     background: "rgba(0,0,0,0.22)",
-    fontSize: 16,
+    fontSize: exporting ? 18 : 16,
     lineHeight: 1,
     userSelect: "none",
   }
@@ -1246,7 +1252,8 @@ function PosBadge({ pos }: { pos: number }) {
       title={`P${pos}`}
       style={{
         ...base,
-        fontSize: 12,
+        borderColor: exporting ? "rgba(255,255,255,0.65)" : undefined,
+        fontSize: exporting ? 15 : 12,
         fontWeight: 900,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
         opacity: 0.9,
@@ -1665,10 +1672,12 @@ function AppHeader({
   mainTitle = "UNION RACE TOOL",
   sideLabel = "Circuito UNION",
   subtitle = "UNION Timing Assistant",
+  pngExport = false,
 }: {
   mainTitle?: string
   sideLabel?: string
   subtitle?: string
+  pngExport?: boolean
 }) {
   return (
     <div
@@ -1700,6 +1709,21 @@ function AppHeader({
         }}
       />
 
+      {pngExport && (
+  <img
+    src="/union-logo.png"
+    alt="UNION"
+    style={{
+      position: "relative",
+      display: "block",
+      width: 140,
+      height: 140,
+      objectFit: "contain",
+      flexShrink: 0,
+    }}
+  />
+)}
+      
       <div style={{ position: "relative", minWidth: 0, flex: 1 }}>
         <div
           style={{
@@ -1731,14 +1755,16 @@ function AppHeader({
     <span
   style={{
     display: "inline-block",
-    width: 1,
+    width: pngExport ? 2 : 1,
     height: 38,
     margin: "0 16px",
     borderRadius: 999,
     background:
       "linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,1) 25%, rgba(255,255,255,0.95) 50%, rgba(160,90,255,0.9) 75%, rgba(160,90,255,0.10) 100%)",
     boxShadow:
-      "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
+      pngExport
+  ? "0 0 4px rgba(255,255,255,1), 0 0 10px rgba(255,215,0,1), 0 0 22px rgba(255,215,0,0.95), 0 0 32px rgba(160,90,255,0.80)"
+  : "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
     transform: "skewX(-14deg)",
     verticalAlign: "middle",
   }}
@@ -1754,8 +1780,13 @@ function AppHeader({
           <span
   className="app-header-side-label"
   style={{
-    fontSize: 14,
-    padding: sideLabel === "ELENCO PILOTI" ? "5px 12px 6px" : "6px 10px",
+    fontSize: pngExport ? 18 : 14,
+    fontWeight: pngExport ? 800 : undefined,
+    padding: pngExport
+      ? "8px 14px"
+      : sideLabel === "ELENCO PILOTI"
+        ? "5px 12px 6px"
+        : "6px 10px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
@@ -1798,9 +1829,56 @@ function AppHeader({
 </span>
         </div>
 
-        <div style={{ marginTop: 5, fontSize: 13, opacity: 0.9, whiteSpace: "nowrap" }}>
-          {subtitle}
-        </div>
+        <div
+  style={{
+    marginTop: 5,
+    fontSize: pngExport ? 18 : 13,
+    lineHeight: pngExport ? "20px" : undefined,
+    height: pngExport ? 20 : undefined,
+    opacity: 0.9,
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  }}
+>
+  <span>{subtitle}</span>
+
+  {pngExport && (
+    <>
+      <span
+        style={{
+          opacity: 0.45,
+          fontWeight: 400,
+        }}
+      >
+        |
+      </span>
+
+      <span
+        style={{
+          opacity: 0.72,
+          fontSize: 15,
+        }}
+      >
+        Powered by
+      </span>
+
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          fontStyle: "italic",
+          letterSpacing: 0.5,
+          color: "#ffffff",
+          textShadow: "0 0 10px rgba(255,255,255,0.28)",
+        }}
+      >
+        Albixximo
+      </span>
+    </>
+  )}
+</div>
 
         <div
           style={{
@@ -1999,7 +2077,7 @@ const isZeroPointsStatus = isBox || isNc || isDnp || isDsqRow
             : (exporting ? -9 : -7),
         display: "flex",
         gap: 1,
-        fontSize: exporting ? 10 : 9,
+        fontSize: exporting ? 14 : 9,
         lineHeight: 1,
       }}
     >
@@ -2232,9 +2310,13 @@ function renderPrtQualifyingCell({
           justifyContent: "center",
           padding: exporting ? "7px 13px" : "6px 12px",
           borderRadius: 999,
-          border: "1px solid rgba(59,130,246,0.7)",
-          background: "transparent",
-          color: "rgba(147,197,253,0.95)",
+          border: exporting
+  ? "1px solid #93c5fd"
+  : "1px solid rgba(59,130,246,0.7)",
+background: "transparent",
+color: exporting ? "#eff6ff" : "rgba(147,197,253,0.95)",
+textShadow: exporting ? "0 0 6px rgba(96,165,250,0.8)" : undefined,
+boxShadow: exporting ? "0 0 8px rgba(59,130,246,0.35)" : undefined,
           fontWeight: 800,
           fontSize: exporting ? 13 : 12,
           letterSpacing: 0.5,
@@ -2963,7 +3045,7 @@ const rowStyle = getPrtTableRowStyle(
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "center" }}>
-                      <PosBadge pos={r.posGara} />
+                      <PosBadge pos={r.posGara} exporting={exporting} />
                     </div>
                   </TableCell>
 
@@ -10566,7 +10648,7 @@ setExportTextsDraft({
   mainTitle:
     type === "championship-html"
       ? `UNION 2026 - ROUND 2 | ${selectedLeague}`
-      : exportTexts.mainTitle,
+      : `UNION 2026 - ROUND 2 | LEGA ${selectedLeague}`,
   sideLabel:
     type === "championship-html"
       ? latestRaceWithResults
@@ -16751,10 +16833,11 @@ const changed = currentValue !== originalValue
         }}
       >
         <AppHeader
-          mainTitle={exportTexts.mainTitle}
-          sideLabel={exportTexts.sideLabel}
-          subtitle={exportTexts.subtitle}
-        />
+  mainTitle={exportTexts.mainTitle}
+  sideLabel={exportTexts.sideLabel}
+  subtitle={exportTexts.subtitle}
+  pngExport={true}
+/>
 
         <SummaryStrip
           winner={winner}
