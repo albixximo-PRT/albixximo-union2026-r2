@@ -3384,6 +3384,8 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 
 const [highlightDrawerPilot, setHighlightDrawerPilot] = useState<string | null>(null)
 
+const [dismissedUnknownDriverId, setDismissedUnknownDriverId] = useState<string | null>(null)
+
   const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
   ELITE: {},
@@ -5777,7 +5779,11 @@ migliorGiroGara: r.migliorGiroGara,
 ])
 
 const unresolvedLeagueDrivers = leagueDriverResolution.unresolvedCandidates
-const activeUnknownDriver = unresolvedLeagueDrivers[0] || null
+
+const activeUnknownDriver =
+  unresolvedLeagueDrivers.find(
+    (driver) => driver.id !== dismissedUnknownDriverId
+  ) || null
 
 const displayRows = useMemo<DisplayRow[]>(() => {
   if (leagueDriverResolution.baseRows.length === 0) return []
@@ -15438,10 +15444,13 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 
     if (!selectedOfficial) return
 
-    const leagueToOpen = activeUnknownDriver.league
+const leagueToOpen = activeUnknownDriver.league
 
-    // Apre il cassetto piloti
-    setDrawerOpen(true)
+// Chiude questo popup
+setDismissedUnknownDriverId(activeUnknownDriver.id)
+
+// Apre il cassetto piloti
+setDrawerOpen(true)
 
     // Evidenzia il pilota da correggere
     setHighlightDrawerPilot(selectedOfficial)
