@@ -3382,6 +3382,8 @@ const [editingDriverTeam, setEditingDriverTeam] = useState<string | null>(null)
 
 const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 
+const [highlightDrawerPilot, setHighlightDrawerPilot] = useState<string | null>(null)
+
   const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
   ELITE: {},
@@ -14013,45 +14015,54 @@ boxShadow:
   </button>
 </div>
 
-        <div style={{ display: "grid", gap: 4 }}>
+<div style={{ display: "grid", gap: 4 }}>
   {(workbenchDriverLeagueMap[league] || []).length === 0 ? (
     <div style={{ fontSize: 12, opacity: 0.45 }}>Nessun pilota</div>
   ) : (
     workbenchDriverLeagueMap[league].map((pilot) => (
-  <div
-    key={`${league}-${pilot}`}
-    style={{
-      display: "grid",
-      gap: 4,
-      padding: "6px 0",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 8,
-      }}
-    >
       <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    minWidth: 0,
-  }}
->
-  {editingDriverTeam === pilot ? (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 4,
-      flexShrink: 0,
-    }}
-  >
+        key={`${league}-${pilot}`}
+        id={`drawer-pilot-${league}-${normalizeDriverNameForChampionship(pilot)}`}
+        style={{
+          display: "grid",
+          gap: 4,
+          padding: "6px 0",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          outline:
+            highlightDrawerPilot === pilot
+              ? "2px solid rgba(255,215,0,0.95)"
+              : undefined,
+          boxShadow:
+            highlightDrawerPilot === pilot
+              ? "0 0 18px rgba(255,215,0,0.35)"
+              : undefined,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            {editingDriverTeam === pilot ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  flexShrink: 0,
+                }}
+              >
     <input
       autoFocus
       value={editingDriverTeamDraft}
@@ -15427,55 +15438,41 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 
     if (!selectedOfficial) return
 
-    const correctionKey =
-      `${activeUnknownDriver.league}:${normalizeDriverLookupName(selectedOfficial)}`
+    const leagueToOpen = activeUnknownDriver.league
 
-    setDriverIdCorrections((prev) => ({
-      ...prev,
-      [correctionKey]: activeUnknownDriver.rawName,
-    }))
+    // Apre il cassetto piloti
+    setDrawerOpen(true)
 
-    setWorkbenchDriverLeagueMap((prev) => ({
-  ...prev,
-  [activeUnknownDriver.league]: (
-    prev[activeUnknownDriver.league] || []
-  ).map((pilot) =>
-    normalizeDriverLookupName(pilot) ===
-    normalizeDriverLookupName(selectedOfficial)
-      ? activeUnknownDriver.rawName
-      : pilot
-  ),
-}))
-    
-setExpectedLobbyDrivers((prev) =>
-  prev.map((pilot) =>
-    normalizeDriverLookupName(pilot) ===
-    normalizeDriverLookupName(selectedOfficial)
-      ? activeUnknownDriver.rawName
-      : pilot
-  )
-)    
+    // Evidenzia il pilota da correggere
+    setHighlightDrawerPilot(selectedOfficial)
 
-setRows((prev) => {
-      const selectedOfficialKey = normalizeDriverLookupName(selectedOfficial)
-
-      return prev.map((row: ExtractRow) => {
-        const rowKey = normalizeDriverLookupName(row.pilota)
-
-        if (rowKey !== selectedOfficialKey) return row
-
-        return {
-          ...row,
-          pilota: activeUnknownDriver.rawName,
-        }
-      })
-    })
-
+    // Chiude la selezione OCR
     setUnknownDriverSelections((prev) => {
       const next = { ...prev }
       delete next[activeUnknownDriver.id]
       return next
     })
+
+    // Dopo l'apertura del cassetto va direttamente sul pilota
+    setTimeout(() => {
+      const element = document.getElementById(
+        `drawer-pilot-${leagueToOpen}-${normalizeDriverNameForChampionship(
+          selectedOfficial
+        )}`
+      )
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        })
+      }
+    }, 200)
+
+    // Mantiene il pilota evidenziato per 5 secondi
+    setTimeout(() => {
+      setHighlightDrawerPilot(null)
+    }, 5000)
   }}
   style={{
     padding: "12px 16px",
