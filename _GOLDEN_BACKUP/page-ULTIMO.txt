@@ -67,6 +67,8 @@ const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
 
 type ChampionshipLeagueKey = UnionRankKey
 
+type DgMeasureType = "NONE" | "P" | "S" | "INFONDATO"
+
 type SavedLeagueSnapshot = {
   savedAt: string
   league: ChampionshipLeagueKey
@@ -76,10 +78,13 @@ type SavedLeagueSnapshot = {
   rows: ExtractRow[]
   finalRows: DisplayRow[]
   unionMeta: UnionMeta
-  penalties: PenaltyMap
-  lapOverrides: Record<string, string>
+penalties: PenaltyMap
+dgMeasureTypes?: Record<string, DgMeasureType>
+dgUnfoundedPilots?: string[]
+lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
 absenceOverrides: AbsenceOverrideMap
+verifiedAbsences?: Record<string, boolean>
 manualDsqOverrides: ManualDsqOverrideMap
 manualGaraOverride: string
   manualLegaOverride: string
@@ -1176,7 +1181,13 @@ function Pill({
   )
 }
 
-function PosBadge({ pos }: { pos: number }) {
+function PosBadge({
+  pos,
+  exporting = false,
+}: {
+  pos: number
+  exporting?: boolean
+}) {
   const base: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
@@ -1186,7 +1197,7 @@ function PosBadge({ pos }: { pos: number }) {
     borderRadius: 12,
     border: "1px solid rgba(255,255,255,0.12)",
     background: "rgba(0,0,0,0.22)",
-    fontSize: 16,
+    fontSize: exporting ? 18 : 16,
     lineHeight: 1,
     userSelect: "none",
   }
@@ -1241,7 +1252,8 @@ function PosBadge({ pos }: { pos: number }) {
       title={`P${pos}`}
       style={{
         ...base,
-        fontSize: 12,
+        borderColor: exporting ? "rgba(255,255,255,0.65)" : undefined,
+        fontSize: exporting ? 15 : 12,
         fontWeight: 900,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
         opacity: 0.9,
@@ -1660,10 +1672,12 @@ function AppHeader({
   mainTitle = "UNION RACE TOOL",
   sideLabel = "Circuito UNION",
   subtitle = "UNION Timing Assistant",
+  pngExport = false,
 }: {
   mainTitle?: string
   sideLabel?: string
   subtitle?: string
+  pngExport?: boolean
 }) {
   return (
     <div
@@ -1695,6 +1709,21 @@ function AppHeader({
         }}
       />
 
+      {pngExport && (
+  <img
+    src="/union-logo.png"
+    alt="UNION"
+    style={{
+      position: "relative",
+      display: "block",
+      width: 140,
+      height: 140,
+      objectFit: "contain",
+      flexShrink: 0,
+    }}
+  />
+)}
+      
       <div style={{ position: "relative", minWidth: 0, flex: 1 }}>
         <div
           style={{
@@ -1726,14 +1755,16 @@ function AppHeader({
     <span
   style={{
     display: "inline-block",
-    width: 1,
+    width: pngExport ? 2 : 1,
     height: 38,
     margin: "0 16px",
     borderRadius: 999,
     background:
       "linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,1) 25%, rgba(255,255,255,0.95) 50%, rgba(160,90,255,0.9) 75%, rgba(160,90,255,0.10) 100%)",
     boxShadow:
-      "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
+      pngExport
+  ? "0 0 4px rgba(255,255,255,1), 0 0 10px rgba(255,215,0,1), 0 0 22px rgba(255,215,0,0.95), 0 0 32px rgba(160,90,255,0.80)"
+  : "0 0 5px rgba(255,215,0,0.75), 0 0 12px rgba(255,215,0,0.35), 0 0 18px rgba(160,90,255,0.28)",
     transform: "skewX(-14deg)",
     verticalAlign: "middle",
   }}
@@ -1749,8 +1780,13 @@ function AppHeader({
           <span
   className="app-header-side-label"
   style={{
-    fontSize: 14,
-    padding: sideLabel === "ELENCO PILOTI" ? "5px 12px 6px" : "6px 10px",
+    fontSize: pngExport ? 18 : 14,
+    fontWeight: pngExport ? 800 : undefined,
+    padding: pngExport
+      ? "8px 14px"
+      : sideLabel === "ELENCO PILOTI"
+        ? "5px 12px 6px"
+        : "6px 10px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
@@ -1793,9 +1829,56 @@ function AppHeader({
 </span>
         </div>
 
-        <div style={{ marginTop: 5, fontSize: 13, opacity: 0.9, whiteSpace: "nowrap" }}>
-          {subtitle}
-        </div>
+        <div
+  style={{
+    marginTop: 5,
+    fontSize: pngExport ? 18 : 13,
+    lineHeight: pngExport ? "20px" : undefined,
+    height: pngExport ? 20 : undefined,
+    opacity: 0.9,
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  }}
+>
+  <span>{subtitle}</span>
+
+  {pngExport && (
+    <>
+      <span
+        style={{
+          opacity: 0.45,
+          fontWeight: 400,
+        }}
+      >
+        |
+      </span>
+
+      <span
+        style={{
+          opacity: 0.72,
+          fontSize: 15,
+        }}
+      >
+        Powered by
+      </span>
+
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          fontStyle: "italic",
+          letterSpacing: 0.5,
+          color: "#ffffff",
+          textShadow: "0 0 10px rgba(255,255,255,0.28)",
+        }}
+      >
+        Albixximo
+      </span>
+    </>
+  )}
+</div>
 
         <div
           style={{
@@ -1994,7 +2077,7 @@ const isZeroPointsStatus = isBox || isNc || isDnp || isDsqRow
             : (exporting ? -9 : -7),
         display: "flex",
         gap: 1,
-        fontSize: exporting ? 10 : 9,
+        fontSize: exporting ? 14 : 9,
         lineHeight: 1,
       }}
     >
@@ -2227,9 +2310,13 @@ function renderPrtQualifyingCell({
           justifyContent: "center",
           padding: exporting ? "7px 13px" : "6px 12px",
           borderRadius: 999,
-          border: "1px solid rgba(59,130,246,0.7)",
-          background: "transparent",
-          color: "rgba(147,197,253,0.95)",
+          border: exporting
+  ? "1px solid #93c5fd"
+  : "1px solid rgba(59,130,246,0.7)",
+background: "transparent",
+color: exporting ? "#eff6ff" : "rgba(147,197,253,0.95)",
+textShadow: exporting ? "0 0 6px rgba(96,165,250,0.8)" : undefined,
+boxShadow: exporting ? "0 0 8px rgba(59,130,246,0.35)" : undefined,
           fontWeight: 800,
           fontSize: exporting ? 13 : 12,
           letterSpacing: 0.5,
@@ -2342,14 +2429,17 @@ function renderPrtMetaCell({
 function renderPrtPenaltyCell({
   row,
   penalties,
+  dgMeasureTypes,
   exportPenaltyTimeTextStyle,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
+  dgMeasureTypes: Record<string, DgMeasureType>
   exportPenaltyTimeTextStyle: React.CSSProperties
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const penaltySeconds = penalties[key] || 0
+  const dgMeasureType = dgMeasureTypes[key] || "NONE"
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
@@ -2360,13 +2450,102 @@ function renderPrtPenaltyCell({
     return <Pill left="DSQ" variant="dsq" />
   }
 
-  if (penaltySeconds <= 0) {
+  if (dgMeasureType === "INFONDATO") {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 26,
+            padding: "0 16px",
+            borderRadius: 999,
+            background: "rgba(220,53,69,0.98)",
+            border: "1px solid rgba(255,90,105,0.85)",
+            boxShadow: "0 0 14px rgba(220,53,69,0.30)",
+            color: "#ffffff",
+            fontSize: 11.5,
+            fontWeight: 950,
+            letterSpacing: 0.25,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          RECLAMO INFONDATO
+        </span>
+      </div>
+    )
+  }
+
+  if (
+    (dgMeasureType !== "P" && dgMeasureType !== "S") ||
+    penaltySeconds <= 0
+  ) {
     return "-"
   }
 
+  const isPenalty = dgMeasureType === "P"
+
   return (
-    <div style={exportPenaltyTimeTextStyle}>
-      {formatPenaltyDisplay(penaltySeconds)}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
+        alignItems: "center",
+        width: "100%",
+      }}
+    >
+      {/* Spazio speculare al tempo: mantiene P/S al centro reale */}
+      <div />
+
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          justifySelf: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+
+          background: isPenalty
+            ? "rgba(220,53,69,0.98)"
+            : "rgba(105,105,255,0.98)",
+
+          border: isPenalty
+            ? "1px solid rgba(255,90,105,0.85)"
+            : "1px solid rgba(155,165,255,0.90)",
+
+          boxShadow: isPenalty
+            ? "0 0 13px rgba(220,53,69,0.30)"
+            : "0 0 14px rgba(105,120,255,0.38)",
+
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        {dgMeasureType}
+      </span>
+
+      <div
+        style={{
+          ...exportPenaltyTimeTextStyle,
+          justifySelf: "end",
+        }}
+      >
+        {formatPenaltyDisplay(penaltySeconds)}
+      </div>
     </div>
   )
 }
@@ -2586,8 +2765,11 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
+  dgMeasureTypes,
   forceHideMeta = false,
   tableTitle = "Classifica (output)",
+  onAbsenceClick,
+  verifiedAbsences,
 }: {
   previewRows: DisplayRow[]
   bestRaceLap: string
@@ -2596,8 +2778,11 @@ function ResultsTable({
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
+  dgMeasureTypes: Record<string, DgMeasureType>
   forceHideMeta?: boolean
   tableTitle?: string
+  onAbsenceClick?: (row: DisplayRow) => void
+  verifiedAbsences?: Record<string, boolean>
 }) {
   const showMeta = !forceHideMeta && (prtMode || unionMode)
   const showLobby = !forceHideMeta && unionMode
@@ -2761,7 +2946,7 @@ const compactStatusPills = exporting && exportStatusPillCount > 2
                   ...currentPenaltyColumn,
                 }}
               >
-                Penalità
+                Direzione Gara
               </th>
 
               <th
@@ -2860,7 +3045,7 @@ const rowStyle = getPrtTableRowStyle(
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "center" }}>
-                      <PosBadge pos={r.posGara} />
+                      <PosBadge pos={r.posGara} exporting={exporting} />
                     </div>
                   </TableCell>
 
@@ -2910,7 +3095,58 @@ const rowStyle = getPrtTableRowStyle(
                     mono
                     style={exporting ? PRT_ROW_STYLES.tempoExport : PRT_ROW_STYLES.tempoLive}
                   >
-                    {renderTempoCell(tempo, exporting, compactStatusPills)}
+                    {(() => {
+  const upperTempo = tempo.trim().toUpperCase()
+  const isAbsence = upperTempo === "ASS-I" || upperTempo === "ASS-G"
+
+  if (!exporting && isAbsence && onAbsenceClick) {
+    return (
+      <button
+        type="button"
+        onClick={() => onAbsenceClick(r)}
+        title="Clicca per cambiare il tipo di assenza"
+        style={{
+  padding: 0,
+  margin: 0,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  font: "inherit",
+  color: "inherit",
+  lineHeight: "inherit",
+}}
+      >
+        <span
+  style={{
+    position: "relative",
+    display: "inline-flex",
+  }}
+>
+  {renderTempoCell(tempo, false, compactStatusPills)}
+
+  {!verifiedAbsences?.[getPrtRowStableKey(r.sourcePosGara)] && (
+    <span
+      title="Assenza da verificare"
+      style={{
+        position: "absolute",
+        top: -4,
+        right: -5,
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: "#ffffff",
+        boxShadow: "0 0 6px rgba(255,255,255,0.9)",
+        pointerEvents: "none",
+      }}
+    />
+  )}
+</span>
+      </button>
+    )
+  }
+
+  return renderTempoCell(tempo, exporting, compactStatusPills)
+})()}
                   </TableCell>
 
                   <TableCell
@@ -2933,6 +3169,7 @@ return penaltySeconds === 0 && !isDsqRow
                     {renderPrtPenaltyCell({
   row: r,
   penalties,
+  dgMeasureTypes,
   exportPenaltyTimeTextStyle,
 })}
                   </TableCell>
@@ -3047,10 +3284,15 @@ export default function Page() {
   const [prtMode, setPrtMode] = useState(true)
   const [unionMode, setUnionMode] = useState(false)
   const [penalties, setPenalties] = useState<PenaltyMap>({})
+
+const [dgMeasureTypes, setDgMeasureTypes] = useState<
+  Record<string, DgMeasureType>
+>({})
   const [exportMetaInPng, setExportMetaInPng] = useState(false)
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
   const [absenceOverrides, setAbsenceOverrides] = useState<AbsenceOverrideMap>({})
+  const [verifiedAbsences, setVerifiedAbsences] = useState<Record<string, boolean>>({})
   const [manualDsqOverrides, setManualDsqOverrides] =
   useState<ManualDsqOverrideMap>({})
   const [showExportModal, setShowExportModal] = useState(false)
@@ -3117,6 +3359,8 @@ const [workbenchDriverLeagueMap, setWorkbenchDriverLeagueMap] = useState<DriverL
   AMA: [...UNION_DRIVER_NAMES_BY_RANK.AMA],
 }))
 
+const [driverLeagueMapHydrated, setDriverLeagueMapHydrated] = useState(false)
+
 function cloneDriverLeagueMap(source: DriverLeagueMap): DriverLeagueMap {
   return {
     STAR: [...(source.STAR || [])],
@@ -3137,6 +3381,10 @@ const [driverTeamOverridesHydrated, setDriverTeamOverridesHydrated] =
 const [editingDriverTeam, setEditingDriverTeam] = useState<string | null>(null)
 
 const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
+
+const [highlightDrawerPilot, setHighlightDrawerPilot] = useState<string | null>(null)
+
+const [dismissedUnknownDriverId, setDismissedUnknownDriverId] = useState<string | null>(null)
 
   const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
@@ -3354,6 +3602,8 @@ if (rawDriverLeagueMap) {
   }
 }
 
+setDriverLeagueMapHydrated(true)
+
 const rawDriverAliasMap = window.localStorage.getItem(UNION_DRIVER_ALIAS_MAP_STORAGE_KEY)
 if (rawDriverAliasMap) {
   const parsedDriverAliasMap = JSON.parse(rawDriverAliasMap)
@@ -3437,11 +3687,13 @@ useEffect(() => {
 
 useEffect(() => {
   if (typeof window === "undefined") return
+  if (!driverLeagueMapHydrated) return
+
   window.localStorage.setItem(
-  UNION_DRIVER_RANK_MAP_STORAGE_KEY,
-  JSON.stringify(workbenchDriverLeagueMap)
-)
-}, [workbenchDriverLeagueMap])
+    UNION_DRIVER_RANK_MAP_STORAGE_KEY,
+    JSON.stringify(workbenchDriverLeagueMap)
+  )
+}, [workbenchDriverLeagueMap, driverLeagueMapHydrated])
 
 useEffect(() => {
   if (typeof window === "undefined") return
@@ -3520,7 +3772,9 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   }))
 
   setManualLegaOverride(selectedLeague)
+  if (driverLeagueMapHydrated) {
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
+}
   setUnknownDriverSelections({})
 }, [currentRace, selectedLeague, selectedLobby, championshipState])
 
@@ -5250,7 +5504,27 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
 
   const previewRows = useMemo<DisplayRow[]>(() => {
     const csvRows = parseCsvRows(csv)
+console.log(
+  "🔵 UNION DEBUG ROWS",
+  rows.map((r) => ({
+    pos: r.posGara,
+    pilota: r.pilota,
+    auto: r.auto,
+    distacco: r.distaccoDalPrimo,
+    bestLap: r.migliorGiroGara,
+  }))
+)
 
+console.log(
+  "🟣 UNION DEBUG CSV",
+  csvRows.map((r) => ({
+    pos: r.posGara,
+    pilota: r.pilota,
+    auto: r.auto,
+    distacco: r.distaccoDalPrimo,
+    bestLap: r.migliorGiroGara,
+  }))
+)
     if (csvRows.length === 0) {
       return rows.map((r) => ({
         ...r,
@@ -5329,8 +5603,17 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
   const correctedDriverIdsForLeague = Object.entries(driverIdCorrections)
   .filter(([key]) => key.startsWith(`${selectedLeague}:`))
   .reduce<Record<string, string>>((acc, [key, correctedId]) => {
-    const originalId = key.slice(selectedLeague.length + 1)
-    acc[normalizeDriverLookupName(correctedId)] = originalId
+    const originalNormalizedId = key.slice(selectedLeague.length + 1)
+
+    const officialPilot = officialLeaguePilots.find(
+      (pilot) =>
+        normalizeDriverLookupName(pilot) === originalNormalizedId
+    )
+
+    if (officialPilot) {
+      acc[normalizeDriverLookupName(correctedId)] = officialPilot
+    }
+
     return acc
   }, {})
   const unresolvedMap = new Map<string, UnresolvedDriverCandidate>()
@@ -5402,7 +5685,10 @@ return {
   pilota: resolvedPilot,
   auto: resolvedAuto,
 
-  tempoTotaleGara: r.tempoTotaleGara,
+  tempoTotaleGara:
+  manualDistaccoValue === "NC"
+    ? "NC"
+    : r.tempoTotaleGara,
 
 distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
 
@@ -5493,7 +5779,11 @@ migliorGiroGara: r.migliorGiroGara,
 ])
 
 const unresolvedLeagueDrivers = leagueDriverResolution.unresolvedCandidates
-const activeUnknownDriver = unresolvedLeagueDrivers[0] || null
+
+const activeUnknownDriver =
+  unresolvedLeagueDrivers.find(
+    (driver) => driver.id !== dismissedUnknownDriverId
+  ) || null
 
 const displayRows = useMemo<DisplayRow[]>(() => {
   if (leagueDriverResolution.baseRows.length === 0) return []
@@ -5541,11 +5831,12 @@ const maxSourcePos = rowsWithPole.reduce(
     posGara: rowsWithPole.length + index + 1,
     sourcePosGara: maxSourcePos + index + 1,
     pilota: pilot,
-    auto: "---",
+    auto: manualAutoOverrides[maxSourcePos + index + 1] || "---",
     tempoTotaleGara: "ASS-I",
     distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
-    tempoQualifica: "",
+    tempoQualifica:
+  manualQualiOverrides[maxSourcePos + index + 1] || "",
     pole: "",
   }))
 
@@ -5555,6 +5846,8 @@ const maxSourcePos = rowsWithPole.reduce(
   leagueDriverResolution.baseRows,
   expectedLobbyDrivers,
   selectedLeague,
+  manualAutoOverrides,
+  manualQualiOverrides,
 ])
     const hasManualPilotOverrides = useMemo(() => {
     return Object.keys(manualPilotOverrides).length > 0
@@ -5680,6 +5973,18 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(r.sourcePosGara)
     const rawTempo = tempoLikeGt7(r)
     const upperTempo = rawTempo.trim().toUpperCase()
+    const manualStatus = String(
+  manualDistaccoOverrides[r.sourcePosGara] ?? ""
+).trim().toUpperCase()
+
+if (manualStatus === "NC") {
+  return {
+    ...r,
+    posGara: i + 1,
+    tempoTotaleGara: "NC",
+    distaccoDalPrimo: "NC",
+  }
+}
     const absenceValue =
   upperTempo === "ASS-I" || upperTempo === "ASS-G"
     ? absenceOverrides[key] || upperTempo
@@ -5693,7 +5998,7 @@ const maxSourcePos = rowsWithPole.reduce(
     distaccoDalPrimo: "DSQ",
   }
 }
-    if (absenceValue) {
+    if (absenceValue && !manualDistaccoOverrides[r.sourcePosGara]) {
   return {
     ...r,
     posGara: i + 1,
@@ -5823,6 +6128,18 @@ const maxSourcePos = rowsWithPole.reduce(
     const key = getPrtRowStableKey(item.row.sourcePosGara)
     const rawTempo = tempoLikeGt7(item.row)
     const upperTempo = rawTempo.trim().toUpperCase()
+    const manualStatus = String(
+  manualDistaccoOverrides[item.row.sourcePosGara] ?? ""
+).trim().toUpperCase()
+
+if (manualStatus === "NC") {
+  return {
+    ...item.row,
+    posGara: updatedComparable.length + idx + 1,
+    tempoTotaleGara: "NC",
+    distaccoDalPrimo: "NC",
+  }
+}
     const absenceValue =
   upperTempo === "ASS-I" || upperTempo === "ASS-G"
     ? absenceOverrides[key] || upperTempo
@@ -5836,7 +6153,7 @@ const maxSourcePos = rowsWithPole.reduce(
     distaccoDalPrimo: "DSQ",
   }
 }
-    if (absenceValue) {
+    if (absenceValue && !manualDistaccoOverrides[item.row.sourcePosGara]) {
   return {
     ...item.row,
     posGara: updatedComparable.length + idx + 1,
@@ -6130,6 +6447,10 @@ if (hasUnresolvedAuto) {
       const key = getPrtRowStableKey(row.sourcePosGara)
       const rawTempo = tempoLikeGt7(row)
       const isDoppiato = isDoppiatoValue(rawTempo)
+      const doppiaggioLabel =
+  /^\d+GIRO$/i.test(rawTempo.trim())
+    ? rawTempo.trim().toUpperCase()
+    : ""
 const isDnf = /^(DNF|DNF-I|DNFV)$/i.test(rawTempo.trim())
 const isAbsence = /^(ASS-I|ASS-G)$/i.test(rawTempo.trim())
 const absenceValue: AbsenceOverrideValue =
@@ -6143,6 +6464,7 @@ const absenceValue: AbsenceOverrideValue =
   row,
   key,
   isDoppiato,
+  doppiaggioLabel,
   isDnf,
   isAbsence,
   absenceValue,
@@ -6591,12 +6913,7 @@ const savedLeagueInCurrentRace = useMemo(() => {
 const savedLeagueStatus = useMemo(() => {
   return Object.fromEntries(
     CHAMPIONSHIP_LEAGUES.map((league) => {
-      const expectedLobbies =
-        championshipState.expectedDrivers?.[currentRace]?.[league] || {}
-
-      const activeLobbies = Object.entries(expectedLobbies)
-        .filter(([, drivers]) => (drivers || []).length > 0)
-        .map(([lobby]) => lobby)
+      const activeLobbies = UNION_LOBBIES_BY_RANK[league]
 
       const isComplete =
         activeLobbies.length > 0 &&
@@ -6710,7 +7027,11 @@ const snapshotPointsMap = snapshotPointsMapRaw
       if (!key) continue
 
       const baseCell = buildSavedRaceCell(row, snapshot.bestRaceLap || "")
-const resolvedPoints = snapshotPointsMap[pilotName] ?? 0
+
+
+const resolvedPoints =
+  snapshotPointsMap[pilotName] ?? 0
+
 const rawTempo = tempoLikeGt7(row).trim().toUpperCase()
 
 let resolvedStatus: ChampionshipCellStatus | null = baseCell.status
@@ -6812,33 +7133,6 @@ for (const driver of map.values()) {
 
   const currentLeague = normalizeLeagueKey(driver.league)
 
-  if (currentLeague) {
-  const activeMovement = activeRoundMovementByDriver.get(driverKey)
-
-  for (const raceNumber of savedRaceNumbersByLeague[currentLeague]) {
-
-    const movedIntoCurrentLeagueAfterThisRace =
-      raceNumber === currentRace &&
-      activeMovement?.toLeague === currentLeague &&
-      activeMovement.fromLeague !== currentLeague
-
-    if (movedIntoCurrentLeagueAfterThisRace) continue
-
-    if (!driver.raceResults[raceNumber]) {
-  driver.raceResults[raceNumber] = {
-    position: null,
-    status: "ASS-I",
-    pp: false,
-    gv: false,
-    points: 0,
-    rawText: "ASS-I",
-  }
-
-  driver.racePoints[raceNumber] = 0
-}
-  }
-}
-
   const activeMovement = (() => {
   const movementRounds = [5, 4, 3, 2, 1]
 
@@ -6903,6 +7197,36 @@ if (activeMovement) {
     0
   )
 }
+
+// RECLAMI INFONDATI:
+// -5 punti sulla classifica assoluta per ogni reclamo infondato
+let unfoundedClaimsCount = 0
+
+for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
+  const raceState = championshipState.races[raceNumber]
+  if (!raceState) continue
+
+  const normalizedDriver =
+    normalizeDriverNameForChampionship(driver.pilota)
+
+  for (const league of CHAMPIONSHIP_LEAGUES) {
+    const lobbyState = raceState[league]
+    if (!lobbyState) continue
+
+    for (const snapshot of Object.values(lobbyState)) {
+      if (!snapshot) continue
+
+      const hasUnfoundedClaim =
+        snapshot.dgUnfoundedPilots?.includes(normalizedDriver) ?? false
+
+      if (hasUnfoundedClaim) {
+        unfoundedClaimsCount += 1
+      }
+    }
+  }
+}
+
+driver.totalPoints -= unfoundedClaimsCount * 5
 }
 // Frecce storiche promo/retro: solo grafica, non modifica punti
 for (const movementRound of [1, 2, 3, 4, 5]) {
@@ -6950,20 +7274,70 @@ return Array.from(map.values())
       return b.totalPoints - a.totalPoints
     }
 
-    // 1B. A parità di punti, un risultato valido in gara
-    //     precede un'assenza / risultato senza posizione.
-    //     Esempio: 14° con 0 punti > ASS-I / ASS-G con 0 punti.
-    const aHasValidPosition = Object.values(a.raceResults).some(
-      (result) => result?.position != null
-    )
+    // 1B. A parità di punti, chi ha già un risultato salvato
+//     precede chi deve ancora disputare la gara.
+//     Vale anche per ASS-I / ASS-G.
+const aHasSavedResult = Object.keys(a.raceResults).length > 0
+const bHasSavedResult = Object.keys(b.raceResults).length > 0
 
-    const bHasValidPosition = Object.values(b.raceResults).some(
-      (result) => result?.position != null
-    )
+if (aHasSavedResult !== bHasSavedResult) {
+  return aHasSavedResult ? -1 : 1
+}
 
-    if (aHasValidPosition !== bHasValidPosition) {
-      return aHasValidPosition ? -1 : 1
-    }
+// 1C. Tra piloti che hanno già corso, un piazzamento valido
+//     precede un risultato senza posizione (ASS-I / ASS-G ecc.).
+const aHasValidPosition = Object.values(a.raceResults).some(
+  (result) => result?.position != null
+)
+
+const bHasValidPosition = Object.values(b.raceResults).some(
+  (result) => result?.position != null
+)
+
+if (aHasValidPosition !== bHasValidPosition) {
+  return aHasValidPosition ? -1 : 1
+}
+
+// 1D. A parità di punti e senza piazzamento valido,
+//     ordina gli stati a 0 punti secondo priorità UNION:
+//     ASS-G (arancione) → BOX → NC → ASS-I (rosso).
+const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
+  const results = Object.values(driver.raceResults)
+
+  const hasAssG = results.some(
+    (result) => result?.status === "ASS-G"
+  )
+
+  const hasBox = results.some(
+    (result) => result?.status === "BOX"
+  )
+
+  const hasNc = results.some(
+    (result) => result?.status === "NC"
+  )
+
+  const hasAssI = results.some(
+    (result) => result?.status === "ASS-I"
+  )
+
+  if (hasAssG) return 0
+  if (hasBox) return 1
+  if (hasNc) return 2
+  if (hasAssI) return 3
+
+  return 4
+}
+
+const aZeroStatusPriority = getZeroPointsStatusPriority(a)
+const bZeroStatusPriority = getZeroPointsStatusPriority(b)
+
+if (
+  a.totalPoints === 0 &&
+  b.totalPoints === 0 &&
+  aZeroStatusPriority !== bZeroStatusPriority
+) {
+  return aZeroStatusPriority - bZeroStatusPriority
+}
 
     // 2. Al termine di Gara 5 entra in vigore lo spareggio ufficiale UNION:
     //    maggior numero di 1° posti, poi 2° posti, poi 3° posti, ecc.
@@ -10290,7 +10664,7 @@ setExportTextsDraft({
   mainTitle:
     type === "championship-html"
       ? `UNION 2026 - ROUND 2 | ${selectedLeague}`
-      : exportTexts.mainTitle,
+      : `UNION 2026 - ROUND 2 | LEGA ${selectedLeague}`,
   sideLabel:
     type === "championship-html"
       ? latestRaceWithResults
@@ -10374,6 +10748,7 @@ async function run(targetLeague?: ChampionshipLeagueKey) {
 
     const res = await fetch("/api/albixximo", { method: "POST", body: fd })
     const data = await res.json()
+    console.log("🟠 UNION DEBUG API RAW", data)
 
     if (!res.ok) {
       setError(JSON.stringify(data, null, 2))
@@ -10894,6 +11269,47 @@ function removePilotFromLeagueDrawer(
   })
 }
 
+function editPilotIdFromLeagueDrawer(
+  league: ChampionshipLeagueKey,
+  pilotName: string
+) {
+  const newId = window.prompt("Modifica ID GT7", pilotName)?.trim()
+
+  if (!newId || newId === pilotName) return
+
+  const oldNormalized = normalizeDriverNameForChampionship(pilotName)
+  const newNormalized = normalizeDriverNameForChampionship(newId)
+
+  if (!newNormalized) return
+
+  setWorkbenchDriverLeagueMap((prev) => {
+    const next = cloneDriverLeagueMap(prev)
+
+    const alreadyExists = next[league].some(
+      (pilot) =>
+        normalizeDriverNameForChampionship(pilot) === newNormalized &&
+        normalizeDriverNameForChampionship(pilot) !== oldNormalized
+    )
+
+    if (alreadyExists) {
+      window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
+      return prev
+    }
+
+    next[league] = next[league]
+      .map((pilot) =>
+        normalizeDriverNameForChampionship(pilot) === oldNormalized
+          ? newId
+          : pilot
+      )
+      .sort((a, b) =>
+        a.localeCompare(b, "it", { sensitivity: "base" })
+      )
+
+    return next
+  })
+}
+
 function saveDriverTeamOverride(pilot: string) {
   const nextTeamCode = editingDriverTeamDraft.trim().toUpperCase()
 
@@ -10941,7 +11357,26 @@ function saveExpectedLobbyDrivers() {
     )
   )
 
-  const invalidDrivers = uniqueDrivers.filter(
+  Object.entries(driverIdCorrections)
+    .filter(([key]) => key.startsWith(`${selectedLeague}:`))
+    .forEach(([, correctedId]) => {
+      const cleanCorrectedId = String(correctedId || "").trim()
+
+      if (cleanCorrectedId) {
+        allowedDrivers.add(
+          normalizeDriverNameForChampionship(cleanCorrectedId)
+        )
+      }
+    })
+
+  console.log("DEBUG SAVE LOBBY", {
+  selectedLeague,
+  uniqueDrivers,
+  workbenchRank: workbenchDriverLeagueMap[selectedLeague],
+  corrections: driverIdCorrections,
+  allowedDrivers: Array.from(allowedDrivers),
+})
+    const invalidDrivers = uniqueDrivers.filter(
     (driver) =>
       !allowedDrivers.has(normalizeDriverNameForChampionship(driver))
   )
@@ -10955,19 +11390,19 @@ function saveExpectedLobbyDrivers() {
 
   setExpectedLobbyDrivers(uniqueDrivers)
 
-setChampionshipState((prev) => ({
-  ...prev,
-  expectedDrivers: {
-    ...prev.expectedDrivers,
-    [currentRace]: {
-      ...(prev.expectedDrivers?.[currentRace] || {}),
-      [selectedLeague]: {
-        ...(prev.expectedDrivers?.[currentRace]?.[selectedLeague] || {}),
-        [selectedLobby]: uniqueDrivers,
+  setChampionshipState((prev) => ({
+    ...prev,
+    expectedDrivers: {
+      ...prev.expectedDrivers,
+      [currentRace]: {
+        ...(prev.expectedDrivers?.[currentRace] || {}),
+        [selectedLeague]: {
+          ...(prev.expectedDrivers?.[currentRace]?.[selectedLeague] || {}),
+          [selectedLobby]: uniqueDrivers,
+        },
       },
     },
-  },
-}))
+  }))
 }
 
 function resetExpectedLobbyDrivers() {
@@ -11059,10 +11494,18 @@ function confirmSaveCurrentLeague() {
     rows,
     finalRows,
     unionMeta,
-    penalties,
+penalties,
+dgMeasureTypes,
+dgUnfoundedPilots: finalRows
+  .filter((row) => {
+    const key = getPrtRowStableKey(row.sourcePosGara)
+    return dgMeasureTypes[key] === "INFONDATO"
+  })
+  .map((row) => normalizeDriverNameForChampionship(row.pilota)),
 lapOverrides,
 dnfOverrides,
 absenceOverrides,
+verifiedAbsences,
 manualDsqOverrides,
 manualGaraOverride,
 manualLegaOverride,
@@ -11156,9 +11599,11 @@ clearCurrentWorkbench(false)
     )
   )
 )
-  setLapOverrides(snapshot.lapOverrides || {})
+ setDgMeasureTypes(snapshot.dgMeasureTypes || {}) 
+setLapOverrides(snapshot.lapOverrides || {})
 setDnfOverrides(snapshot.dnfOverrides || {})
 setAbsenceOverrides(snapshot.absenceOverrides || {})
+setVerifiedAbsences(snapshot.verifiedAbsences || {})
 setManualDsqOverrides(snapshot.manualDsqOverrides || {})
 
   setManualPilotOverrides(snapshot.manualPilotOverrides || {})
@@ -11250,7 +11695,28 @@ function resetAllLeaguesInCurrentRace() {
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
 
-  function setUnionPenaltySeconds(sourcePosGara: number, value: string) {
+function setDgMeasureType(
+  sourcePosGara: number,
+  type: DgMeasureType
+) {
+  const key = getPrtRowStableKey(sourcePosGara)
+
+  setDgMeasureTypes((prev) => ({
+    ...prev,
+    [key]: type,
+  }))
+
+  // Il reclamo infondato non applica secondi al tempo gara.
+  if (type === "INFONDATO") {
+    setPenalties((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+}
+
+function setUnionPenaltySeconds(sourcePosGara: number, value: string) {
   const key = getPrtRowStableKey(sourcePosGara)
 
   setPenalties((prev) => {
@@ -11387,7 +11853,23 @@ function openAutoCorrectionModal() {
 function applyAutoCorrections() {
   const cleaned: Record<number, string> = {}
 
-  const hasUnresolvedAuto = previewRows.some((row) => {
+  const hasUnresolvedAuto = displayRows.some((row) => {
+    const rowStatus = String(
+      manualDistaccoOverrides[row.sourcePosGara] ??
+      row.distaccoDalPrimo ??
+      row.tempoTotaleGara ??
+      ""
+    )
+      .trim()
+      .toUpperCase()
+
+    const isAbsence =
+      rowStatus === "ASS-I" ||
+      rowStatus === "ASS-G"
+
+    // Per un pilota assente l'auto non è obbligatoria.
+    if (isAbsence) return false
+
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -11401,7 +11883,24 @@ function applyAutoCorrections() {
     return
   }
 
-  for (const row of previewRows) {
+  for (const row of displayRows) {
+    const rowStatus = String(
+      manualDistaccoOverrides[row.sourcePosGara] ??
+      row.distaccoDalPrimo ??
+      row.tempoTotaleGara ??
+      ""
+    )
+      .trim()
+      .toUpperCase()
+
+    const isAbsence =
+      rowStatus === "ASS-I" ||
+      rowStatus === "ASS-G"
+
+    if (isAbsence) {
+      continue
+    }
+
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
     ).trim()
@@ -11425,11 +11924,12 @@ function openQualiCorrectionModal() {
 function applyQualiCorrections() {
   const cleaned: Record<number, string> = {}
 
-  for (const row of previewRows) {
-    const draftValue = String(manualQualiDraft[row.sourcePosGara] ?? "").trim()
-    const originalValue = String(row.tempoQualifica ?? "").trim()
+  for (const row of displayRows) {
+    const draftValue = String(
+      manualQualiDraft[row.sourcePosGara] ?? ""
+    ).trim()
 
-    if (draftValue && draftValue !== originalValue) {
+    if (draftValue) {
       cleaned[row.sourcePosGara] = draftValue
     }
   }
@@ -11437,7 +11937,6 @@ function applyQualiCorrections() {
   setManualQualiOverrides(cleaned)
   setShowQualiModal(false)
 }
-
 function resetQualiCorrections() {
   setManualQualiOverrides({})
   setManualQualiDraft({})
@@ -11462,7 +11961,7 @@ function openDistaccoCorrectionModal() {
 function applyDistaccoCorrections() {
   const cleaned: Record<number, string> = {}
 
-  for (const row of previewRows) {
+  for (const row of displayRows) {
     const draftValue = String(manualDistaccoDraft[row.sourcePosGara] ?? "").trim()
     const originalValue = String(row.distaccoDalPrimo ?? "").trim()
 
@@ -11471,6 +11970,22 @@ function applyDistaccoCorrections() {
     }
   }
 
+  setAbsenceOverrides((prev) => {
+  const next = { ...prev }
+
+  for (const row of displayRows) {
+    const value = String(cleaned[row.sourcePosGara] ?? "")
+      .trim()
+      .toUpperCase()
+
+    if (value === "NC") {
+      const key = getPrtRowStableKey(row.sourcePosGara)
+      delete next[key]
+    }
+  }
+
+  return next
+})
   setManualDistaccoOverrides(cleaned)
   setShowDistaccoModal(false)
 }
@@ -12049,6 +12564,12 @@ const lastCreatedMovementText = useMemo(() => {
   const isActive = selectedLeague === league
   const isSaved = savedLeagueStatus[league]
 
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+
+  const savedLobbyCount = leagueLobbies.filter(
+    (lobby) => !!currentRaceSnapshot[league]?.[lobby]
+  ).length
+
   return (
     <button
       key={league}
@@ -12085,7 +12606,48 @@ const lastCreatedMovementText = useMemo(() => {
       }}
       title={isSaved ? `Apri ${league}` : `${league} non ancora salvata`}
     >
-      {league} {isSaved ? "✅" : isActive ? "•" : ""}
+      <span
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    whiteSpace: "nowrap",
+  }}
+>
+  <span>
+    {league} {isSaved ? "✅" : isActive ? "•" : ""}
+  </span>
+
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 3,
+      height: 14,
+    }}
+  >
+    {leagueLobbies.map((lobby, index) => (
+      <span
+        key={lobby}
+        style={{
+          display: "block",
+          width: 3,
+          height: 12,
+          borderRadius: 1,
+          background:
+  index < savedLobbyCount
+    ? "#39ff88"
+    : "rgba(255,255,255,0.20)",
+boxShadow:
+  index < savedLobbyCount
+    ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
+    : "none",
+        }}
+      />
+    ))}
+  </span>
+</span>
     </button>
   )
 })}
@@ -12717,7 +13279,23 @@ const lastCreatedMovementText = useMemo(() => {
     prtMode={prtMode}
     unionMode={unionMode}
     penalties={penalties}
+    dgMeasureTypes={dgMeasureTypes}
+    onAbsenceClick={(row) => {
+  const key = getPrtRowStableKey(row.sourcePosGara)
+  const currentValue = tempoLikeGt7(row).trim().toUpperCase()
+
+  setVerifiedAbsences((prev) => ({
+    ...prev,
+    [key]: true,
+  }))
+
+  setAbsenceOverrides((prev) => ({
+    ...prev,
+    [key]: currentValue === "ASS-G" ? "ASS-I" : "ASS-G",
+  }))
+}}
     tableTitle="Classifica (output)"
+    verifiedAbsences={verifiedAbsences}
   />
 )}
 
@@ -12987,9 +13565,10 @@ const lastCreatedMovementText = useMemo(() => {
 
         <tbody>
           {dgInfo.map(
-  ({ row, isDoppiato, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
+  ({ row, isDoppiato, doppiaggioLabel, isDnf, isAbsence, absenceValue, key, manualGap, manualGapValid }, idx) => {
             const dnfValue = dnfOverrides[key] || "NC"
             const penaltySeconds = penalties[key] || 0
+            const dgMeasureType = dgMeasureTypes[key] || "NONE"
             const unjustifiedAbsenceCount =
   unjustifiedAbsenceCounts[normalizeDriverNameForChampionship(row.pilota)] || 0
 
@@ -13028,6 +13607,33 @@ const lastCreatedMovementText = useMemo(() => {
       gap: 10,
     }}
   >
+    <select
+      value={dgMeasureType}
+      onChange={(e) =>
+        setDgMeasureType(
+          row.sourcePosGara,
+          e.target.value as DgMeasureType
+        )
+      }
+      style={{
+        width: 110,
+        padding: "8px 6px",
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(0,0,0,0.26)",
+        color: "white",
+        fontWeight: 900,
+        textAlign: "center",
+      }}
+    >
+      <option value="NONE">—</option>
+      <option value="P">PENALITÀ</option>
+      <option value="S">SEGNALAZIONE</option>
+      <option value="INFONDATO">INFONDATO</option>
+    </select>
+
+    {(dgMeasureType === "P" || dgMeasureType === "S") && (
+  <>
     <input
       type="number"
       min="0"
@@ -13067,13 +13673,15 @@ const lastCreatedMovementText = useMemo(() => {
         fontSize: 12,
         fontWeight: 900,
         color:
-  penaltySeconds > 0
-    ? "#ffb3b3"
-    : "rgba(255,255,255,0.55)",
+          penaltySeconds > 0
+            ? "#ffb3b3"
+            : "rgba(255,255,255,0.55)",
       }}
     >
       {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
     </div>
+  </>
+)}
   </div>
 </TableCell>
 
@@ -13095,6 +13703,23 @@ const lastCreatedMovementText = useMemo(() => {
                             fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                           }}
                         />
+                        {doppiaggioLabel && (
+  <div
+    style={{
+      fontSize: 12,
+      fontWeight: 950,
+      letterSpacing: 0.5,
+      color: "#ffb347",
+    }}
+  >
+    DOPPIATO •{" "}
+    {doppiaggioLabel.replace(
+      /^(\d+)GIRO$/i,
+      (_match: string, n: string) =>
+        `${n} ${n === "1" ? "GIRO" : "GIRI"}`
+    )}
+  </div>
+)}
                         <div
                           style={{
                             fontSize: 11,
@@ -13396,45 +14021,54 @@ const lastCreatedMovementText = useMemo(() => {
   </button>
 </div>
 
-        <div style={{ display: "grid", gap: 4 }}>
+<div style={{ display: "grid", gap: 4 }}>
   {(workbenchDriverLeagueMap[league] || []).length === 0 ? (
     <div style={{ fontSize: 12, opacity: 0.45 }}>Nessun pilota</div>
   ) : (
     workbenchDriverLeagueMap[league].map((pilot) => (
-  <div
-    key={`${league}-${pilot}`}
-    style={{
-      display: "grid",
-      gap: 4,
-      padding: "6px 0",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 8,
-      }}
-    >
       <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    minWidth: 0,
-  }}
->
-  {editingDriverTeam === pilot ? (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 4,
-      flexShrink: 0,
-    }}
-  >
+        key={`${league}-${pilot}`}
+        id={`drawer-pilot-${league}-${normalizeDriverNameForChampionship(pilot)}`}
+        style={{
+          display: "grid",
+          gap: 4,
+          padding: "6px 0",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          outline:
+            highlightDrawerPilot === pilot
+              ? "2px solid rgba(255,215,0,0.95)"
+              : undefined,
+          boxShadow:
+            highlightDrawerPilot === pilot
+              ? "0 0 18px rgba(255,215,0,0.35)"
+              : undefined,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            {editingDriverTeam === pilot ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  flexShrink: 0,
+                }}
+              >
     <input
       autoFocus
       value={editingDriverTeamDraft}
@@ -13524,24 +14158,54 @@ const lastCreatedMovementText = useMemo(() => {
   </div>
 </div>
 
-      <button
-        onClick={() => removePilotFromLeagueDrawer(league, pilot)}
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 8,
-          border: "1px solid rgba(239,68,68,0.28)",
-          background: "rgba(239,68,68,0.14)",
-          color: "white",
-          cursor: "pointer",
-          fontWeight: 900,
-          flexShrink: 0,
-          lineHeight: 1,
-        }}
-        title={`Rimuovi ${pilot}`}
-      >
-        ×
-      </button>
+      <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => editPilotIdFromLeagueDrawer(league, pilot)}
+    style={{
+      width: 24,
+      height: 24,
+      borderRadius: 8,
+      border: "1px solid rgba(96,165,250,0.28)",
+      background: "rgba(96,165,250,0.14)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 900,
+      flexShrink: 0,
+      lineHeight: 1,
+    }}
+    title={`Modifica ID GT7 di ${pilot}`}
+  >
+    ✎
+  </button>
+
+  <button
+    type="button"
+    onClick={() => removePilotFromLeagueDrawer(league, pilot)}
+    style={{
+      width: 24,
+      height: 24,
+      borderRadius: 8,
+      border: "1px solid rgba(239,68,68,0.28)",
+      background: "rgba(239,68,68,0.14)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 900,
+      flexShrink: 0,
+      lineHeight: 1,
+    }}
+    title={`Rimuovi ${pilot}`}
+  >
+    ×
+  </button>
+</div>
     </div>
   </div>
 ))
@@ -14780,46 +15444,44 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 
     if (!selectedOfficial) return
 
-    const correctionKey =
-      `${activeUnknownDriver.league}:${normalizeDriverLookupName(selectedOfficial)}`
+const leagueToOpen = activeUnknownDriver.league
 
-    setDriverIdCorrections((prev) => ({
-      ...prev,
-      [correctionKey]: activeUnknownDriver.rawName,
-    }))
+// Chiude questo popup
+setDismissedUnknownDriverId(activeUnknownDriver.id)
 
-    setWorkbenchDriverLeagueMap((prev) => ({
-  ...prev,
-  [activeUnknownDriver.league]: (
-    prev[activeUnknownDriver.league] || []
-  ).map((pilot) =>
-    normalizeDriverLookupName(pilot) ===
-    normalizeDriverLookupName(selectedOfficial)
-      ? activeUnknownDriver.rawName
-      : pilot
-  ),
-}))
-    
-    setRows((prev) => {
-      const selectedOfficialKey = normalizeDriverLookupName(selectedOfficial)
+// Apre il cassetto piloti
+setDrawerOpen(true)
 
-      return prev.map((row: ExtractRow) => {
-        const rowKey = normalizeDriverLookupName(row.pilota)
+    // Evidenzia il pilota da correggere
+    setHighlightDrawerPilot(selectedOfficial)
 
-        if (rowKey !== selectedOfficialKey) return row
-
-        return {
-          ...row,
-          pilota: activeUnknownDriver.rawName,
-        }
-      })
-    })
-
+    // Chiude la selezione OCR
     setUnknownDriverSelections((prev) => {
       const next = { ...prev }
       delete next[activeUnknownDriver.id]
       return next
     })
+
+    // Dopo l'apertura del cassetto va direttamente sul pilota
+    setTimeout(() => {
+      const element = document.getElementById(
+        `drawer-pilot-${leagueToOpen}-${normalizeDriverNameForChampionship(
+          selectedOfficial
+        )}`
+      )
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        })
+      }
+    }, 200)
+
+    // Mantiene il pilota evidenziato per 5 secondi
+    setTimeout(() => {
+      setHighlightDrawerPilot(null)
+    }, 5000)
   }}
   style={{
     padding: "12px 16px",
@@ -15595,9 +16257,23 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 const originalValue = String(row.auto ?? "").trim()
 const changed = currentValue !== originalValue
 
-const unresolved = !UNION_GR2_CARS.some(
-  (car) => car === currentValue
+const rowStatus = String(
+  manualDistaccoOverrides[row.sourcePosGara] ??
+  row.distaccoDalPrimo ??
+  row.tempoTotaleGara ??
+  ""
 )
+  .trim()
+  .toUpperCase()
+
+const isAbsence =
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
+const unresolved =
+  !isAbsence &&
+  !UNION_GR2_CARS.some(
+    (car) => car === currentValue
+  )
 
                 return (
                   <tr
@@ -16012,7 +16688,7 @@ const changed = currentValue !== originalValue
       <div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Correzione Distacco Manuale</div>
         <div style={{ marginTop: 6, fontSize: 13, opacity: 0.76 }}>
-          Inserisci un distacco manuale oppure uno stato come DOPPIATO, DNF, DNFV, BOX o DSQ.
+          Inserisci un distacco manuale oppure uno stato come DOPPIATO, NC, BOX o DSQ.
         </div>
       </div>
 
@@ -16121,7 +16797,7 @@ const changed = currentValue !== originalValue
                             [row.sourcePosGara]: e.target.value,
                           }))
                         }
-                        placeholder="Es. +12.345 / +1:14.960 / DOPPIATO / DNF / DNFV / BOX / DSQ"
+                        placeholder="Es. +12.345 / +1:14.960 / DOPPIATO / NC / BOX / DSQ"
                         style={{
                           width: "100%",
                           padding: "10px 12px",
@@ -16136,7 +16812,7 @@ const changed = currentValue !== originalValue
                       />
 
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {["DOPPIATO", "DNF", "DNFV", "BOX", "DSQ"].map((label) => (
+                        {["DOPPIATO", "NC", "BOX", "DSQ"].map((label) => (
                           <button
                             key={label}
                             onClick={() =>
@@ -16261,10 +16937,11 @@ const changed = currentValue !== originalValue
         }}
       >
         <AppHeader
-          mainTitle={exportTexts.mainTitle}
-          sideLabel={exportTexts.sideLabel}
-          subtitle={exportTexts.subtitle}
-        />
+  mainTitle={exportTexts.mainTitle}
+  sideLabel={exportTexts.sideLabel}
+  subtitle={exportTexts.subtitle}
+  pngExport={true}
+/>
 
         <SummaryStrip
           winner={winner}
@@ -16284,6 +16961,7 @@ const changed = currentValue !== originalValue
           unionMode={unionMode}
           exporting={true}
           penalties={penalties}
+          dgMeasureTypes={dgMeasureTypes}
           forceHideMeta={!exportMetaInPng}
           tableTitle="Classifica definitiva"
         />
