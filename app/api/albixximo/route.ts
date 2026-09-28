@@ -649,12 +649,13 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     return null
   }
 
-  let posBlock = findPosBlock()
+    let posBlock = findPosBlock()
+  let fallbackNames: string[] | null = null
 
   // FALLBACK OCR:
   // alcuni screen GT7 alternano posizione e nome
-  // invece di fornire prima tutto il blocco 1..8 / 9..16.
-  // Entra SOLO se il parser normale non ha trovato il blocco.
+  // invece di fornire prima tutto il blocco posizioni.
+  // Entra SOLO se il parser normale non trova il blocco.
   if (!posBlock) {
     const numericPositions: { index: number; value: number }[] = []
 
@@ -685,6 +686,43 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
       if (valid.length >= 2) {
         const highestPosition = Math.max(...valid.map((p) => p.value))
         const count = highestPosition - startNum + 1
+
+        // Cerchiamo l'inizio delle auto.
+        // Tutto ciò che sta tra la prima posizione e la prima auto
+        // può contenere i nomi intercalati alle posizioni.
+        const firstCarIndex = lines.findIndex(
+          (line, index) =>
+            index > valid[0].index && looksLikeKnownCarToken(line)
+        )
+
+        if (firstCarIndex !== -1) {
+          const nameTokens = lines
+            .slice(valid[0].index, firstCarIndex)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .filter((s) => {
+              const normalized = s.replace(/З/g, "3")
+
+              // elimina le posizioni
+              if (/^\d+$/.test(normalized)) return false
+
+              // elimina elementi che non possono essere nomi
+              if (/MIGLIOR|DISTACCO|GRAN TURISMO|UNION/i.test(s)) return false
+              if (looksLikeKnownCarToken(s)) return false
+              if (s.includes(":")) return false
+              if (/^\+/.test(s)) return false
+              if (!/[A-Za-z]/.test(s)) return false
+
+              return true
+            })
+            .map((s) => normalizePilot(s))
+
+          // Usiamo questi nomi soltanto se il numero è coerente
+          // con le righe che stiamo cercando di ricostruire.
+          if (nameTokens.length >= count) {
+            fallbackNames = nameTokens.slice(0, count)
+          }
+        }
 
         posBlock = {
           start: valid[0].index,
@@ -725,11 +763,27 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     return /[A-Za-z]/.test(t)
   }
 
-  const names: string[] = []
-  while (cursor < lines.length && names.length < count) {
-    const s = lines[cursor]
-    if (isName(s)) names.push(normalizePilot(s))
-    cursor++
+    const names: string[] = []
+
+  if (fallbackNames) {
+    // Caso OCR intercalato: i nomi sono già stati recuperati
+    // dal fallback senza modificare il parser normale.
+    names.push(...fallbackNames)
+
+    // Ripartiamo dall'inizio delle auto
+    while (
+      cursor < lines.length &&
+      !looksLikeKnownCarToken(lines[cursor])
+    ) {
+      cursor++
+    }
+  } else {
+    // Parser normale: comportamento precedente invariato
+    while (cursor < lines.length && names.length < count) {
+      const s = lines[cursor]
+      if (isName(s)) names.push(normalizePilot(s))
+      cursor++
+    }
   }
 
   while (names.length < count) names.push("")
