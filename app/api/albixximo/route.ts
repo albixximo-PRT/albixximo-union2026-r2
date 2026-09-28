@@ -939,13 +939,19 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
     Math.max(...validPositions.map((x) => x.index)) + 1
 
   const idxTempo = lines.findIndex(
-    (l) => /^TEMPO$/i.test(l) || /TEMPO/i.test(l)
-  )
-  const idxPen = lines.findIndex((l) => /PENALIT/i.test(l))
-  const idxBest = lines.findIndex((l) => /MIGLIOR\s+GIRO/i.test(l))
+  (l) => /^(TEMPO|TIME)$/i.test(l)
+)
 
-  const stopAnyHeader =
-    /^(TEMPO|PENALITÀ|PENALITA|MIGLIOR\s+GIRO)$/i
+const idxPen = lines.findIndex(
+  (l) => /^(PENALITÀ|PENALITA|PENALTY)$/i.test(l)
+)
+
+const idxBest = lines.findIndex(
+  (l) => /^(MIGLIOR\s+GIRO|BEST\s+LAP)$/i.test(l)
+)
+
+const stopAnyHeader =
+  /^(TEMPO|TIME|PENALITÀ|PENALITA|PENALTY|MIGLIOR\s+GIRO|BEST\s+LAP)$/i
 
   const isName = (s: string) => {
     const t = String(s || "").trim()
@@ -1143,14 +1149,14 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
   const tempoRaw = takeBlock(
     lines,
     idxTempo,
-    /^(PENALITÀ|PENALITA|MIGLIOR\s+GIRO)$/i,
+    /^(PENALITÀ|PENALITA|PENALTY|MIGLIOR\s+GIRO|BEST\s+LAP)$/i,
     n
   )
 
   const bestRaw = takeBlock(
     lines,
     idxBest,
-    /^(TEMPO|PENALITÀ|PENALITA)$/i,
+    /^(TEMPO|TIME|PENALITÀ|PENALITA|PENALTY)$/i,
     n
   ).map((s) => {
     const m = s.match(
@@ -1378,12 +1384,41 @@ function parseGaraShortLobby(rawText: string): RaceRow[] {
 
 function classifyText(text: string): "quali" | "race" | "unknown" {
   const t = (text || "").toUpperCase()
-  const isQuali = t.includes("DISTACCO") && t.includes("MIGLIOR GIRO")
-  const isRace = t.includes("TEMPO") && (t.includes("PENALIT") || t.includes("PENALITA")) && t.includes("MIGLIOR GIRO")
+
+  const hasGap =
+    t.includes("DISTACCO") ||
+    t.includes("GAP")
+
+  const hasBestLap =
+    t.includes("MIGLIOR GIRO") ||
+    t.includes("BEST LAP")
+
+  const hasRaceTime =
+    t.includes("TEMPO") ||
+    t.includes("TIME")
+
+  const hasPenalty =
+    t.includes("PENALIT") ||
+    t.includes("PENALTY")
+
+  const isQuali = hasGap && hasBestLap
+  const isRace = hasRaceTime && hasPenalty && hasBestLap
+
   if (isQuali && !isRace) return "quali"
   if (isRace) return "race"
-  if (t.includes("DISTACCO")) return "quali"
-  if (t.includes("PENALIT") || t.includes("NON FINITO") || t.includes("IN GARA")) return "race"
+
+  if (hasGap) return "quali"
+
+  if (
+    hasPenalty ||
+    t.includes("NON FINITO") ||
+    t.includes("IN GARA") ||
+    t.includes("DNF") ||
+    /\b\d+\s+LAPS?\b/.test(t)
+  ) {
+    return "race"
+  }
+
   return "unknown"
 }
 
