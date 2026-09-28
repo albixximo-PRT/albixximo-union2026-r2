@@ -325,10 +325,49 @@ function csvEscape(v: any) {
 /* -------------------- Known cars -------------------- */
 
 const KNOWN_CARS = [
-  "NSX CONCEPT-GT '16",
-  "RC F GT500 '16",
-  "RS 5 Turbo DTM '19",
-  "GT-R NISMO GT500 '16",
+  "Cayman GT4 Clubsport '16",
+  "Mégane Trophy '11",
+  "Swift Sport Gr.4",
+  "458 Italia Gr.4",
+  "458 Italia GT3 '13",
+  "TT Cup '16",
+  "4C Gr.4",
+  "ELANTRA N TC '24",
+  "Huracán Gr.4",
+  "NSX Gr.4",
+  "Silvia spec-R Aero (S15) Touring Car",
+  "Atenza Gr.4",
+  "MAZDA3 Gr.4",
+  "GT-R Gr.4",
+  "650S Gr.4",
+    "TS050 - Hybrid '16",
+  "919 Hybrid '16",
+  "GR010 HYBRID '21",
+  "R18 '16",
+  "908 HDi FAP '10",
+  "RCZ Gr.B Rally Car",
+  "Lancer Evolution Final Gr.B Rally Car",
+  "WRX Gr.B Rally Car",
+  "GT-R Gr.B Rally Car",
+  "NSX Gr.B Rally Car",
+  "86 Gr.B Rally Car",
+    "296 GT3 '23",
+  "911 GT3 R (992) '22",
+  "R.S.01 GT3 '16",
+  "Beetle Gr.3",
+  "R8 LMS Evo '19",
+  "Mercedes-AMG GT3 '20",
+  "911 RSR (991) '17",
+  "GR Supra Racing Concept '18",
+  "S-FR Racing Concept '16",
+    "NSX CONCEPT-GT '16",
+"RC F GT500 '16",
+"RS 5 Turbo DTM '19",
+"GT-R NISMO GT500 '16",
+"NSX GT500 '08",
+"GT-R GT500 '08",
+"SC430 GT500 '08",
+"F3500-B",
 ]
 
 function normalizeCarLoose(s: string) {
@@ -551,24 +590,71 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     .filter((l) => !/^ALTERNA/i.test(l))
 
   const findPosBlock = () => {
-    const candidates = [1, 9]
-    for (const startNum of candidates) {
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i] !== String(startNum)) continue
-        let count = 0
-        while (count < 8 && lines[i + count] === String(startNum + count)) count++
-        if (count >= 2) return { start: i, end: i + count, startNum, count }
+  const candidates = [1, 9]
+
+  for (const startNum of candidates) {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] !== String(startNum)) continue
+
+      const maxPos = startNum === 1 ? 8 : 16
+      const foundPositions: number[] = []
+      let cursor = i
+
+      while (cursor < lines.length && cursor - i < 12) {
+        let token = lines[cursor].trim()
+
+        // Correzione OCR frequente: "З" cirillico letto al posto di "3"
+        token = token.replace(/З/g, "3")
+
+        if (/^\d+$/.test(token)) {
+          const n = Number(token)
+
+          if (n >= startNum && n <= maxPos) {
+            if (!foundPositions.includes(n)) {
+              foundPositions.push(n)
+            }
+
+            cursor++
+            continue
+          }
+        }
+
+        // appena iniziano i nomi, il blocco posizioni è terminato
+        if (/[A-Za-z]/.test(token)) break
+
+        cursor++
+      }
+
+      if (foundPositions.length >= 2) {
+        const highestPosition = Math.max(...foundPositions)
+
+        // Il numero di righe deriva dall'ultima posizione riconosciuta,
+        // non dal numero di posizioni OCR effettivamente lette.
+        const count = highestPosition - startNum + 1
+
+        return {
+          start: i,
+          end: cursor,
+          startNum,
+          count,
+          positions: Array.from(
+            { length: count },
+            (_, index) => startNum + index
+          ),
+        }
       }
     }
-    return null
   }
+
+  return null
+}
 
   const posBlock = findPosBlock()
   if (!posBlock) return []
 
   const count = posBlock.count
-  const positions = lines.slice(posBlock.start, posBlock.end).map((x) => Number(x))
-  let cursor = posBlock.end
+const positions = posBlock.positions
+let cursor = posBlock.end
 
   const isName = (s: string) => {
     const t = String(s || "").trim()
