@@ -3776,7 +3776,7 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
   setUnknownDriverSelections({})
-}, [currentRace, selectedLeague, selectedLobby, championshipState])
+}, [currentRace, selectedLeague, selectedLobby])
 
 function normalizeDriverNameForChampionship(value: string) {
   return String(value || "")
