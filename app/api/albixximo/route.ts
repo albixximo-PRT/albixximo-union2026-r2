@@ -2040,14 +2040,38 @@ export async function POST(req: NextRequest) {
           qualiTexts.push(textAlt)
 
           const partAlt = parseQualificaFromColumnText(textAlt)
-          if (!polePilot) {
-            const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
-            if (p1Alt?.pilota) polePilot = p1Alt.pilota
-          }
 
-          for (const r of partAlt) {
-            mergeQualiRowSafe(qualiRowsMerged, r)
-          }
+// Se ALT è almeno completa quanto BASE e contiene almeno
+// lo stesso numero di coppie pilota+tempo valide,
+// preferiamo ALT per questo singolo screen.
+const useAltInsteadOfBase =
+  partAlt.length >= part.length &&
+  partAlt.filter((r) => r.pilota && r.tempo).length >=
+    part.filter((r) => r.pilota && r.tempo).length
+
+if (useAltInsteadOfBase) {
+  for (const r of partAlt) {
+    qualiRowsMerged.set(r.pos, {
+      ...r,
+      pilota: normalizePilot(r.pilota || ""),
+      auto: normalizeKnownCar(r.auto || ""),
+      tempo: normalizeTimeText((r.tempo || "").trim()),
+      distacco: normalizeGapText((r.distacco || "").trim()),
+    })
+  }
+
+  const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
+  if (p1Alt?.pilota) polePilot = p1Alt.pilota
+} else {
+  if (!polePilot) {
+    const p1Alt = partAlt.find((r) => r.pos === 1 && r.pilota)
+    if (p1Alt?.pilota) polePilot = p1Alt.pilota
+  }
+
+  for (const r of partAlt) {
+    mergeQualiRowSafe(qualiRowsMerged, r)
+  }
+}
 
           debugChunks.push(`FILE #${idx + 1} QUALI ALT — ${f.name}\n\n${textAlt}`)
         }
