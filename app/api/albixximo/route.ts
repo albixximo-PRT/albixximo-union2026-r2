@@ -1081,10 +1081,70 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
 
   const n = positions.length
 
-  // I nomi iniziano dopo l'ultimo numero posizione effettivamente
-  // riconosciuto nello screen.
-  let cursor =
-    Math.max(...validPositions.map((x) => x.index)) + 1
+// ---------------------------------------------------------
+// FALLBACK OCR P1 PRIMA DEL BLOCCO POSIZIONI
+//
+// Alcuni screen GT7 possono essere letti così:
+//
+// PILOTA_P1
+// 2
+// 4
+// 5
+// 6
+// 7
+// 8
+// PILOTA_P2
+// ...
+//
+// In questo caso OCR ha perso il numero "1" ma ha letto
+// correttamente il nome del vincitore PRIMA dei numeri.
+//
+// Recuperiamo quel nome senza modificare il comportamento
+// normale del parser.
+// ---------------------------------------------------------
+
+let leadingP1Name = ""
+
+if (
+  startNum === 1 &&
+  !validPositions.some((x) => x.pos === 1)
+) {
+  const firstPositionIndex = Math.min(
+    ...validPositions.map((x) => x.index)
+  )
+
+  for (let i = firstPositionIndex - 1; i >= 0; i--) {
+    const candidate = String(lines[i] || "").trim()
+
+    if (!candidate) continue
+
+    // Evita intestazioni / metadati / auto / tempi
+    if (
+      /GRAN TURISMO|THE REAL DRIVING SIMULATOR|UNION|GARA|LOBBY/i.test(
+        candidate
+      )
+    ) {
+      continue
+    }
+
+    if (/^\d{1,2}$/.test(candidate)) continue
+    if (candidate.includes(":")) continue
+    if (/^\+/.test(candidate)) continue
+    if (looksLikeKnownCarToken(candidate)) continue
+
+    if (/[A-Za-z]/.test(candidate)) {
+      leadingP1Name = normalizePilot(
+        candidate.replace(/\s+/g, "_")
+      )
+      break
+    }
+  }
+}
+
+// I nomi normali iniziano dopo l'ultimo numero posizione
+// effettivamente riconosciuto nello screen.
+let cursor =
+  Math.max(...validPositions.map((x) => x.index)) + 1
 
   const idxTempo = lines.findIndex(
   (l) => /^(TEMPO|TIME)$/i.test(l)
@@ -1118,6 +1178,12 @@ const stopAnyHeader =
   }
 
   const names: string[] = []
+
+// Se OCR ha letto il P1 prima del blocco numerico,
+// lo reinseriamo come primo pilota.
+if (leadingP1Name) {
+  names.push(leadingP1Name)
+}
 
   while (cursor < lines.length && names.length < n) {
     const s = lines[cursor]
