@@ -11282,19 +11282,20 @@ function editPilotIdFromLeagueDrawer(
 
   if (!newNormalized) return
 
+  const alreadyExists = workbenchDriverLeagueMap[league].some(
+    (pilot) =>
+      normalizeDriverNameForChampionship(pilot) === newNormalized &&
+      normalizeDriverNameForChampionship(pilot) !== oldNormalized
+  )
+
+  if (alreadyExists) {
+    window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
+    return
+  }
+
+  // 1. Aggiorna il pilota nel cassetto
   setWorkbenchDriverLeagueMap((prev) => {
     const next = cloneDriverLeagueMap(prev)
-
-    const alreadyExists = next[league].some(
-      (pilot) =>
-        normalizeDriverNameForChampionship(pilot) === newNormalized &&
-        normalizeDriverNameForChampionship(pilot) !== oldNormalized
-    )
-
-    if (alreadyExists) {
-      window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
-      return prev
-    }
 
     next[league] = next[league]
       .map((pilot) =>
@@ -11305,6 +11306,62 @@ function editPilotIdFromLeagueDrawer(
       .sort((a, b) =>
         a.localeCompare(b, "it", { sensitivity: "base" })
       )
+
+    return next
+  })
+
+  // 2. Aggiorna lo stesso ID in tutti i dati già salvati
+  setChampionshipState((prev) => {
+    const next = structuredClone(prev)
+
+    for (const raceState of Object.values(next.races)) {
+      if (!raceState) continue
+
+      for (const lobbyState of Object.values(raceState)) {
+        if (!lobbyState) continue
+
+        for (const snapshot of Object.values(lobbyState)) {
+          if (!snapshot) continue
+
+          snapshot.rows = (snapshot.rows || []).map((row) =>
+            normalizeDriverNameForChampionship(row.pilota) === oldNormalized
+              ? { ...row, pilota: newId }
+              : row
+          )
+
+          snapshot.finalRows = (snapshot.finalRows || []).map((row) =>
+            normalizeDriverNameForChampionship(row.pilota) === oldNormalized
+              ? { ...row, pilota: newId }
+              : row
+          )
+
+          snapshot.expectedDrivers = (snapshot.expectedDrivers || []).map(
+            (pilot) =>
+              normalizeDriverNameForChampionship(pilot) === oldNormalized
+                ? newId
+                : pilot
+          )
+        }
+      }
+    }
+
+    for (const raceData of Object.values(next.expectedDrivers || {})) {
+      if (!raceData) continue
+
+      for (const rankData of Object.values(raceData)) {
+        if (!rankData) continue
+
+        for (const lobby of Object.keys(rankData)) {
+          rankData[lobby] = (rankData[lobby] || []).map((pilot) =>
+            normalizeDriverNameForChampionship(pilot) === oldNormalized
+              ? newId
+              : pilot
+          )
+        }
+      }
+    }
+
+    next.driverCars = buildUnionDriverCarsFromRaces(next.races)
 
     return next
   })
