@@ -3384,7 +3384,7 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 
 const [highlightDrawerPilot, setHighlightDrawerPilot] = useState<string | null>(null)
 
-const [dismissedUnknownDriverId, setDismissedUnknownDriverId] = useState<string | null>(null)
+const [dismissedUnknownDriverIds, setDismissedUnknownDriverIds] = useState<string[]>([])
 
   const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
@@ -5782,7 +5782,7 @@ const unresolvedLeagueDrivers = leagueDriverResolution.unresolvedCandidates
 
 const activeUnknownDriver =
   unresolvedLeagueDrivers.find(
-    (driver) => driver.id !== dismissedUnknownDriverId
+    (driver) => !dismissedUnknownDriverIds.includes(driver.id)
   ) || null
 
 const displayRows = useMemo<DisplayRow[]>(() => {
@@ -15503,8 +15503,12 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 
 const leagueToOpen = activeUnknownDriver.league
 
-// Chiude questo popup
-setDismissedUnknownDriverId(activeUnknownDriver.id)
+// Chiude questo popup e lo considera già gestito
+setDismissedUnknownDriverIds((prev) =>
+  prev.includes(activeUnknownDriver.id)
+    ? prev
+    : [...prev, activeUnknownDriver.id]
+)
 
 // Apre il cassetto piloti
 setDrawerOpen(true)
