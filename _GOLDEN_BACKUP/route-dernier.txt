@@ -590,54 +590,17 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     .filter((l) => !/^ALTERNA/i.test(l))
 
   const findPosBlock = () => {
-  const candidates = [1, 9]
-
-  for (const startNum of candidates) {
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i] !== String(startNum)) continue
-
-      const maxCount = startNum === 1 ? 8 : 6
-      const foundPositions: number[] = []
-
-      let cursor = i
-
-      while (cursor < lines.length && cursor - i < 12) {
-        const raw = String(lines[cursor] || "").trim()
-
-        // OCR può leggere il numero 3 come carattere cirillico "З"
-        const normalized = raw === "З" ? "3" : raw
-
-        if (/^\d+$/.test(normalized)) {
-          const pos = Number(normalized)
-
-          if (
-            pos >= startNum &&
-            pos < startNum + maxCount &&
-            !foundPositions.includes(pos)
-          ) {
-            foundPositions.push(pos)
-          }
-        }
-
-        // Appena iniziano i nomi, il blocco delle posizioni è terminato
-        if (/[A-Za-z]/.test(raw)) break
-
-        cursor++
-      }
-
-      if (foundPositions.length >= 2) {
-        return {
-          start: i,
-          end: cursor,
-          startNum,
-          count: maxCount,
-        }
+    const candidates = [1, 9]
+    for (const startNum of candidates) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i] !== String(startNum)) continue
+        let count = 0
+        while (count < 8 && lines[i + count] === String(startNum + count)) count++
+        if (count >= 2) return { start: i, end: i + count, startNum, count }
       }
     }
+    return null
   }
-
-  return null
-}
 
   const posBlock = findPosBlock()
   if (!posBlock) return []
@@ -880,25 +843,29 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
   }
   if (startIndex === -1) return []
 
-  const maxCount = startNum === 1 ? 8 : 6
+  const positions: number[] = []
+  let cursor = startIndex
+  let expected = startNum
 
-const positions: number[] = Array.from(
-  { length: maxCount },
-  (_, index) => startNum + index
-)
+  while (cursor < lines.length) {
+    if (lines[cursor] === String(expected)) {
+      positions.push(expected)
+      expected++
+      cursor++
+      if (positions.length >= 16) break
+      continue
+    }
+    if (/TEMPO|PENALIT|MIGLIOR\s+GIRO/i.test(lines[cursor])) break
+    cursor++
+    if (positions.length > 0 && cursor - startIndex > 80) break
+  }
+  if (!positions.length) return []
 
-let cursor = startIndex
+  const lastPos = positions[positions.length - 1]
+  const lastPosIdx = lines.findIndex((l, i) => i >= startIndex && l === String(lastPos))
+  cursor = lastPosIdx === -1 ? startIndex : lastPosIdx + 1
 
-while (cursor < lines.length && cursor - startIndex < 12) {
-  const raw = String(lines[cursor] || "").trim()
-
-  // Appena iniziano i nomi, il blocco posizioni è terminato
-  if (/[A-Za-z]/.test(raw)) break
-
-  cursor++
-}
-
-const n = positions.length
+  const n = positions.length
 
   const idxTempo = lines.findIndex((l) => /^TEMPO$/i.test(l) || /TEMPO/i.test(l))
   const idxPen = lines.findIndex((l) => /PENALIT/i.test(l))
