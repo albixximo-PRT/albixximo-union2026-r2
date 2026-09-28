@@ -590,51 +590,105 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     .filter((l) => !/^ALTERNA/i.test(l))
 
   const findPosBlock = () => {
-  const candidates = [1, 9]
+    const candidates = [1, 9]
 
-  for (const startNum of candidates) {
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i] !== String(startNum)) continue
+    for (const startNum of candidates) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i] !== String(startNum)) continue
 
-      const maxPos = startNum === 1 ? 8 : 16
-      const foundPositions: number[] = []
-      let cursor = i
+        const maxPos = startNum === 1 ? 8 : 16
+        const foundPositions: number[] = []
+        let cursor = i
 
-      while (cursor < lines.length && cursor - i < 12) {
-        let token = lines[cursor].trim()
+        while (cursor < lines.length && cursor - i < 12) {
+          let token = lines[cursor].trim()
 
-        // Correzione OCR frequente: "З" cirillico letto al posto di "3"
-        token = token.replace(/З/g, "3")
+          // Correzione OCR frequente: "З" cirillico letto al posto di "3"
+          token = token.replace(/З/g, "3")
 
-        if (/^\d+$/.test(token)) {
-          const n = Number(token)
+          if (/^\d+$/.test(token)) {
+            const n = Number(token)
 
-          if (n >= startNum && n <= maxPos) {
-            if (!foundPositions.includes(n)) {
-              foundPositions.push(n)
+            if (n >= startNum && n <= maxPos) {
+              if (!foundPositions.includes(n)) {
+                foundPositions.push(n)
+              }
+
+              cursor++
+              continue
             }
-
-            cursor++
-            continue
           }
+
+          // appena iniziano i nomi, il blocco posizioni è terminato
+          if (/[A-Za-z]/.test(token)) break
+
+          cursor++
         }
 
-        // appena iniziano i nomi, il blocco posizioni è terminato
-        if (/[A-Za-z]/.test(token)) break
+        if (foundPositions.length >= 2) {
+          const highestPosition = Math.max(...foundPositions)
 
-        cursor++
+          // Il numero di righe deriva dall'ultima posizione riconosciuta,
+          // non dal numero di posizioni OCR effettivamente lette.
+          const count = highestPosition - startNum + 1
+
+          return {
+            start: i,
+            end: cursor,
+            startNum,
+            count,
+            positions: Array.from(
+              { length: count },
+              (_, index) => startNum + index
+            ),
+          }
+        }
       }
+    }
 
-      if (foundPositions.length >= 2) {
-        const highestPosition = Math.max(...foundPositions)
+    return null
+  }
 
-        // Il numero di righe deriva dall'ultima posizione riconosciuta,
-        // non dal numero di posizioni OCR effettivamente lette.
+  let posBlock = findPosBlock()
+
+  // FALLBACK OCR:
+  // alcuni screen GT7 alternano posizione e nome
+  // invece di fornire prima tutto il blocco 1..8 / 9..16.
+  // Entra SOLO se il parser normale non ha trovato il blocco.
+  if (!posBlock) {
+    const numericPositions: { index: number; value: number }[] = []
+
+    for (let i = 0; i < lines.length; i++) {
+      const token = lines[i].trim().replace(/З/g, "3")
+
+      if (!/^\d+$/.test(token)) continue
+
+      const n = Number(token)
+
+      if (n >= 1 && n <= 16) {
+        numericPositions.push({
+          index: i,
+          value: n,
+        })
+      }
+    }
+
+    if (numericPositions.length >= 2) {
+      const first = numericPositions[0].value
+      const startNum = first >= 9 ? 9 : 1
+      const maxPos = startNum === 1 ? 8 : 16
+
+      const valid = numericPositions.filter(
+        (p) => p.value >= startNum && p.value <= maxPos
+      )
+
+      if (valid.length >= 2) {
+        const highestPosition = Math.max(...valid.map((p) => p.value))
         const count = highestPosition - startNum + 1
 
-        return {
-          start: i,
-          end: cursor,
+        posBlock = {
+          start: valid[0].index,
+          end: valid[valid.length - 1].index + 1,
           startNum,
           count,
           positions: Array.from(
@@ -646,15 +700,11 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
     }
   }
 
-  return null
-}
-
-  const posBlock = findPosBlock()
   if (!posBlock) return []
 
   const count = posBlock.count
-const positions = posBlock.positions
-let cursor = posBlock.end
+  const positions = posBlock.positions
+  let cursor = posBlock.end
 
   const isName = (s: string) => {
     const t = String(s || "").trim()
@@ -664,7 +714,12 @@ let cursor = posBlock.end
     if (/^\+/.test(t)) return false
     if (t.includes(":")) return false
     if (/^[\-\.\s]+$/.test(t)) return false
-    if (/DISTACCO|MIGLIOR|GRAN|UNION|Dragon|Chiudi|Avanti|Alterna|Blue Moon|Speedway|Interno/i.test(t)) return false
+    if (
+      /DISTACCO|MIGLIOR|GRAN|UNION|Dragon|Chiudi|Avanti|Alterna|Blue Moon|Speedway|Interno/i.test(
+        t
+      )
+    )
+      return false
     if (looksLikeKnownCarToken(t)) return false
 
     return /[A-Za-z]/.test(t)
@@ -676,12 +731,19 @@ let cursor = posBlock.end
     if (isName(s)) names.push(normalizePilot(s))
     cursor++
   }
+
   while (names.length < count) names.push("")
 
   const isCar = (s: string) => {
     const t = String(s || "").trim()
+
     if (!t) return false
-    if (/MIGLIOR|DISTACCO|GRAN TURISMO|BLUE MOON|SPEEDWAY|INTERNO|CHIUDI|AVANTI|ALTERNA/i.test(t)) return false
+    if (
+      /MIGLIOR|DISTACCO|GRAN TURISMO|BLUE MOON|SPEEDWAY|INTERNO|CHIUDI|AVANTI|ALTERNA/i.test(
+        t
+      )
+    )
+      return false
     if (/^\d+$/.test(t)) return false
     if (/^\+/.test(t)) return false
     if (t.includes(":")) return false
@@ -691,30 +753,46 @@ let cursor = posBlock.end
     if (/\(\d{3}\)/.test(t)) return true
     if (/\bGr\.?4\b/i.test(t)) return true
     if (/\bTouring Car\b/i.test(t)) return true
+
     return false
   }
 
   const cars: string[] = []
   while (cursor < lines.length && cars.length < count) {
     const s = lines[cursor]
-    if (isCar(s)) cars.push(normalizeKnownCar(s))
+
+    if (isCar(s)) {
+      cars.push(normalizeKnownCar(s))
+    }
+
     cursor++
   }
+
   while (cars.length < count) cars.push("")
 
   const isLapTime = (s: string) => isLapTimeStrict(s)
+
   const times: string[] = []
   while (cursor < lines.length && times.length < count) {
-    if (isLapTime(lines[cursor])) times.push(normalizeTimeText(lines[cursor]))
+    if (isLapTime(lines[cursor])) {
+      times.push(normalizeTimeText(lines[cursor]))
+    }
+
     cursor++
   }
+
   while (times.length < count) times.push("")
 
   let gapsRaw: string[] = []
+
   const idxDistacco = lines.findIndex((l) => /DISTACCO/i.test(l))
+
   if (idxDistacco !== -1) {
     const after = lines.slice(idxDistacco + 1)
-    const gapRegex = /^(--\.\-\-\-|--\.\-\-\-|\+\d{2}\s*\.\s*\d{3}|\+\d+:\d{2}\.\d{3})$/
+
+    const gapRegex =
+      /^(--\.\---|--\.\---|\+\d{2}\s*\.\s*\d{3}|\+\d+:\d{2}\.\d{3})$/
+
     gapsRaw = after
       .filter((l) => gapRegex.test(l))
       .map((l) => normalizeGapText(l))
@@ -722,21 +800,36 @@ let cursor = posBlock.end
   }
 
   let distacchi: string[] = Array(count).fill("")
+
   const hasLeaderMarker = gapsRaw.some((g) => g.startsWith("--"))
+
   if (hasLeaderMarker) {
-    const onlyPlus = gapsRaw.filter((g) => g.startsWith("+")).slice(0, Math.max(0, count - 1))
+    const onlyPlus = gapsRaw
+      .filter((g) => g.startsWith("+"))
+      .slice(0, Math.max(0, count - 1))
+
     distacchi = [""].concat(onlyPlus)
-    while (distacchi.length < count) distacchi.push("")
+
+    while (distacchi.length < count) {
+      distacchi.push("")
+    }
+
     distacchi = distacchi.slice(0, count)
   } else {
     distacchi = gapsRaw.slice(0, count)
-    while (distacchi.length < count) distacchi.push("")
+
+    while (distacchi.length < count) {
+      distacchi.push("")
+    }
   }
 
   const out: QualiRow[] = []
+
   for (let i = 0; i < count; i++) {
     const pos = positions[i]
+
     if (!pos || Number.isNaN(pos)) continue
+
     out.push({
       pos,
       pilota: names[i] ?? "",
@@ -745,6 +838,7 @@ let cursor = posBlock.end
       distacco: distacchi[i] ?? "",
     })
   }
+
   return out
 }
 
