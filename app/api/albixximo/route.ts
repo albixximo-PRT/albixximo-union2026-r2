@@ -1188,20 +1188,30 @@ const stopAnyHeader =
   /^(TEMPO|TIME|PENALITÀ|PENALITA|PENALTY|MIGLIOR\s+GIRO|BEST\s+LAP)$/i
 
   const isName = (s: string) => {
-    const t = String(s || "").trim()
+  const t = String(s || "").trim()
 
-    if (!t) return false
-    if (/^\d+$/.test(t)) return false
-    if (stopAnyHeader.test(t)) return false
-    if (t.includes(":")) return false
-    if (/^\+/.test(t)) return false
-    if (/^[\-\.\s]+$/.test(t)) return false
-    if (looksLikeKnownCarToken(t)) return false
-    if (/\(\d{3}\)/.test(t)) return false
-    if (/'\d{2}\b/.test(t)) return false
+  if (!t) return false
+  if (/^\d+$/.test(t)) return false
+  if (stopAnyHeader.test(t)) return false
+  if (t.includes(":")) return false
+  if (/^\+/.test(t)) return false
+  if (/^[\-\.\s]+$/.test(t)) return false
+  if (looksLikeKnownCarToken(t)) return false
+  if (/\(\d{3}\)/.test(t)) return false
+  if (/'\d{2}\b/.test(t)) return false
 
-    return /[A-Za-z]/.test(t)
+  // Esclude intestazioni e metadati GT7 che possono comparire
+  // prima del nome pilota negli screen P9-P16.
+  if (
+    /GRAN TURISMO|THE REAL DRIVING SIMULATOR|RED BULL RING|UNION|GARA|LOBBY|CHIUDI|AVANTI|ALTERNA/i.test(
+      t
+    )
+  ) {
+    return false
   }
+
+  return /[A-Za-z]/.test(t)
+}
 
   const names: string[] = []
 
