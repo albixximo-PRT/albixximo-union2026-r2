@@ -13692,28 +13692,33 @@ boxShadow:
 
     {(dgMeasureType === "P" || dgMeasureType === "S") && (
   <>
-    <input
-      type="number"
-      min="0"
-      step="1"
-      placeholder="0"
-      value={penaltySeconds || ""}
-      onChange={(e) =>
-        setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
-      }
-      style={{
-        width: 82,
-        padding: "8px 10px",
-        borderRadius: 10,
-        border: "1px solid rgba(255,255,255,0.14)",
-        background: "rgba(0,0,0,0.26)",
-        color: "white",
-        textAlign: "center",
-        fontWeight: 900,
-        fontFamily:
-          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-      }}
-    />
+    <select
+  value={penaltySeconds || ""}
+  onChange={(e) =>
+    setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
+  }
+  style={{
+    width: 92,
+    padding: "8px 8px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.26)",
+    color: "white",
+    textAlign: "center",
+    fontWeight: 900,
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  }}
+>
+  <option value="">—</option>
+  {Array.from({ length: 16 }, (_, i) => (i + 1) * 5).map(
+    (seconds) => (
+      <option key={seconds} value={seconds}>
+        {seconds}
+      </option>
+    )
+  )}
+</select>
 
     <span
       style={{
@@ -13731,9 +13736,11 @@ boxShadow:
         fontSize: 12,
         fontWeight: 900,
         color:
-          penaltySeconds > 0
-            ? "#ffb3b3"
-            : "rgba(255,255,255,0.55)",
+  penaltySeconds > 0
+    ? dgMeasureType === "S"
+      ? "#aab4ff"
+      : "#ffb3b3"
+    : "rgba(255,255,255,0.55)",
       }}
     >
       {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
