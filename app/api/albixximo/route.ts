@@ -1146,12 +1146,12 @@ if (
 
     // Evita intestazioni / metadati / auto / tempi
     if (
-      /GRAN TURISMO|THE REAL DRIVING SIMULATOR|UNION|GARA|LOBBY/i.test(
-        candidate
-      )
-    ) {
-      continue
-    }
+  /GRAN TURISMO|SIMULATOR|UNION|GARA|LOBBY/i.test(
+    candidate
+  )
+) {
+  continue
+}
 
     if (/^\d{1,2}$/.test(candidate)) continue
     if (candidate.includes(":")) continue
