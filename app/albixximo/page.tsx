@@ -11874,9 +11874,9 @@ function applyPilotCorrections() {
     const draftValue = String(manualPilotDraft[row.sourcePosGara] ?? "").trim()
     const originalValue = String(row.pilota ?? "").trim()
 
-    if (draftValue && draftValue !== originalValue) {
-      cleaned[row.sourcePosGara] = draftValue
-    }
+    if (draftValue !== originalValue) {
+  cleaned[row.sourcePosGara] = draftValue
+}
   }
 
   
