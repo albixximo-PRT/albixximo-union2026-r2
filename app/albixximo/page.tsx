@@ -2539,13 +2539,16 @@ function renderPrtPenaltyCell({
       </span>
 
       <div
-        style={{
-          ...exportPenaltyTimeTextStyle,
-          justifySelf: "end",
-        }}
-      >
-        {formatPenaltyDisplay(penaltySeconds)}
-      </div>
+  style={{
+    ...exportPenaltyTimeTextStyle,
+    justifySelf: "end",
+    color: isPenalty
+      ? "rgba(220,53,69,0.98)"
+      : "rgba(105,105,255,0.98)",
+  }}
+>
+  {formatPenaltyDisplay(penaltySeconds)}
+</div>
     </div>
   )
 }
