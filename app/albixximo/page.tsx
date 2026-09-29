@@ -11763,8 +11763,9 @@ function setDgMeasureType(
     [key]: type,
   }))
 
-  // Il reclamo infondato non applica secondi al tempo gara.
-  if (type === "INFONDATO") {
+  // Se non c'è una penalità a tempo, azzera sempre i secondi.
+  // Vale sia tornando su "—" sia scegliendo INFONDATO.
+  if (type === "NONE" || type === "INFONDATO") {
     setPenalties((prev) => {
       const next = { ...prev }
       delete next[key]
