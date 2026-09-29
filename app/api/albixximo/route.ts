@@ -625,24 +625,32 @@ function parseQualificaFromColumnText(rawText: string): QualiRow[] {
           cursor++
         }
 
-        if (foundPositions.length >= 2) {
-          const highestPosition = Math.max(...foundPositions)
+        // Per il blocco 1-8 continuiamo a richiedere almeno 2 posizioni:
+// mantiene invariato il comportamento già collaudato.
+//
+// Per il blocco 9-16 accettiamo anche UNA SOLA posizione,
+// perché nelle lobby corte può esistere uno screen contenente
+// soltanto P9.
+const minimumPositionsRequired = startNum === 9 ? 1 : 2
 
-          // Il numero di righe deriva dall'ultima posizione riconosciuta,
-          // non dal numero di posizioni OCR effettivamente lette.
-          const count = highestPosition - startNum + 1
+if (foundPositions.length >= minimumPositionsRequired) {
+  const highestPosition = Math.max(...foundPositions)
 
-          return {
-            start: i,
-            end: cursor,
-            startNum,
-            count,
-            positions: Array.from(
-              { length: count },
-              (_, index) => startNum + index
-            ),
-          }
-        }
+  // Il numero di righe deriva dall'ultima posizione riconosciuta,
+  // non dal numero di posizioni OCR effettivamente lette.
+  const count = highestPosition - startNum + 1
+
+  return {
+    start: i,
+    end: cursor,
+    startNum,
+    count,
+    positions: Array.from(
+      { length: count },
+      (_, index) => startNum + index
+    ),
+  }
+}
       }
     }
 
@@ -1054,7 +1062,25 @@ function parseGaraFromColumnText(rawText: string): RaceRow[] {
     numericPositions.push({ pos, index: i })
   }
 
-  if (!numericPositions.length) return []
+  // Fallback per screen gara P9-P16 con una sola riga:
+// a volte OCR perde il numero "9", pur leggendo correttamente
+// tutto il resto dello screen.
+if (!numericPositions.length) {
+  const hasRaceData =
+    lines.some((l) => /^TEMPO$/i.test(l)) &&
+    lines.some((l) => /MIGLIOR\s*GIRO/i.test(l))
+
+  const hasKnownCar = lines.some((l) => looksLikeKnownCarToken(l))
+
+  if (hasRaceData && hasKnownCar) {
+    numericPositions.push({
+      pos: 9,
+      index: -1,
+    })
+  } else {
+    return []
+  }
+}
 
   // Se compare almeno una posizione >= 9 siamo nello screen P9-P16.
   // Altrimenti siamo nello screen P1-P8.
