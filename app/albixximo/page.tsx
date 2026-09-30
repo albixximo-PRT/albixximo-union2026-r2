@@ -11778,8 +11778,22 @@ clearCurrentWorkbench(false)
     snapshot.manualGaraOverride || String(snapshot.raceNumber || currentRace)
   )
 
-  setCsv(snapshot.csv || "")
-  setRows(Array.isArray(snapshot.rows) ? snapshot.rows : [])
+  const isA27VicconegtException =
+  currentRace === 1 &&
+  league === "AMA" &&
+  lobby === "A27"
+
+const reopenedRows = Array.isArray(snapshot.rows)
+  ? snapshot.rows.filter(
+      (row) =>
+        !isA27VicconegtException ||
+        normalizeDriverLookupName(row.pilota) !==
+          normalizeDriverLookupName("OES-Vicconegt69")
+    )
+  : []
+
+setCsv(snapshot.csv || "")
+setRows(reopenedRows)
   setUnionMeta(
     snapshot.unionMeta && typeof snapshot.unionMeta === "object"
       ? {
