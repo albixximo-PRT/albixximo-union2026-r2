@@ -10833,6 +10833,62 @@ if (isA20Race1ProAma) {
     } as ExtractRow)
   }
 }
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A19
+// Praetorian_001 e FMC_Frtta18 sono NC.
+// ARGAMERR e SMI_Kaiser restano assenti.
+// Correzione confinata esclusivamente alla lobby A19.
+const isA19Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A19"
+
+if (isA19Race1ProAma) {
+  const a19SpecialRows = [
+    {
+      posGara: 9,
+      pilota: "Praetorian_001",
+      auto: "GT-R NISMO GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "",
+    },
+    {
+      posGara: 10,
+      pilota: "FMC_Frtta18",
+      auto: "RC F GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "",
+    },
+  ] as ExtractRow[]
+
+  for (const specialRow of a19SpecialRows) {
+    const specialKey = normalizeDriverLookupName(specialRow.pilota)
+
+    const existingIndex = extractedRows.findIndex(
+      (row: ExtractRow) =>
+        normalizeDriverLookupName(row.pilota) === specialKey
+    )
+
+    if (existingIndex >= 0) {
+      extractedRows[existingIndex] = {
+        ...extractedRows[existingIndex],
+        ...specialRow,
+        auto:
+          specialRow.auto ||
+          extractedRows[existingIndex].auto ||
+          "",
+      }
+    } else {
+      extractedRows.push(specialRow)
+    }
+  }
+
+  extractedRows.sort(
+    (a: ExtractRow, b: ExtractRow) =>
+      Number(a.posGara || 999) - Number(b.posGara || 999)
+  )
+}
 // FIX MIRATO — Gara 1 • PRO AMA • Lobby A26
 // Zagaracing è presente correttamente nel RAW OCR sia in qualifica sia in gara,
 // ma viene perso nel matching finale, causando lo slittamento delle righe 1-8.
