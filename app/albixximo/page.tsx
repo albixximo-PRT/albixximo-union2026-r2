@@ -10781,15 +10781,16 @@ const detectedLeague = normalizeLeagueKey(nextUnionMeta.lega)
 
 const effectiveImportLeague =
   targetLeague || detectedLeague || selectedLeague
-  // FIX MIRATO — Gara 1 • PRO AMA • Lobby A20
-// DCT_Pescepoldo compare nello screen qualifica ma non nello screen gara principale:
-// viene aggiunto come NC esclusivamente in questa lobby.
+
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A20
 const isA20Race1ProAma =
   currentRace === 1 &&
   effectiveImportLeague === "PRO AMA" &&
   String(selectedLobby || "").trim().toUpperCase() === "A20"
 
 if (isA20Race1ProAma) {
+  // DCT_Pescepoldo compare nello screen qualifica ma non nello screen gara principale:
+  // viene aggiunto come NC esclusivamente in questa lobby.
   const pescepoldoQuali = extractedQualiRows.find(
     (q: QualiRow) =>
       normalizeDriverLookupName(q.pilota) ===
@@ -10810,6 +10811,25 @@ if (isA20Race1ProAma) {
       tempoTotaleGara: "NC",
       distaccoDalPrimo: "NC",
       migliorGiroGara: "1:33.880",
+    } as ExtractRow)
+  }
+
+  // ASC-LupO viene letto dall'OCR nello screen gara,
+  // ma viene perso durante la costruzione delle raceRows.
+  const lupoAlreadyInRace = extractedRows.some(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("ASC-LupO")
+  )
+
+  if (!lupoAlreadyInRace) {
+    extractedRows.push({
+      posGara: 8,
+      pilota: "ASC-LupO",
+      auto: "RS 5 Turbo DTM '19",
+      tempoTotaleGara: "+44.856",
+      distaccoDalPrimo: "+44.856",
+      migliorGiroGara: "1:20.499",
     } as ExtractRow)
   }
 }
