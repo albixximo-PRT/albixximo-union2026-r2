@@ -11683,37 +11683,14 @@ function confirmSaveCurrentLeague() {
 
   if (!saveLobbyKey) return
 
-  // Eccezione Gara 1 · AMA · A27
-// OES-Vicconegt69 ritirato: non deve figurare in alcuna classifica
-const excludeVicconegtA27 =
-  currentRace === 1 &&
-  saveLeagueKey === "AMA" &&
-  saveLobbyKey === "A27"
-
-const cleanExpectedDrivers = excludeVicconegtA27
-  ? expectedLobbyDrivers.filter(
-      (driver) =>
-        normalizeDriverNameForChampionship(driver) !==
-        normalizeDriverNameForChampionship("OES-Vicconegt69")
-    )
-  : expectedLobbyDrivers
-
-const cleanFinalRows = excludeVicconegtA27
-  ? finalRows.filter(
-      (row) =>
-        normalizeDriverNameForChampionship(row.pilota) !==
-        normalizeDriverNameForChampionship("OES-Vicconegt69")
-    )
-  : finalRows
-
   const snapshot: SavedLeagueSnapshot = {
-    savedAt: new Date().toISOString(),
-    league: saveLeagueKey,
-    raceNumber: currentRace,
-    expectedDrivers: cleanExpectedDrivers,
-csv: finalCsv,
-rows,
-finalRows: cleanFinalRows,
+  savedAt: new Date().toISOString(),
+  league: saveLeagueKey,
+  raceNumber: currentRace,
+  expectedDrivers: expectedLobbyDrivers,
+  csv: finalCsv,
+  rows,
+  finalRows,
     unionMeta,
 penalties,
 dgMeasureTypes,
