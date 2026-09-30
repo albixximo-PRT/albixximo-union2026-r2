@@ -10833,6 +10833,92 @@ if (isA20Race1ProAma) {
     } as ExtractRow)
   }
 }
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A26
+// Zagaracing è presente correttamente nel RAW OCR sia in qualifica sia in gara,
+// ma viene perso nel matching finale, causando lo slittamento delle righe 1-8.
+const isA26Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A26"
+
+if (isA26Race1ProAma) {
+  const zagaRace = extractedRows.find(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("Zagaracing")
+  )
+
+  if (!zagaRace) {
+    const firstEight = [
+      {
+        posGara: 1,
+        pilota: "Zagaracing",
+        auto: "GT-R NISMO GT500 '16",
+        tempoTotaleGara: "49:25.006",
+        distaccoDalPrimo: "49:25.006",
+        migliorGiroGara: "1:20.381",
+      },
+      {
+        posGara: 2,
+        pilota: "TLM_RiKaS",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+24.373",
+        distaccoDalPrimo: "+24.373",
+        migliorGiroGara: "1:21.457",
+      },
+      {
+        posGara: 3,
+        pilota: "Davide 1972 Ita",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+33.805",
+        distaccoDalPrimo: "+33.805",
+        migliorGiroGara: "1:21.387",
+      },
+      {
+        posGara: 4,
+        pilota: "snoop",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+39.768",
+        distaccoDalPrimo: "+39.768",
+        migliorGiroGara: "1:21.059",
+      },
+      {
+        posGara: 5,
+        pilota: "GTID-D3sTrOX",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+47.187",
+        distaccoDalPrimo: "+47.187",
+        migliorGiroGara: "1:21.263",
+      },
+      {
+        posGara: 6,
+        pilota: "Flippo-Trippo",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+54.528",
+        distaccoDalPrimo: "+54.528",
+        migliorGiroGara: "1:22.147",
+      },
+      {
+        posGara: 7,
+        pilota: "ErMau07",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+55.560",
+        distaccoDalPrimo: "+55.560",
+        migliorGiroGara: "1:20.295",
+      },
+      {
+        posGara: 8,
+        pilota: "CBR_FELIX",
+        auto: "RC F GT500 '16",
+        tempoTotaleGara: "+1:13.015",
+        distaccoDalPrimo: "+1:13.015",
+        migliorGiroGara: "1:21.566",
+      },
+    ] as ExtractRow[]
+
+    extractedRows.splice(0, 8, ...firstEight)
+  }
+}
 
 let rowsWithAliases = extractedRows
 
