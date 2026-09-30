@@ -5607,11 +5607,14 @@ console.log(
   .filter(([key]) => key.startsWith(`${selectedLeague}:`))
   .reduce<Record<string, string>>((acc, [key, correctedId]) => {
     const originalNormalizedId = key.slice(selectedLeague.length + 1)
-    const cleanCorrectedId = String(correctedId || "").trim()
 
-    if (originalNormalizedId && cleanCorrectedId) {
-      acc[originalNormalizedId] = cleanCorrectedId
-      acc[normalizeDriverLookupName(cleanCorrectedId)] = cleanCorrectedId
+    const officialPilot = officialLeaguePilots.find(
+      (pilot) =>
+        normalizeDriverLookupName(pilot) === originalNormalizedId
+    )
+
+    if (officialPilot) {
+      acc[normalizeDriverLookupName(correctedId)] = officialPilot
     }
 
     return acc
@@ -11680,14 +11683,37 @@ function confirmSaveCurrentLeague() {
 
   if (!saveLobbyKey) return
 
+  // Eccezione Gara 1 · AMA · A27
+// OES-Vicconegt69 ritirato: non deve figurare in alcuna classifica
+const excludeVicconegtA27 =
+  currentRace === 1 &&
+  saveLeagueKey === "AMA" &&
+  saveLobbyKey === "A27"
+
+const cleanExpectedDrivers = excludeVicconegtA27
+  ? expectedLobbyDrivers.filter(
+      (driver) =>
+        normalizeDriverNameForChampionship(driver) !==
+        normalizeDriverNameForChampionship("OES-Vicconegt69")
+    )
+  : expectedLobbyDrivers
+
+const cleanFinalRows = excludeVicconegtA27
+  ? finalRows.filter(
+      (row) =>
+        normalizeDriverNameForChampionship(row.pilota) !==
+        normalizeDriverNameForChampionship("OES-Vicconegt69")
+    )
+  : finalRows
+
   const snapshot: SavedLeagueSnapshot = {
     savedAt: new Date().toISOString(),
     league: saveLeagueKey,
     raceNumber: currentRace,
-    expectedDrivers: expectedLobbyDrivers,
-    csv: finalCsv,
-    rows,
-    finalRows,
+    expectedDrivers: cleanExpectedDrivers,
+csv: finalCsv,
+rows,
+finalRows: cleanFinalRows,
     unionMeta,
 penalties,
 dgMeasureTypes,
