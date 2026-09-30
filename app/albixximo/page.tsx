@@ -10781,6 +10781,38 @@ const detectedLeague = normalizeLeagueKey(nextUnionMeta.lega)
 
 const effectiveImportLeague =
   targetLeague || detectedLeague || selectedLeague
+  // FIX MIRATO — Gara 1 • PRO AMA • Lobby A20
+// DCT_Pescepoldo compare nello screen qualifica ma non nello screen gara principale:
+// viene aggiunto come NC esclusivamente in questa lobby.
+const isA20Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A20"
+
+if (isA20Race1ProAma) {
+  const pescepoldoQuali = extractedQualiRows.find(
+    (q: QualiRow) =>
+      normalizeDriverLookupName(q.pilota) ===
+      normalizeDriverLookupName("DCT_Pescepoldo")
+  )
+
+  const pescepoldoAlreadyInRace = extractedRows.some(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("DCT_Pescepoldo")
+  )
+
+  if (pescepoldoQuali && !pescepoldoAlreadyInRace) {
+    extractedRows.push({
+      posGara: 9,
+      pilota: "DCT_Pescepoldo",
+      auto: "GT-R NISMO GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "1:33.880",
+    } as ExtractRow)
+  }
+}
 
 let rowsWithAliases = extractedRows
 
