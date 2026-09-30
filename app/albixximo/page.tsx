@@ -5607,14 +5607,11 @@ console.log(
   .filter(([key]) => key.startsWith(`${selectedLeague}:`))
   .reduce<Record<string, string>>((acc, [key, correctedId]) => {
     const originalNormalizedId = key.slice(selectedLeague.length + 1)
+    const cleanCorrectedId = String(correctedId || "").trim()
 
-    const officialPilot = officialLeaguePilots.find(
-      (pilot) =>
-        normalizeDriverLookupName(pilot) === originalNormalizedId
-    )
-
-    if (officialPilot) {
-      acc[normalizeDriverLookupName(correctedId)] = officialPilot
+    if (originalNormalizedId && cleanCorrectedId) {
+      acc[originalNormalizedId] = cleanCorrectedId
+      acc[normalizeDriverLookupName(cleanCorrectedId)] = cleanCorrectedId
     }
 
     return acc
