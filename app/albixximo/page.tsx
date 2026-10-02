@@ -5472,7 +5472,17 @@ const tieColor =
         {index + 1}
       </span>
     ) : (
-      <PosBadge pos={index + 1} />
+      <span
+  style={{
+    display: "inline-flex",
+    borderRadius: 12,
+    boxShadow: tie.isTied
+      ? "0 0 5px rgba(255,255,255,0.22)"
+      : "none",
+  }}
+>
+  <PosBadge pos={index + 1} />
+</span>
     )
   ) : (
     <span
@@ -5533,15 +5543,15 @@ const tieColor =
   <span
     style={{
       position: "absolute",
-      right: 0,
+      right: -5,
       top: tie.isFirst ? "50%" : -1,
       bottom: tie.isLast ? "50%" : -1,
-      width: 2,
+      width: 1,
       borderRadius: 3,
       background:
         "linear-gradient(90deg, #c48c12, #fff1a6, #ffd700)",
       boxShadow:
-        "0 0 6px #ffd700, 0 0 15px rgba(255,215,0,0.9), 0 0 25px rgba(255,185,0,0.4)",
+  "0 0 3px rgba(255,215,0,0.65), 0 0 7px rgba(255,215,0,0.25)",
       pointerEvents: "none",
     }}
   />
