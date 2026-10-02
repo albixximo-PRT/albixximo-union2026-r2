@@ -5544,16 +5544,16 @@ const tieColor =
     style={{
       position: "absolute",
       right: -5,
-      top: tie.isFirst ? "15%" : -1,
-      bottom: tie.isLast ? "15%" : -1,
-      width: 1,
-      borderRadius: 3,
-      background: "#FFD700",
-      boxShadow:
-        "0 0 3px #FFD700, " +
-        "0 0 8px rgba(255,215,0,0.95), " +
-        "0 0 16px rgba(255,215,0,0.65), " +
-        "0 0 25px rgba(255,215,0,0.30)",
+      top: tie.isFirst ? "25%" : -1,
+bottom: tie.isLast ? "25%" : -1,
+width: 1.5,
+borderRadius: 3,
+background: "#FFD700",
+boxShadow:
+  "0 0 2px 1px #FFF3A0, " +
+  "0 0 6px 2px #FFD700, " +
+  "0 0 12px 3px rgba(255,215,0,0.85), " +
+  "0 0 22px 5px rgba(255,215,0,0.45)",
       pointerEvents: "none",
     }}
   />
