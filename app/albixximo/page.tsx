@@ -67,7 +67,7 @@ const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
 
 type ChampionshipLeagueKey = UnionRankKey
 
-type DgMeasureType = "NONE" | "P" | "S" | "INFONDATO"
+type DgMeasureType = "NONE" | "P" | "S" | "P_S" | "INFONDATO"
 type DgSpecialMeasure =
   | "NEXT_RACE_DSQ"
   | "NEXT_RACE_GRID_MINUS_5"
@@ -2434,6 +2434,7 @@ function renderPrtMetaCell({
 }
 
 
+
 function renderPrtPenaltyCell({
   row,
   penalties,
@@ -2505,10 +2506,78 @@ function renderPrtPenaltyCell({
     )
   }
 
-  // Segnalazioni relative alla prossima gara:
-// vengono visualizzate senza modificare i tempi.
-if (dgMeasureType === "S" && specialMeasureLabel) {
-  return (
+  const hasPenalty =
+    (dgMeasureType === "P" ||
+      dgMeasureType === "S" ||
+      dgMeasureType === "P_S") &&
+    penaltySeconds > 0
+
+  const hasSpecialMeasure =
+    (dgMeasureType === "S" || dgMeasureType === "P_S") &&
+    !!specialMeasureLabel
+
+  if (!hasPenalty && !hasSpecialMeasure) {
+    return "-"
+  }
+
+  const penaltyElement = hasPenalty ? (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
+        alignItems: "center",
+        width: "100%",
+      }}
+    >
+      <div />
+
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          justifySelf: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+          background:
+            dgMeasureType === "S"
+              ? "rgba(105,105,255,0.98)"
+              : "rgba(220,53,69,0.98)",
+          border:
+            dgMeasureType === "S"
+              ? "1px solid rgba(155,165,255,0.90)"
+              : "1px solid rgba(255,90,105,0.85)",
+          boxShadow:
+            dgMeasureType === "S"
+              ? "0 0 14px rgba(105,120,255,0.38)"
+              : "0 0 13px rgba(220,53,69,0.30)",
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        {dgMeasureType === "S" ? "S" : "P"}
+      </span>
+
+      <div
+        style={{
+          ...exportPenaltyTimeTextStyle,
+          justifySelf: "end",
+          color:
+            dgMeasureType === "S"
+              ? "rgba(105,105,255,0.98)"
+              : "rgba(220,53,69,0.98)",
+        }}
+      >
+        {formatPenaltyDisplay(penaltySeconds)}
+      </div>
+    </div>
+  ) : null
+
+  const specialMeasureElement = hasSpecialMeasure ? (
     <div
       style={{
         display: "grid",
@@ -2518,7 +2587,6 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
         color: "rgba(105,105,255,0.98)",
       }}
     >
-      {/* Spazio speculare: mantiene S allineata a P */}
       <div />
 
       <span
@@ -2571,76 +2639,22 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
         )}
       </span>
     </div>
-  )
-}
-
-  if (
-    (dgMeasureType !== "P" && dgMeasureType !== "S") ||
-    penaltySeconds <= 0
-  ) {
-    return "-"
-  }
-
-  const isPenalty = dgMeasureType === "P"
+  ) : null
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "88px 1fr 88px",
-        alignItems: "center",
+        gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
         width: "100%",
       }}
     >
-      {/* Spazio speculare al tempo: mantiene P/S al centro reale */}
-      <div />
-
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          justifySelf: "center",
-          width: 38,
-          height: 26,
-          borderRadius: 999,
-
-          background: isPenalty
-            ? "rgba(220,53,69,0.98)"
-            : "rgba(105,105,255,0.98)",
-
-          border: isPenalty
-            ? "1px solid rgba(255,90,105,0.85)"
-            : "1px solid rgba(155,165,255,0.90)",
-
-          boxShadow: isPenalty
-            ? "0 0 13px rgba(220,53,69,0.30)"
-            : "0 0 14px rgba(105,120,255,0.38)",
-
-          color: "#ffffff",
-          fontSize: 13,
-          fontWeight: 950,
-          lineHeight: 1,
-          flexShrink: 0,
-        }}
-      >
-        {dgMeasureType}
-      </span>
-
-      <div
-        style={{
-          ...exportPenaltyTimeTextStyle,
-          justifySelf: "end",
-          color: isPenalty
-            ? "rgba(220,53,69,0.98)"
-            : "rgba(105,105,255,0.98)",
-        }}
-      >
-        {formatPenaltyDisplay(penaltySeconds)}
-      </div>
+      {penaltyElement}
+      {specialMeasureElement}
     </div>
   )
 }
+
 
 
 const PRT_TABLE_STYLES = {
@@ -12207,7 +12221,8 @@ function setDgMeasureType(
     ...prev,
     [key]: type,
   }))
-  if (type !== "S") {
+  if (type !== "S" && type !== "P_S") {
+    
   setDgSpecialMeasures((prev) => {
     const next = { ...prev }
     delete next[key]
@@ -12217,7 +12232,7 @@ function setDgMeasureType(
 
   // Se non c'è una penalità a tempo, azzera sempre i secondi.
   // Vale sia tornando su "—" sia scegliendo INFONDATO.
-  if (type === "NONE" || type === "INFONDATO") {
+  if (type === "NONE" || type === "INFONDATO" || type === "S") {
     setPenalties((prev) => {
       const next = { ...prev }
       delete next[key]
@@ -14119,7 +14134,7 @@ boxShadow:
     }}
   >
     <select
-      value={dgMeasureType}
+      value={dgMeasureType === "P_S" ? "P_S" : dgMeasureType}
       onChange={(e) =>
         setDgMeasureType(
           row.sourcePosGara,
@@ -14140,97 +14155,121 @@ boxShadow:
       <option value="NONE">—</option>
       <option value="P">PENALITÀ</option>
       <option value="S">SEGNALAZIONE</option>
+      <option value="P_S">PENALITÀ + SEGNALAZIONE</option>
       <option value="INFONDATO">INFONDATO</option>
     </select>
 
-    {(dgMeasureType === "P" || dgMeasureType === "S") && (
+    {(dgMeasureType === "P" || dgMeasureType === "S" || dgMeasureType === "P_S") && (
   <>
-    <select
-  value={dgSpecialMeasures[key] || penaltySeconds || ""}
-  onChange={(e) => {
-    const value = e.target.value
+  {/* PENALITÀ IN SECONDI */}
+  {(dgMeasureType === "P" || dgMeasureType === "P_S") && (
+    <>
+      <select
+        value={penaltySeconds || ""}
+        onChange={(e) =>
+          setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
+        }
+        style={{
+          width: 92,
+          maxWidth: "100%",
+          padding: "8px 8px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(0,0,0,0.26)",
+          color: "white",
+          textAlign: "center",
+          fontWeight: 900,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        }}
+      >
+        <option value="">—</option>
+        {Array.from({ length: 16 }, (_, i) => (i + 1) * 5).map(
+          (seconds) => (
+            <option key={seconds} value={seconds}>
+              {seconds}
+            </option>
+          )
+        )}
+      </select>
 
-    if (
-      dgMeasureType === "S" &&
-      (value === "NEXT_RACE_DSQ" ||
-        value === "NEXT_RACE_GRID_MINUS_5")
-    ) {
-      setDgSpecialMeasures((prev) => ({
-        ...prev,
-        [key]: value,
-      }))
-
-      setUnionPenaltySeconds(row.sourcePosGara, "")
-    } else {
-      setDgSpecialMeasures((prev) => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
-
-      setUnionPenaltySeconds(row.sourcePosGara, value)
-    }
-  }}
-  style={{
-    width: dgMeasureType === "S" ? 320 : 92,
-maxWidth: "100%",
-    padding: "8px 8px",
-    borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.26)",
-    color: "white",
-    textAlign: "center",
-    fontWeight: 900,
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  }}
->
-  <option value="">—</option>
-  {dgMeasureType === "S" && (
-  <>
-    <option value="NEXT_RACE_DSQ">
-      SQUALIFICA DALLA PROSSIMA GARA
-    </option>
-    <option value="NEXT_RACE_GRID_MINUS_5">
-      -5 POSIZIONI IN GRIGLIA PROSSIMA GARA
-    </option>
-  </>
-)}
-  {Array.from({ length: 16 }, (_, i) => (i + 1) * 5).map(
-    (seconds) => (
-      <option key={seconds} value={seconds}>
-        {seconds}
-      </option>
-    )
+      <span
+        style={{
+          fontSize: 12,
+          opacity: 0.72,
+          fontWeight: 800,
+        }}
+      >
+        sec
+      </span>
+    </>
   )}
-</select>
 
-    <span
-      style={{
-        fontSize: 12,
-        opacity: 0.72,
-        fontWeight: 800,
+  {/* SEGNALAZIONE */}
+  {(dgMeasureType === "S" || dgMeasureType === "P_S") && (
+    <select
+      value={dgSpecialMeasures[key] || ""}
+      onChange={(e) => {
+        const value = e.target.value
+
+        setDgSpecialMeasures((prev) => {
+          const next = { ...prev }
+
+          if (
+            value === "NEXT_RACE_DSQ" ||
+            value === "NEXT_RACE_GRID_MINUS_5"
+          ) {
+            next[key] = value
+          } else {
+            delete next[key]
+          }
+
+          return next
+        })
       }}
-    >
-      sec
-    </span>
-
-    <div
       style={{
-        minWidth: 88,
-        fontSize: 12,
+        width: 320,
+        maxWidth: "100%",
+        padding: "8px 8px",
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(0,0,0,0.26)",
+        color: "white",
+        textAlign: "center",
         fontWeight: 900,
-        color:
-  penaltySeconds > 0
-    ? dgMeasureType === "S"
-      ? "#aab4ff"
-      : "#ffb3b3"
-    : "rgba(255,255,255,0.55)",
+        fontFamily:
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       }}
     >
-      {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
-    </div>
-  </>
+      <option value="">—</option>
+
+      <option value="NEXT_RACE_DSQ">
+        SQUALIFICA DALLA PROSSIMA GARA
+      </option>
+
+      <option value="NEXT_RACE_GRID_MINUS_5">
+        -5 POSIZIONI IN GRIGLIA PROSSIMA GARA
+      </option>
+    </select>
+  )}
+
+  {/* RIEPILOGO PENALITÀ */}
+  <div
+    style={{
+      minWidth: 88,
+      fontSize: 12,
+      fontWeight: 900,
+      color:
+        penaltySeconds > 0
+          ? "#ffb3b3"
+          : "rgba(255,255,255,0.55)",
+    }}
+  >
+    {penaltySeconds > 0
+      ? formatPenaltyDisplay(penaltySeconds)
+      : "-"}
+  </div>
+</>
 )}
   </div>
 </TableCell>
