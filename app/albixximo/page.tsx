@@ -5475,23 +5475,57 @@ const tieGroups = leagueRows.map((driver, index) => {
   ))}
 </div>
 
-  {tie.isTied && (
+  {/* Filo dorato nei posti condivisi */}
+{tie.isTied && !tie.isFirst && (
+  <>
     <span
       style={{
         position: "absolute",
-        right: 0,
-        top: tie.isFirst ? "50%" : -1,
-        bottom: tie.isLast ? "50%" : -1,
-        width: 3,
-        borderRadius: 3,
+        left: "50%",
+        top: 0,
+        bottom: 0,
+        width: 1,
         background:
-          "linear-gradient(90deg, #b46aff, #f0d4ff, #b46aff)",
-        boxShadow:
-          "0 0 5px #b46aff, 0 0 12px rgba(180,106,255,0.85)",
+          "repeating-linear-gradient(to bottom, rgba(255,215,0,0.55) 0px, rgba(255,215,0,0.55) 3px, transparent 3px, transparent 9px)",
+        boxShadow: "0 0 5px rgba(255,215,0,0.35)",
         pointerEvents: "none",
       }}
     />
-  )}
+    <span
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        width: 4,
+        height: 4,
+        borderRadius: "50%",
+        background: "#ffe48a",
+        boxShadow: "0 0 8px #ffd700",
+        transform: "translate(-38%, -50%)",
+        pointerEvents: "none",
+      }}
+    />
+  </>
+)}
+
+{/* Lama esterna oro glow */}
+{tie.isTied && (
+  <span
+    style={{
+      position: "absolute",
+      right: 0,
+      top: tie.isFirst ? "50%" : -1,
+      bottom: tie.isLast ? "50%" : -1,
+      width: 3,
+      borderRadius: 3,
+      background:
+        "linear-gradient(90deg, #c48c12, #fff1a6, #ffd700)",
+      boxShadow:
+        "0 0 6px #ffd700, 0 0 15px rgba(255,215,0,0.9), 0 0 25px rgba(255,185,0,0.4)",
+      pointerEvents: "none",
+    }}
+  />
+)}
 </TableCell>
 
                                     <TableCell
