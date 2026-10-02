@@ -5147,6 +5147,23 @@ const hasChampionshipResults = leagueRows.some(
 
 const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
+const tieGroups = leagueRows.map((driver, index) => {
+  const previous = leagueRows[index - 1]
+  const next = leagueRows[index + 1]
+
+  const tiedWithPrevious =
+    !!previous && previous.totalPoints === driver.totalPoints
+
+  const tiedWithNext =
+    !!next && next.totalPoints === driver.totalPoints
+
+  return {
+    isTied: tiedWithPrevious || tiedWithNext,
+    isFirst: !tiedWithPrevious && tiedWithNext,
+    isLast: tiedWithPrevious && !tiedWithNext,
+  }
+})
+
   const championshipCircuits: Record<
   number,
   { name: string; flagSrc: string; isLogo?: boolean }
@@ -5364,6 +5381,8 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
             }}
           >
             {leagueRows.map((driver, index) => {
+  const tie = tieGroups[index]
+
   return (
                 <tr
                   key={`${driver.pilota}-${index}`}
@@ -5398,31 +5417,81 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
                   }}
                 >
                   <TableCell
-                    align="center"
-                    style={{
-                      ...s.col.pos,
-                      ...(exporting ? s.posCellExport : s.posCell),
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-  {hasChampionshipResults ? (
-    <PosBadge pos={index + 1} />
-  ) : (
+  align="center"
+  style={{
+    ...s.col.pos,
+    ...(exporting ? s.posCellExport : s.posCell),
+    textAlign: "center",
+    position: "relative",
+  }}
+>
+  <div style={{ display: "flex", justifyContent: "center" }}>
+    {(!tie.isTied || tie.isFirst) &&
+      (hasChampionshipResults ? (
+        <span
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 34,
+    height: 30,
+    fontSize: 23,
+    fontWeight: 1000,
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    color:
+      index === 0
+        ? "#FFD700"
+        : index === 1
+          ? "#E5F5FF"
+          : index === 2
+            ? "#CD8A52"
+            : "#FFFFFF",
+    textShadow:
+      index === 0
+        ? "0 0 6px #FFD700, 0 0 15px rgba(255,215,0,0.8)"
+        : index === 1
+          ? "0 0 6px #C5E9FF, 0 0 15px rgba(160,215,255,0.8)"
+          : index === 2
+            ? "0 0 6px #CD8A52, 0 0 15px rgba(205,138,82,0.75)"
+            : "none",
+  }}
+>
+  {index + 1}
+</span>
+      ) : (
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            opacity: 0.9,
+          }}
+        >
+          {index + 1}
+        </span>
+      ))}
+  </div>
+
+  {tie.isTied && (
     <span
       style={{
-        fontSize: 12,
-        fontWeight: 900,
-        fontFamily:
-          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-        opacity: 0.9,
+        position: "absolute",
+        right: 0,
+        top: tie.isFirst ? "50%" : -1,
+        bottom: tie.isLast ? "50%" : -1,
+        width: 3,
+        borderRadius: 3,
+        background:
+          "linear-gradient(90deg, #b46aff, #f0d4ff, #b46aff)",
+        boxShadow:
+          "0 0 5px #b46aff, 0 0 12px rgba(180,106,255,0.85)",
+        pointerEvents: "none",
       }}
-    >
-      {index + 1}
-    </span>
+    />
   )}
-</div>
-                  </TableCell>
+</TableCell>
 
                                     <TableCell
                     align="center"
