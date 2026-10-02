@@ -5427,52 +5427,53 @@ const tieGroups = leagueRows.map((driver, index) => {
 >
   <div style={{ display: "flex", justifyContent: "center" }}>
     {(!tie.isTied || tie.isFirst) &&
-      (hasChampionshipResults ? (
-        <span
-  style={{
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 34,
-    height: 30,
-    fontSize: 23,
-    fontWeight: 1000,
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    color:
-      index === 0
-        ? "#FFD700"
-        : index === 1
-          ? "#E5F5FF"
-          : index === 2
-            ? "#CD8A52"
-            : "#FFFFFF",
-    textShadow:
-      index === 0
-        ? "0 0 6px #FFD700, 0 0 15px rgba(255,215,0,0.8)"
-        : index === 1
-          ? "0 0 6px #C5E9FF, 0 0 15px rgba(160,215,255,0.8)"
-          : index === 2
-            ? "0 0 6px #CD8A52, 0 0 15px rgba(205,138,82,0.75)"
-            : "none",
-  }}
->
-  {index + 1}
-</span>
-      ) : (
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 900,
-            fontFamily:
-              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-            opacity: 0.9,
-          }}
-        >
-          {index + 1}
-        </span>
-      ))}
-  </div>
+  (hasChampionshipResults ? (
+    index < 3 ? (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 34,
+          height: 28,
+          fontSize: 16,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+          color:
+            index === 0
+              ? "#FFD700"
+              : index === 1
+                ? "#E5F5FF"
+                : "#CD8A52",
+          textShadow:
+  index === 0
+    ? "0 0 4px #FFD700, 0 0 10px #FFD700, 0 0 22px rgba(255,215,0,0.85), 0 0 35px rgba(255,215,0,0.4)"
+    : index === 1
+      ? "0 0 4px #FFFFFF, 0 0 10px #DDF5FF, 0 0 22px rgba(170,225,255,0.85), 0 0 35px rgba(170,225,255,0.4)"
+      : "0 0 4px #EAB17A, 0 0 10px #CD8A52, 0 0 22px rgba(205,138,82,0.85), 0 0 35px rgba(205,138,82,0.4)",
+        }}
+      >
+        {index + 1}
+      </span>
+    ) : (
+      <PosBadge pos={index + 1} />
+    )
+  ) : (
+    <span
+      style={{
+        fontSize: 12,
+        fontWeight: 900,
+        fontFamily:
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        opacity: 0.9,
+      }}
+    >
+      {index + 1}
+    </span>
+  ))}
+</div>
 
   {tie.isTied && (
     <span
