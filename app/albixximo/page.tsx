@@ -2543,12 +2543,12 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
 
       <span
         style={{
-          justifySelf: "start",
-          marginLeft: 10,
-          width: 190,
-          fontSize: 11,
-          fontWeight: 900,
-          letterSpacing: 0.1,
+          justifySelf: "center",
+width: 190,
+transform: "translateX(-51px)",
+          fontSize: 12,
+          fontWeight: 950,
+          letterSpacing: 0.3,
           lineHeight: 1.4,
           whiteSpace: "nowrap",
           textAlign: "center",
