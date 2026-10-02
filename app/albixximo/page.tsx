@@ -5382,6 +5382,20 @@ const tieGroups = leagueRows.map((driver, index) => {
           >
             {leagueRows.map((driver, index) => {
   const tie = tieGroups[index]
+  const tieStartIndex = tie.isTied
+  ? leagueRows.findIndex((row, i) =>
+      i <= index &&
+      row.totalPoints === driver.totalPoints &&
+      (i === 0 ||
+        leagueRows[i - 1].totalPoints !== driver.totalPoints)
+    )
+  : index
+
+const tieColor =
+  tieStartIndex === 0 ? "#FFD700" :
+  tieStartIndex === 1 ? "#E5F5FF" :
+  tieStartIndex === 2 ? "#CD8A52" :
+  "#FFFFFF"
 
   return (
                 <tr
@@ -5475,7 +5489,7 @@ const tieGroups = leagueRows.map((driver, index) => {
   ))}
 </div>
 
-  {/* Filo dorato nei posti condivisi */}
+  {/* Filo colorato nei posti condivisi */}
 {tie.isTied && !tie.isFirst && (
   <>
     <span
@@ -5485,12 +5499,18 @@ const tieGroups = leagueRows.map((driver, index) => {
         top: 0,
         bottom: 0,
         width: 1,
-        background:
-          "repeating-linear-gradient(to bottom, rgba(255,215,0,0.55) 0px, rgba(255,215,0,0.55) 3px, transparent 3px, transparent 9px)",
-        boxShadow: "0 0 5px rgba(255,215,0,0.35)",
+        background: `repeating-linear-gradient(
+          to bottom,
+          ${tieColor} 0px,
+          ${tieColor} 3px,
+          transparent 3px,
+          transparent 9px
+        )`,
+        boxShadow: `0 0 7px ${tieColor}`,
         pointerEvents: "none",
       }}
     />
+
     <span
       style={{
         position: "absolute",
@@ -5499,8 +5519,8 @@ const tieGroups = leagueRows.map((driver, index) => {
         width: 4,
         height: 4,
         borderRadius: "50%",
-        background: "#ffe48a",
-        boxShadow: "0 0 8px #ffd700",
+        background: tieColor,
+        boxShadow: `0 0 7px ${tieColor}`,
         transform: "translate(-38%, -50%)",
         pointerEvents: "none",
       }}
@@ -5516,7 +5536,7 @@ const tieGroups = leagueRows.map((driver, index) => {
       right: 0,
       top: tie.isFirst ? "50%" : -1,
       bottom: tie.isLast ? "50%" : -1,
-      width: 3,
+      width: 2,
       borderRadius: 3,
       background:
         "linear-gradient(90deg, #c48c12, #fff1a6, #ffd700)",
