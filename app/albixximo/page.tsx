@@ -9986,7 +9986,7 @@ function openRacePng(league, lobby) {
   raceDgPanel.innerHTML = "";
 
   const dgSrc =
-  "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
+  "/Gare/GAC" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
 
   fetch(dgSrc)
     .then(function(response) {
