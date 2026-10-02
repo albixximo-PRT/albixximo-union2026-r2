@@ -7769,8 +7769,8 @@ async function performExportTablePng() {
     link.href = dataUrl
     link.click()
 
-    // 👇 AGGIUNGI SOLO QUESTA RIGA
-    exportRaceDgJson()
+    // JSON DG temporaneamente disattivato
+// exportRaceDgJson()
 
   } catch (e: any) {
     setError(`Errore esportazione PNG: ${String(e?.message || e)}`)
@@ -9981,7 +9981,7 @@ function openRacePng(league, lobby) {
   racePngViewer.classList.add("visible");
   racePngViewer.classList.add("loading");
   
-  if (raceDgPanel) {
+  if (false && raceDgPanel) {
   raceDgPanel.style.display = "none";
   raceDgPanel.innerHTML = "";
 
