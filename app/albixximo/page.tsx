@@ -5547,13 +5547,11 @@ const tieColor =
       top: tie.isFirst ? "25%" : -1,
 bottom: tie.isLast ? "25%" : -1,
 width: 1.5,
-borderRadius: 3,
 background: "#FFD700",
 boxShadow:
-  "0 0 2px 1px #FFF3A0, " +
-  "0 0 6px 2px #FFD700, " +
-  "0 0 12px 3px rgba(255,215,0,0.85), " +
-  "0 0 22px 5px rgba(255,215,0,0.45)",
+  "0 0 2px #FFF3A0, " +
+  "0 0 5px rgba(255,215,0,0.75), " +
+  "0 0 10px rgba(255,215,0,0.35)",
       pointerEvents: "none",
     }}
   />
