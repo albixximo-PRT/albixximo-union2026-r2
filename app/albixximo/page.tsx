@@ -68,6 +68,12 @@ const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
 type ChampionshipLeagueKey = UnionRankKey
 
 type DgMeasureType = "NONE" | "P" | "S" | "INFONDATO"
+type DgSpecialMeasure =
+  | "NEXT_RACE_DSQ"
+  | "NEXT_RACE_GRID_MINUS_5"
+
+type DgSpecialMeasureMap =
+  Record<string, DgSpecialMeasure>
 
 type SavedLeagueSnapshot = {
   savedAt: string
@@ -80,6 +86,7 @@ type SavedLeagueSnapshot = {
   unionMeta: UnionMeta
 penalties: PenaltyMap
 dgMeasureTypes?: Record<string, DgMeasureType>
+dgSpecialMeasures?: DgSpecialMeasureMap
 dgUnfoundedPilots?: string[]
 lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
@@ -2426,20 +2433,31 @@ function renderPrtMetaCell({
   return cleanValue || "-"
 }
 
+
 function renderPrtPenaltyCell({
   row,
   penalties,
   dgMeasureTypes,
+  dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
   dgMeasureTypes: Record<string, DgMeasureType>
+  dgSpecialMeasures: DgSpecialMeasureMap
   exportPenaltyTimeTextStyle: React.CSSProperties
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const penaltySeconds = penalties[key] || 0
   const dgMeasureType = dgMeasureTypes[key] || "NONE"
+  const specialMeasure = dgSpecialMeasures[key]
+
+  const specialMeasureLabel =
+    specialMeasure === "NEXT_RACE_DSQ"
+      ? "SQUALIFICA DALLA PROSSIMA GARA"
+      : specialMeasure === "NEXT_RACE_GRID_MINUS_5"
+        ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
+        : ""
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
@@ -2480,6 +2498,56 @@ function renderPrtPenaltyCell({
           }}
         >
           RECLAMO INFONDATO
+        </span>
+      </div>
+    )
+  }
+
+  // Segnalazioni relative alla prossima gara:
+  // vengono visualizzate senza modificare i tempi.
+  if (dgMeasureType === "S" && specialMeasureLabel) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          width: "100%",
+          color: "rgba(105,105,255,0.98)",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 38,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(105,105,255,0.98)",
+            border: "1px solid rgba(155,165,255,0.90)",
+            boxShadow: "0 0 14px rgba(105,120,255,0.38)",
+            color: "#ffffff",
+            fontSize: 13,
+            fontWeight: 950,
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          S
+        </span>
+
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: 0.1,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {specialMeasureLabel}
         </span>
       </div>
     )
@@ -2539,19 +2607,20 @@ function renderPrtPenaltyCell({
       </span>
 
       <div
-  style={{
-    ...exportPenaltyTimeTextStyle,
-    justifySelf: "end",
-    color: isPenalty
-      ? "rgba(220,53,69,0.98)"
-      : "rgba(105,105,255,0.98)",
-  }}
->
-  {formatPenaltyDisplay(penaltySeconds)}
-</div>
+        style={{
+          ...exportPenaltyTimeTextStyle,
+          justifySelf: "end",
+          color: isPenalty
+            ? "rgba(220,53,69,0.98)"
+            : "rgba(105,105,255,0.98)",
+        }}
+      >
+        {formatPenaltyDisplay(penaltySeconds)}
+      </div>
     </div>
   )
 }
+
 
 const PRT_TABLE_STYLES = {
   wrapper: {
@@ -2768,8 +2837,9 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
-  dgMeasureTypes,
-  forceHideMeta = false,
+dgMeasureTypes,
+dgSpecialMeasures,
+forceHideMeta = false,
   tableTitle = "Classifica (output)",
   onAbsenceClick,
   verifiedAbsences,
@@ -2781,8 +2851,9 @@ function ResultsTable({
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
-  dgMeasureTypes: Record<string, DgMeasureType>
-  forceHideMeta?: boolean
+dgMeasureTypes: Record<string, DgMeasureType>
+dgSpecialMeasures: DgSpecialMeasureMap
+forceHideMeta?: boolean
   tableTitle?: string
   onAbsenceClick?: (row: DisplayRow) => void
   verifiedAbsences?: Record<string, boolean>
@@ -3173,6 +3244,7 @@ return penaltySeconds === 0 && !isDsqRow
   row: r,
   penalties,
   dgMeasureTypes,
+  dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
 })}
                   </TableCell>
@@ -3291,6 +3363,8 @@ export default function Page() {
 const [dgMeasureTypes, setDgMeasureTypes] = useState<
   Record<string, DgMeasureType>
 >({})
+const [dgSpecialMeasures, setDgSpecialMeasures] =
+  useState<DgSpecialMeasureMap>({})
   const [exportMetaInPng, setExportMetaInPng] = useState(false)
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
@@ -11050,7 +11124,9 @@ setQualiRows(extractedQualiRows)
   setShowTable(true)
   setShowReq(false)
   setPenalties({})
-  setExportMetaInPng(false)
+setDgMeasureTypes({})
+setDgSpecialMeasures({})
+setExportMetaInPng(false)
   setLapOverrides({})
   setDnfOverrides({})
   setAbsenceOverrides({})
@@ -11750,6 +11826,7 @@ function confirmSaveCurrentLeague() {
     unionMeta,
 penalties,
 dgMeasureTypes,
+dgSpecialMeasures,
 dgUnfoundedPilots: finalRows
   .filter((row) => {
     const key = getPrtRowStableKey(row.sourcePosGara)
@@ -11868,6 +11945,7 @@ setRows(reopenedRows)
   )
 )
  setDgMeasureTypes(snapshot.dgMeasureTypes || {}) 
+ setDgSpecialMeasures(snapshot.dgSpecialMeasures || {})
 setLapOverrides(snapshot.lapOverrides || {})
 setDnfOverrides(snapshot.dnfOverrides || {})
 setAbsenceOverrides(snapshot.absenceOverrides || {})
@@ -11973,6 +12051,13 @@ function setDgMeasureType(
     ...prev,
     [key]: type,
   }))
+  if (type !== "S") {
+  setDgSpecialMeasures((prev) => {
+    const next = { ...prev }
+    delete next[key]
+    return next
+  })
+}
 
   // Se non c'è una penalità a tempo, azzera sempre i secondi.
   // Vale sia tornando su "—" sia scegliendo INFONDATO.
@@ -13549,6 +13634,7 @@ boxShadow:
     unionMode={unionMode}
     penalties={penalties}
     dgMeasureTypes={dgMeasureTypes}
+    dgSpecialMeasures={dgSpecialMeasures}
     onAbsenceClick={(row) => {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const currentValue = tempoLikeGt7(row).trim().toUpperCase()
@@ -13904,10 +13990,31 @@ boxShadow:
     {(dgMeasureType === "P" || dgMeasureType === "S") && (
   <>
     <select
-  value={penaltySeconds || ""}
-  onChange={(e) =>
-    setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
-  }
+  value={dgSpecialMeasures[key] || penaltySeconds || ""}
+  onChange={(e) => {
+    const value = e.target.value
+
+    if (
+      dgMeasureType === "S" &&
+      (value === "NEXT_RACE_DSQ" ||
+        value === "NEXT_RACE_GRID_MINUS_5")
+    ) {
+      setDgSpecialMeasures((prev) => ({
+        ...prev,
+        [key]: value,
+      }))
+
+      setUnionPenaltySeconds(row.sourcePosGara, "")
+    } else {
+      setDgSpecialMeasures((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+
+      setUnionPenaltySeconds(row.sourcePosGara, value)
+    }
+  }}
   style={{
     width: 92,
     padding: "8px 8px",
@@ -13922,6 +14029,16 @@ boxShadow:
   }}
 >
   <option value="">—</option>
+  {dgMeasureType === "S" && (
+  <>
+    <option value="NEXT_RACE_DSQ">
+      SQUALIFICA DALLA PROSSIMA GARA
+    </option>
+    <option value="NEXT_RACE_GRID_MINUS_5">
+      -5 POSIZIONI IN GRIGLIA PROSSIMA GARA
+    </option>
+  </>
+)}
   {Array.from({ length: 16 }, (_, i) => (i + 1) * 5).map(
     (seconds) => (
       <option key={seconds} value={seconds}>
@@ -17242,6 +17359,7 @@ const changed = currentValue !== originalValue
           exporting={true}
           penalties={penalties}
           dgMeasureTypes={dgMeasureTypes}
+          dgSpecialMeasures={dgSpecialMeasures}
           forceHideMeta={!exportMetaInPng}
           tableTitle="Classifica definitiva"
         />
