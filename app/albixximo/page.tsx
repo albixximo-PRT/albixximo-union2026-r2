@@ -2440,12 +2440,14 @@ function renderPrtPenaltyCell({
   dgMeasureTypes,
   dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
+  exporting = false,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
   dgMeasureTypes: Record<string, DgMeasureType>
   dgSpecialMeasures: DgSpecialMeasureMap
   exportPenaltyTimeTextStyle: React.CSSProperties
+  exporting?: boolean
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const penaltySeconds = penalties[key] || 0
@@ -2546,7 +2548,7 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
           justifySelf: "end",
           width: 190,
           marginRight: -51,
-          fontSize: 12,
+          fontSize: exporting ? 16 : 12,
           fontWeight: 950,
           letterSpacing: 0.3,
           lineHeight: 1.4,
@@ -3263,8 +3265,9 @@ return penaltySeconds === 0 && !isDsqRow
   row: r,
   penalties,
   dgMeasureTypes,
-  dgSpecialMeasures,
+    dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
+  exporting,
 })}
                   </TableCell>
 
