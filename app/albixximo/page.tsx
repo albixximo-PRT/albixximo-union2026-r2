@@ -2504,54 +2504,73 @@ function renderPrtPenaltyCell({
   }
 
   // Segnalazioni relative alla prossima gara:
-  // vengono visualizzate senza modificare i tempi.
-  if (dgMeasureType === "S" && specialMeasureLabel) {
-    return (
-      <div
+// vengono visualizzate senza modificare i tempi.
+if (dgMeasureType === "S" && specialMeasureLabel) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
+        alignItems: "center",
+        width: "100%",
+        color: "rgba(105,105,255,0.98)",
+      }}
+    >
+      {/* Spazio speculare: mantiene S allineata a P */}
+      <div />
+
+      <span
         style={{
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 10,
-          width: "100%",
-          color: "rgba(105,105,255,0.98)",
+          justifySelf: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+          background: "rgba(105,105,255,0.98)",
+          border: "1px solid rgba(155,165,255,0.90)",
+          boxShadow: "0 0 14px rgba(105,120,255,0.38)",
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 38,
-            height: 26,
-            borderRadius: 999,
-            background: "rgba(105,105,255,0.98)",
-            border: "1px solid rgba(155,165,255,0.90)",
-            boxShadow: "0 0 14px rgba(105,120,255,0.38)",
-            color: "#ffffff",
-            fontSize: 13,
-            fontWeight: 950,
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
-        >
-          S
-        </span>
+        S
+      </span>
 
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: 0.1,
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {specialMeasureLabel}
-        </span>
-      </div>
-    )
-  }
+      <span
+        style={{
+          justifySelf: "start",
+          marginLeft: 10,
+          width: 190,
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: 0.1,
+          lineHeight: 1.4,
+          whiteSpace: "nowrap",
+          textAlign: "left",
+        }}
+      >
+        {specialMeasure === "NEXT_RACE_DSQ" ? (
+          <>
+            SQUALIFICA
+            <br />
+            DALLA PROSSIMA GARA
+          </>
+        ) : (
+          <>
+            -5 POSIZIONI IN GRIGLIA
+            <br />
+            PROSSIMA GARA
+          </>
+        )}
+      </span>
+    </div>
+  )
+}
 
   if (
     (dgMeasureType !== "P" && dgMeasureType !== "S") ||
