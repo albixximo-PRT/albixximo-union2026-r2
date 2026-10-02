@@ -14085,7 +14085,8 @@ boxShadow:
     }
   }}
   style={{
-    width: 92,
+    width: dgMeasureType === "S" ? 320 : 92,
+maxWidth: "100%",
     padding: "8px 8px",
     borderRadius: 10,
     border: "1px solid rgba(255,255,255,0.14)",
