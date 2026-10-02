@@ -2335,6 +2335,18 @@ const styles = Array.from(parsed.head.querySelectorAll("style"))
 const bodyContent = parsed.body.innerHTML;
 
 frame.innerHTML = styles + bodyContent;
+// UNION - Linea ex aequo: correzione solo telefono verticale
+const mobileTieStyle = document.createElement("style");
+
+mobileTieStyle.textContent = `
+  @media (pointer: coarse) and (orientation: portrait) {
+    #leagueFrame span[style*="right: -5px"][style*="width: 1.5px"] {
+      right: 5px !important;
+    }
+  }
+`;
+
+frame.appendChild(mobileTieStyle);
 
 const mobileScrollArrow = frame.querySelector(".mobile-scroll-arrow");
 const horizontalScrollWrap = mobileScrollArrow?.nextElementSibling;
