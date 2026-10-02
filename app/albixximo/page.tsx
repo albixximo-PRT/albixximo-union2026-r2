@@ -2543,9 +2543,9 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
 
       <span
         style={{
-          justifySelf: "center",
-width: 190,
-transform: "translateX(-51px)",
+          justifySelf: "end",
+          width: 190,
+          marginRight: -51,
           fontSize: 12,
           fontWeight: 950,
           letterSpacing: 0.3,
