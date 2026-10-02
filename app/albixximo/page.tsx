@@ -2551,14 +2551,14 @@ if (dgMeasureType === "S" && specialMeasureLabel) {
           letterSpacing: 0.1,
           lineHeight: 1.4,
           whiteSpace: "nowrap",
-          textAlign: "left",
+          textAlign: "center",
         }}
       >
         {specialMeasure === "NEXT_RACE_DSQ" ? (
           <>
             SQUALIFICA
             <br />
-            DALLA PROSSIMA GARA
+            PROSSIMA GARA
           </>
         ) : (
           <>
