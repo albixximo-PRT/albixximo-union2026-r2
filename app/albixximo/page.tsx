@@ -5939,7 +5939,14 @@ return {
 
 distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
 
-migliorGiroGara: r.migliorGiroGara,
+// Eccezione UNION Gara 1 - AMA A11: GV Bolker
+migliorGiroGara:
+  currentRace === 1 &&
+  selectedLeague === "AMA" &&
+  selectedLobby === "A11" &&
+  normalizeDriverLookupName(resolvedPilot) === "bolker"
+    ? "1:20.715"
+    : r.migliorGiroGara,
 
   tempoQualifica: (() => {
   const value = (
@@ -7547,7 +7554,7 @@ if (aHasValidPosition !== bHasValidPosition) {
 
 // 1D. A parità di punti e senza piazzamento valido,
 //     ordina gli stati a 0 punti secondo priorità UNION:
-//     ASS-G (arancione) → BOX → NC → ASS-I (rosso).
+// BOX → NC → ASS-G (arancione) → ASS-I (rosso).
 const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
   const results = Object.values(driver.raceResults)
 
@@ -7567,10 +7574,10 @@ const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
     (result) => result?.status === "ASS-I"
   )
 
-  if (hasAssG) return 0
-  if (hasBox) return 1
-  if (hasNc) return 2
-  if (hasAssI) return 3
+  if (hasBox) return 0
+if (hasNc) return 1
+if (hasAssG) return 2
+if (hasAssI) return 3
 
   return 4
 }
@@ -10421,6 +10428,17 @@ const styles = Array.from(parsed.head.querySelectorAll("style"))
 const bodyContent = parsed.body.innerHTML;
 
 frame.innerHTML = styles + bodyContent;
+// UNION - Linea ex aequo: solo smartphone in verticale
+const mobileTieStyle = document.createElement("style");
+
+mobileTieStyle.textContent =
+  '@media (pointer: coarse) and (orientation: portrait) {' +
+  ' #leagueFrame span[style*="right: -5px"][style*="width: 1.5px"] {' +
+  ' right: 8px !important;' +
+  ' }' +
+  '}';
+
+frame.appendChild(mobileTieStyle);
 
 const mobileScrollArrow = frame.querySelector(".mobile-scroll-arrow");
 const horizontalScrollWrap = mobileScrollArrow?.nextElementSibling;
