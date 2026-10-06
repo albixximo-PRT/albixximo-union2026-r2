@@ -6087,7 +6087,11 @@ const maxSourcePos = rowsWithPole.reduce(
     pilota: pilot,
     auto:
   manualAutoOverrides[maxSourcePos + index + 1] ||
-  championshipState.driverCars[pilot] ||
+  Object.entries(championshipState.driverCars).find(
+  ([savedPilot]) =>
+    normalizeDriverNameForChampionship(savedPilot) ===
+    normalizeDriverNameForChampionship(pilot)
+)?.[1] ||
   "---",
     tempoTotaleGara: "ASS-I",
     distaccoDalPrimo: "ASS-I",
