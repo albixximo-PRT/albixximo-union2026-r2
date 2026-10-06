@@ -7644,30 +7644,7 @@ const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
     finalRows.map((row) => normalizeDriverNameForChampionship(row.pilota))
   )
 
-  const recoveredDsqRows: DisplayRow[] = driverChampionship
-    .filter((driver) => {
-      const driverLeague = normalizeLeagueKey(driver.league)
-      const cell = driver.raceResults[currentRace]
-      const key = normalizeDriverNameForChampionship(driver.pilota)
-
-      return (
-        driverLeague === raceLeague &&
-        cell?.status === "DSQ" &&
-        key &&
-        !existingKeys.has(key)
-      )
-    })
-    .map((driver, index) => ({
-  sourcePosGara: 9000 + index,
-  posGara: finalRows.length + index + 1,
-  pilota: driver.pilota,
-  auto: "---",
-  tempoTotaleGara: "DNP",
-  distaccoDalPrimo: "DNP",
-  migliorGiroGara: "",
-  tempoQualifica: "",
-  pole: "",
-}))
+  const recoveredDsqRows: DisplayRow[] = []
 
   const existingKeysAfterDsq = new Set([
     ...Array.from(existingKeys),
