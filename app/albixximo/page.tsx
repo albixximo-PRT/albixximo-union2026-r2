@@ -6085,7 +6085,10 @@ const maxSourcePos = rowsWithPole.reduce(
     posGara: rowsWithPole.length + index + 1,
     sourcePosGara: maxSourcePos + index + 1,
     pilota: pilot,
-    auto: manualAutoOverrides[maxSourcePos + index + 1] || "---",
+    auto:
+  manualAutoOverrides[maxSourcePos + index + 1] ||
+  championshipState.driverCars[pilot] ||
+  "---",
     tempoTotaleGara: "ASS-I",
     distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
