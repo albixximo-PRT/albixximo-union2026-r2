@@ -12505,8 +12505,13 @@ function applyDistaccoCorrections() {
   const cleaned: Record<number, string> = {}
 
   for (const row of displayRows) {
-    const draftValue = String(manualDistaccoDraft[row.sourcePosGara] ?? "").trim()
-    const originalValue = String(row.distaccoDalPrimo ?? "").trim()
+    const draftValue = String(
+      manualDistaccoDraft[row.sourcePosGara] ?? ""
+    ).trim()
+
+    const originalValue = String(
+      row.distaccoDalPrimo ?? ""
+    ).trim()
 
     if (draftValue && draftValue !== originalValue) {
       cleaned[row.sourcePosGara] = draftValue
@@ -12514,21 +12519,40 @@ function applyDistaccoCorrections() {
   }
 
   setAbsenceOverrides((prev) => {
-  const next = { ...prev }
+    const next = { ...prev }
 
-  for (const row of displayRows) {
-    const value = String(cleaned[row.sourcePosGara] ?? "")
-      .trim()
-      .toUpperCase()
+    for (const row of displayRows) {
+      const value = String(cleaned[row.sourcePosGara] ?? "")
+        .trim()
+        .toUpperCase()
 
-    if (value === "NC") {
-      const key = getPrtRowStableKey(row.sourcePosGara)
-      delete next[key]
+      if (value === "NC" || value === "DSQ") {
+        const key = getPrtRowStableKey(row.sourcePosGara)
+        delete next[key]
+      }
     }
-  }
 
-  return next
-})
+    return next
+  })
+
+  setManualDsqOverrides((prev) => {
+    const next = { ...prev }
+
+    for (const row of displayRows) {
+      const value = String(cleaned[row.sourcePosGara] ?? "")
+        .trim()
+        .toUpperCase()
+
+      const key = getPrtRowStableKey(row.sourcePosGara)
+
+      if (value === "DSQ") {
+        next[key] = true
+      }
+    }
+
+    return next
+  })
+
   setManualDistaccoOverrides(cleaned)
   setShowDistaccoModal(false)
 }
