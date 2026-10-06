@@ -12455,6 +12455,20 @@ function applyAutoCorrections() {
   setShowAutoModal(false)
 }
 
+function applyLockedCarToDriver(
+  sourcePosGara: number,
+  lockedCar: string
+) {
+  const cleanCar = String(lockedCar || "").trim()
+
+  if (!cleanCar) return
+
+  setManualAutoOverrides((prev) => ({
+    ...prev,
+    [sourcePosGara]: cleanCar,
+  }))
+}
+
 function openQualiCorrectionModal() {
   const nextDraft: Record<number, string> = {}
   for (const row of displayRows) {
@@ -15710,10 +15724,42 @@ boxShadow:
         }}
       >
         <b>{item.pilot}</b>
-        <br />
-        Vettura registrata: <b>{item.lockedCar}</b>
-        <br />
-        Vettura rilevata: <b>{item.currentCar}</b>
+<br />
+Vettura registrata: <b>{item.lockedCar}</b>
+<br />
+Vettura rilevata: <b>{item.currentCar}</b>
+
+<div style={{ marginTop: 10 }}>
+  <button
+    type="button"
+    onClick={() => {
+      const row = finalRows.find(
+        (r) => String(r.pilota || "").trim() === item.pilot
+      )
+
+      if (!row) return
+
+      applyLockedCarToDriver(
+        row.sourcePosGara,
+        item.lockedCar
+      )
+    }}
+    style={{
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid rgba(34,197,94,0.35)",
+      background: "rgba(34,197,94,0.16)",
+      color: "white",
+      cursor: "pointer",
+      fontSize: 11,
+      fontWeight: 900,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    }}
+  >
+    Usa vettura registrata
+  </button>
+</div>
       </div>
     ))}
   </div>
