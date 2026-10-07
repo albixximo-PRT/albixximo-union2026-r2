@@ -11956,7 +11956,10 @@ function openConfirmSaveLeagueModal() {
 
 const isDsqWithoutCar =
   raceValue === "DSQ" &&
-  !String(row.auto || "").trim()
+  (
+  !String(row.auto || "").trim() ||
+  String(row.auto || "").trim() === "---"
+)
 
 if (isAbsence || isDsqWithoutCar) return false
 
@@ -12400,7 +12403,10 @@ function applyAutoCorrections() {
 
 const isDsqWithoutCar =
   rowStatus === "DSQ" &&
-  !String(row.auto || "").trim()
+  (
+  !String(row.auto || "").trim() ||
+  String(row.auto || "").trim() === "---"
+)
 
     // Per un pilota assente l'auto non è obbligatoria.
     if (isAbsence || isDsqWithoutCar) return false
@@ -12434,7 +12440,10 @@ const isDsqWithoutCar =
 
 const isDsqWithoutCar =
   rowStatus === "DSQ" &&
-  !String(row.auto || "").trim()
+  (
+  !String(row.auto || "").trim() ||
+  String(row.auto || "").trim() === "---"
+)
 
     if (isAbsence || isDsqWithoutCar) {
   continue
