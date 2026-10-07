@@ -12395,11 +12395,15 @@ function applyAutoCorrections() {
       .toUpperCase()
 
     const isAbsence =
-      rowStatus === "ASS-I" ||
-      rowStatus === "ASS-G"
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
+
+const isDsqWithoutCar =
+  rowStatus === "DSQ" &&
+  !String(row.auto || "").trim()
 
     // Per un pilota assente l'auto non è obbligatoria.
-    if (isAbsence) return false
+    if (isAbsence || isDsqWithoutCar) return false
 
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
@@ -12425,12 +12429,16 @@ function applyAutoCorrections() {
       .toUpperCase()
 
     const isAbsence =
-      rowStatus === "ASS-I" ||
-      rowStatus === "ASS-G"
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
 
-    if (isAbsence) {
-      continue
-    }
+const isDsqWithoutCar =
+  rowStatus === "DSQ" &&
+  !String(row.auto || "").trim()
+
+    if (isAbsence || isDsqWithoutCar) {
+  continue
+}
 
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
