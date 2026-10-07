@@ -11947,21 +11947,43 @@ function resetExpectedLobbyDrivers() {
 function openConfirmSaveLeagueModal() {
   if (finalRows.length === 0) return
 
+  const expelledDrivers = finalRows.filter((row) => {
+    const status = tempoLikeGt7(row).trim().toUpperCase()
+
+    if (status !== "ASS-I") return false
+
+    const key = normalizeDriverNameForChampionship(row.pilota)
+
+    return (unjustifiedAbsenceCounts[key] || 0) >= 2
+  })
+
+  if (expelledDrivers.length > 0) {
+    window.alert(
+      `⚠️ SECONDA ASSENZA INGIUSTIFICATA\n\n` +
+        expelledDrivers
+          .map(
+            (row) =>
+              `${row.pilota} ha raggiunto 2 assenze ingiustificate.\nDa regolamento il pilota deve essere ESPULSO DAL CAMPIONATO.`
+          )
+          .join("\n\n")
+    )
+  }
+
   const hasUnresolvedAuto = finalRows.some((row) => {
     const raceValue = tempoLikeGt7(row).trim().toUpperCase()
 
     const isAbsence =
-  raceValue === "ASS-I" ||
-  raceValue === "ASS-G"
+      raceValue === "ASS-I" ||
+      raceValue === "ASS-G"
 
-const isDsqWithoutCar =
-  raceValue === "DSQ" &&
-  (
-  !String(row.auto || "").trim() ||
-  String(row.auto || "").trim() === "---"
-)
+    const isDsqWithoutCar =
+      raceValue === "DSQ" &&
+      (
+        !String(row.auto || "").trim() ||
+        String(row.auto || "").trim() === "---"
+      )
 
-if (isAbsence || isDsqWithoutCar) return false
+    if (isAbsence || isDsqWithoutCar) return false
 
     const auto = String(row.auto || "").trim()
 
