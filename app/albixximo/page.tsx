@@ -11968,13 +11968,9 @@ function openConfirmSaveLeagueModal() {
               "—"
 
             return (
-              `PILOTA: ${row.pilota}\n` +
-              `TEAM: ${team}\n` +
-              `LEGA: ${selectedLeague}\n` +
-              `LOBBY: ${selectedLobby}\n` +
-              `GARA: ${currentRace}\n\n` +
-              `Il pilota ha raggiunto 2 assenze ingiustificate.\n` +
-              `Da regolamento deve essere ESPULSO DAL CAMPIONATO.`
+              `${row.pilota} • ${team} • ${selectedLeague} • ${selectedLobby} • GARA ${currentRace}\n\n` +
+              `2ª assenza ingiustificata raggiunta.\n` +
+              `DA REGOLAMENTO: ESPULSIONE DAL CAMPIONATO.`
             )
           })
           .join("\n\n")
