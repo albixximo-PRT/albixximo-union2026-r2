@@ -11951,10 +11951,14 @@ function openConfirmSaveLeagueModal() {
     const raceValue = tempoLikeGt7(row).trim().toUpperCase()
 
     const isAbsence =
-      raceValue === "ASS-I" ||
-      raceValue === "ASS-G"
+  raceValue === "ASS-I" ||
+  raceValue === "ASS-G"
 
-    if (isAbsence) return false
+const isDsqWithoutCar =
+  raceValue === "DSQ" &&
+  !String(row.auto || "").trim()
+
+if (isAbsence || isDsqWithoutCar) return false
 
     const auto = String(row.auto || "").trim()
 
