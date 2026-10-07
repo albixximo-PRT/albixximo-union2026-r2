@@ -11961,10 +11961,22 @@ function openConfirmSaveLeagueModal() {
     window.alert(
       `⚠️ SECONDA ASSENZA INGIUSTIFICATA\n\n` +
         expelledDrivers
-          .map(
-            (row) =>
-              `${row.pilota} ha raggiunto 2 assenze ingiustificate.\nDa regolamento il pilota deve essere ESPULSO DAL CAMPIONATO.`
-          )
+          .map((row) => {
+            const team =
+              driverTeamOverrides[row.pilota] ||
+              getUnionDriverTeamCode(row.pilota) ||
+              "—"
+
+            return (
+              `PILOTA: ${row.pilota}\n` +
+              `TEAM: ${team}\n` +
+              `LEGA: ${selectedLeague}\n` +
+              `LOBBY: ${selectedLobby}\n` +
+              `GARA: ${currentRace}\n\n` +
+              `Il pilota ha raggiunto 2 assenze ingiustificate.\n` +
+              `Da regolamento deve essere ESPULSO DAL CAMPIONATO.`
+            )
+          })
           .join("\n\n")
     )
   }
