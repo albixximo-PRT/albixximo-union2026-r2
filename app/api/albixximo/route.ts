@@ -1146,7 +1146,7 @@ if (
 
     // Evita intestazioni / metadati / auto / tempi
     if (
-  /GRAN TURISMO|SIMULATOR|UNION|GARA|LOBBY/i.test(
+  /GRAN TURISMO|SIMULATOR|LIMULATOR|UNION|GARA|LOBBY/i.test(
     candidate
   )
 ) {
