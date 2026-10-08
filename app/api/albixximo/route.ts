@@ -1455,7 +1455,8 @@ if (leadingP1Name) {
 
         if (giroMatch) {
           distacco = `${giroMatch[1]}giro`
-        } else if (/non\s*finito/i.test(tempoCell)) {
+        } else if (/non\s*finito|DNF/i.test(tempoCell)) {
+  distacco = "DNF"} else if (/non\s*finito/i.test(tempoCell)) {
           distacco = "DNF"
         } else {
           distacco = tempoCell
