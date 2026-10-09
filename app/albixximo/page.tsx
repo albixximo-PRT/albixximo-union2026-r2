@@ -7820,16 +7820,11 @@ async function generateProvisionalZip() {
       const pngBlob = await renderProvisionalLobby(item, raceNumber)
 
       const leagueName = item.league.replace(/\s+/g, "_")
-      const lobbyFolder = dayFolder.folder(`${item.lobby} ${item.league}`)
 
-      if (!lobbyFolder) {
-        throw new Error(`Impossibile creare la cartella ${item.lobby}.`)
-      }
-
-      lobbyFolder.file(
-        `${item.lobby}_${leagueName}_PROVVISORIA.png`,
-        pngBlob
-      )
+dayFolder.file(
+  `${item.lobby}_${leagueName}_PROVVISORIA.png`,
+  pngBlob
+)
     }
 
     const zipBlob = await zip.generateAsync({ type: "blob" })
@@ -17978,11 +17973,11 @@ const changed = currentValue !== originalValue
       }}
     >
       <AppHeader
-        mainTitle="CLASSIFICHE PROVVISORIE"
-        sideLabel={UNION_PROVISIONAL_CIRCUITS[provisionalRenderData.raceNumber]}
-        subtitle="UNION Timing Assistant"
-        pngExport={true}
-      />
+  mainTitle={`${provisionalRenderData.lobby} ${provisionalRenderData.league}`}
+  sideLabel={`CLASSIFICHE PROVVISORIE GARA ${provisionalRenderData.raceNumber}`}
+  subtitle="UNION Timing Assistant"
+  pngExport={true}
+/>
       <SummaryStrip
   winner={provisionalRenderData.snapshot.winner}
   bestQuali={provisionalRenderData.snapshot.bestQuali}
