@@ -1203,7 +1203,7 @@ const stopAnyHeader =
   // Esclude intestazioni e metadati GT7 che possono comparire
   // prima del nome pilota negli screen P9-P16.
   if (
-    /GRAN TURISMO|THE REAL DRIVING SIMULATOR|RED BULL RING|UNION|GARA|LOBBY|CHIUDI|AVANTI|ALTERNA/i.test(
+    /GRAN TURISMO|THE REAL DRIVING SIMULATOR|RED BULL RING|UNION|\bGARA\b|LOBBY|CHIUDI|AVANTI|ALTERNA/i.test(
       t
     )
   ) {
