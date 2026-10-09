@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { toPng } from "html-to-image"
+import JSZip from "jszip"
 import {
   UNION_DRIVER_NAMES_BY_RANK,
   getUnionDriverTeamCode,
@@ -53,6 +54,22 @@ const UNION_LOBBIES_BY_RANK = {
   "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
   AMA: ["A7", "A11", "A19", "A23", "A27", "A33"],
 } as const
+
+const UNION_PROVISIONAL_DAYS = {
+  lunedi: ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
+  martedi: ["A8", "A9", "A10", "A11", "A12", "A13", "A14", "A15"],
+  mercoledi: ["A16", "A17", "A18", "A19", "A20", "A21", "A22"],
+  giovedi: ["A23", "A24", "A25", "A26", "A27", "A28", "A29", "A30"],
+  venerdi: ["A31", "A32", "A33", "A34", "A35", "A36"],
+} as const
+
+const UNION_PROVISIONAL_CIRCUITS: Record<number, string> = {
+  1: "Red Bull Ring",
+  2: "Watkins Glen",
+  3: "Suzuka Circuit",
+  4: "Autopolis",
+  5: "Nürburgring GP",
+}
 
 type UnionRankKey = typeof UNION_RANKS[number]
 
@@ -3409,6 +3426,15 @@ const [dgSpecialMeasures, setDgSpecialMeasures] =
   const [manualDsqOverrides, setManualDsqOverrides] =
   useState<ManualDsqOverrideMap>({})
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showProvisionalExportModal, setShowProvisionalExportModal] = useState(false)
+  const [provisionalRenderData, setProvisionalRenderData] = useState<{
+  lobby: string
+  league: UnionRankKey
+  raceNumber: number
+  snapshot: SavedLeagueSnapshot
+} | null>(null)
+const [provisionalExportRace, setProvisionalExportRace] = useState<number>(2)
+const [provisionalExportDay, setProvisionalExportDay] = useState<string>("lunedi")
   const [manualGaraOverride, setManualGaraOverride] = useState("")
   const [manualLegaOverride, setManualLegaOverride] = useState("")
 
@@ -3568,6 +3594,7 @@ const [showApplyLastMovementModal, setShowApplyLastMovementModal] = useState(fal
 const backupInputRef = useRef<HTMLInputElement | null>(null)
 const htmlFilesInputRef = useRef<HTMLInputElement | null>(null)
 const exportRef = useRef<HTMLDivElement | null>(null)
+const provisionalExportRef = useRef<HTMLDivElement | null>(null)
 const championshipExportBannerRef = useRef<HTMLDivElement | null>(null)
 const championshipExportTableRef = useRef<HTMLDivElement | null>(null)
 const appHeaderExportRef = useRef<HTMLDivElement | null>(null)
@@ -7167,6 +7194,28 @@ const hasCurrentRoundMovements = useMemo(() => {
   })
 }, [currentRoundMovements])
 
+function getProvisionalSavedLobbies(
+  raceNumber: number,
+  day: keyof typeof UNION_PROVISIONAL_DAYS
+) {
+  const dayLobbies = UNION_PROVISIONAL_DAYS[day]
+  const raceSnapshots = championshipState.races[raceNumber]
+
+  return dayLobbies.flatMap((lobby) => {
+    const league = UNION_RANKS.find((rank) =>
+      (UNION_LOBBIES_BY_RANK[rank] as readonly string[]).includes(lobby)
+    )
+
+    if (!league) return []
+
+    const snapshot = raceSnapshots?.[league]?.[lobby]
+
+    if (!snapshot?.finalRows?.length) return []
+
+    return [{ lobby, league, snapshot }]
+  })
+}
+
 const savedLeagueInCurrentRace = useMemo(() => {
   return !!currentRaceSnapshot[selectedLeague]?.[selectedLobby]
 }, [currentRaceSnapshot, selectedLeague, selectedLobby])
@@ -7734,7 +7783,136 @@ const penaltySeconds = penalties[rowKey] || 0
   return true
 }
 
-async function performExportTablePng() {
+async function generateProvisionalZip() {
+  if (exporting) return
+
+  const raceNumber = provisionalExportRace
+  const day = provisionalExportDay as keyof typeof UNION_PROVISIONAL_DAYS
+
+  const savedLobbies = getProvisionalSavedLobbies(raceNumber, day)
+
+  if (savedLobbies.length === 0) {
+    setError("Nessuna lobby salvata per la gara e il giorno selezionati.")
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const zip = new JSZip()
+
+    const dayNames: Record<string, string> = {
+      lunedi: "Lunedi",
+      martedi: "Martedi",
+      mercoledi: "Mercoledi",
+      giovedi: "Giovedi",
+      venerdi: "Venerdi",
+    }
+
+    const dayFolder = zip.folder(dayNames[day])
+
+    if (!dayFolder) {
+      throw new Error("Impossibile creare la cartella ZIP.")
+    }
+
+    for (const item of savedLobbies) {
+      const pngBlob = await renderProvisionalLobby(item, raceNumber)
+
+      const leagueName = item.league.replace(/\s+/g, "_")
+      const lobbyFolder = dayFolder.folder(`${item.lobby} ${item.league}`)
+
+      if (!lobbyFolder) {
+        throw new Error(`Impossibile creare la cartella ${item.lobby}.`)
+      }
+
+      lobbyFolder.file(
+        `${item.lobby}_${leagueName}_PROVVISORIA.png`,
+        pngBlob
+      )
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" })
+    const url = URL.createObjectURL(zipBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download =
+      `UNION_GARA${raceNumber}_${dayNames[day].toUpperCase()}_PROVVISORIE.zip`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setShowProvisionalExportModal(false)
+  } catch (error: any) {
+    setError(
+      `Errore esportazione provvisorie: ${String(error?.message || error)}`
+    )
+  } finally {
+    setProvisionalRenderData(null)
+    setExporting(false)
+  }
+}
+
+async function renderProvisionalLobby(
+  item: {
+    lobby: string
+    league: UnionRankKey
+    snapshot: SavedLeagueSnapshot
+  },
+  raceNumber: number
+): Promise<Blob> {
+  setProvisionalRenderData({
+    lobby: item.lobby,
+    league: item.league,
+    snapshot: item.snapshot,
+    raceNumber,
+  })
+
+  // Attendiamo che React aggiorni il contenitore PNG.
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+
+  return captureProvisionalPng()
+}
+
+async function captureProvisionalPng(): Promise<Blob> {
+  const element = provisionalExportRef.current
+
+  if (!element || !element.firstElementChild) {
+    throw new Error("Nessuna classifica provvisoria disponibile per l'esportazione.")
+  }
+
+  const dataUrl = await toPng(element, {
+    cacheBust: true,
+    pixelRatio: 2,
+    width: 1920,
+    height: 1080,
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: "#07080c",
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    },
+  })
+
+  const response = await fetch(dataUrl)
+  return response.blob()
+}
+
+async function performExportTablePng(
+  options?: {
+    filename?: string
+    provisional?: boolean
+  }
+) {
   if (!exportRef.current || finalRows.length === 0 || exporting) return
 
   try {
@@ -7756,12 +7934,12 @@ async function performExportTablePng() {
     })
 
     const link = document.createElement("a")
-    link.download = `${selectedLobby}.png`
+    link.download = options?.filename || `${selectedLobby}.png`
     link.href = dataUrl
     link.click()
 
     // JSON DG temporaneamente disattivato
-// exportRaceDgJson()
+    // exportRaceDgJson()
 
   } catch (e: any) {
     setError(`Errore esportazione PNG: ${String(e?.message || e)}`)
@@ -13699,6 +13877,26 @@ boxShadow:
           }}
         >
           {exporting ? "Esportazione PNG..." : "Esporta PNG tabella"}
+                </button>
+
+        <button
+          type="button"
+          onClick={() => setShowProvisionalExportModal(true)}
+          disabled={exporting}
+          style={{
+            padding: "12px 16px",
+            borderRadius: 14,
+            border: "1px solid rgba(255,215,0,0.35)",
+            background: "rgba(255,215,0,0.12)",
+            color: "#ffdf80",
+            fontWeight: 900,
+            letterSpacing: 0.6,
+            cursor: exporting ? "not-allowed" : "pointer",
+            textTransform: "uppercase",
+            boxShadow: "0 0 18px rgba(255,215,0,0.08)",
+          }}
+        >
+          Esporta PNG provvisori
         </button>
 
         <label
@@ -16223,6 +16421,133 @@ setDrawerOpen(true)
   </div>
 )}
       
+      {showProvisionalExportModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.78)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 480,
+        padding: 28,
+        borderRadius: 20,
+        border: "1px solid rgba(255,215,0,0.35)",
+        background: "#11121a",
+        color: "white",
+        boxShadow: "0 0 45px rgba(255,215,0,0.12)",
+      }}
+    >
+      <h2 style={{ marginTop: 0, color: "#ffdf80" }}>
+        ESPORTA CLASSIFICHE PROVVISORIE
+      </h2>
+
+      <p style={{ opacity: 0.75, fontSize: 13 }}>
+        Seleziona la gara e il giorno per preparare le classifiche
+        provvisorie delle lobby.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GARA</strong>
+          <select
+            value={provisionalExportRace}
+            onChange={(e) =>
+              setProvisionalExportRace(Number(e.target.value))
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {[1, 2, 3, 4, 5].map((race) => (
+              <option key={race} value={race}>
+                Gara {race}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GIORNO</strong>
+          <select
+            value={provisionalExportDay}
+            onChange={(e) =>
+              setProvisionalExportDay(e.target.value)
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            <option value="lunedi">Lunedì</option>
+            <option value="martedi">Martedì</option>
+            <option value="mercoledi">Mercoledì</option>
+            <option value="giovedi">Giovedì</option>
+            <option value="venerdi">Venerdì</option>
+          </select>
+        </label>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          marginTop: 28,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowProvisionalExportModal(false)}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "#292a35",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.15)",
+            cursor: "pointer",
+          }}
+        >
+          ANNULLA
+        </button>
+
+        <button
+  type="button"
+  onClick={generateProvisionalZip}
+  disabled={exporting}
+  style={{
+    padding: "12px 18px",
+    borderRadius: 12,
+    background: "rgba(255,215,0,0.15)",
+    color: "#ffdf80",
+    border: "1px solid rgba(255,215,0,0.35)",
+    opacity: exporting ? 0.55 : 1,
+    cursor: exporting ? "not-allowed" : "pointer",
+    fontWeight: 900,
+  }}
+>
+  {exporting ? "GENERAZIONE IN CORSO..." : "GENERA ZIP"}
+</button>
+      </div>
+    </div>
+  </div>
+)}
+      
       {showExportModal && (
         <div
           style={{
@@ -17618,6 +17943,81 @@ const changed = currentValue !== originalValue
     </div>
   </div>
 )}
+
+<div
+  style={{
+    position: "fixed",
+    left: "-24000px",
+    top: 0,
+    width: 1920,
+    height: 1080,
+    pointerEvents: "none",
+    zIndex: -1,
+    opacity: 1,
+  }}
+>
+  <div ref={provisionalExportRef}>
+  {provisionalRenderData && (
+    <div
+      style={{
+        width: 1920,
+        height: 1080,
+        boxSizing: "border-box",
+        display: "grid",
+        gap: 12,
+        padding: "10px 18px 12px 18px",
+        alignContent: "start",
+        borderRadius: 22,
+        background:
+          "radial-gradient(1200px 600px at 15% 10%, rgba(255,215,0,0.14), transparent 50%)," +
+          "radial-gradient(900px 500px at 85% 20%, rgba(160,90,255,0.16), transparent 50%)," +
+          "linear-gradient(180deg, #0b0d12 0%, #07080c 100%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
+        overflow: "hidden",
+      }}
+    >
+      <AppHeader
+        mainTitle="CLASSIFICHE PROVVISORIE"
+        sideLabel={UNION_PROVISIONAL_CIRCUITS[provisionalRenderData.raceNumber]}
+        subtitle="UNION Timing Assistant"
+        pngExport={true}
+      />
+      <SummaryStrip
+  winner={provisionalRenderData.snapshot.winner}
+  bestQuali={provisionalRenderData.snapshot.bestQuali}
+  bestRaceLap={provisionalRenderData.snapshot.bestRaceLap}
+  unionMeta={{
+    ...provisionalRenderData.snapshot.unionMeta,
+    gara: `Gara ${provisionalRenderData.raceNumber}`,
+    lega: provisionalRenderData.league,
+  }}
+  showMeta={true}
+  showLobby={true}
+  exporting={true}
+/>
+
+<ResultsTable
+  previewRows={provisionalRenderData.snapshot.finalRows}
+  bestRaceLap={provisionalRenderData.snapshot.bestRaceLap}
+  unionMeta={{
+    ...provisionalRenderData.snapshot.unionMeta,
+    gara: `Gara ${provisionalRenderData.raceNumber}`,
+    lega: provisionalRenderData.league,
+  }}
+  prtMode={false}
+  unionMode={true}
+  exporting={true}
+  penalties={provisionalRenderData.snapshot.penalties}
+  dgMeasureTypes={provisionalRenderData.snapshot.dgMeasureTypes ?? {}}
+  dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
+  forceHideMeta={false}
+  tableTitle="Classifica provvisoria"
+/>
+    </div>
+  )}
+</div>
+</div>
 
 <div
   style={{
