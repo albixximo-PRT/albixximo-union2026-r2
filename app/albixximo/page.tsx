@@ -18006,8 +18006,8 @@ const changed = currentValue !== originalValue
   penalties={provisionalRenderData.snapshot.penalties}
   dgMeasureTypes={provisionalRenderData.snapshot.dgMeasureTypes ?? {}}
   dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
-  forceHideMeta={false}
-  tableTitle="Classifica provvisoria"
+  forceHideMeta={true}
+tableTitle="Classifica provvisoria"
 />
     </div>
   )}
