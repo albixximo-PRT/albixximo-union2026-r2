@@ -2279,6 +2279,70 @@ if (useAltInsteadOfBase) {
 
     const qualiRows = Array.from(qualiRowsMerged.values()).sort((a, b) => a.pos - b.pos)
     const raceRows = Array.from(raceRowsMerged.values()).sort((a, b) => a.pos - b.pos)
+    // ==========================================================
+// ECCEZIONE ESCLUSIVA UNION 2026 - GARA 2 - ELITE A35
+// Recupero H7-25 YT e riallineamento nomi P1-P8.
+// Nessuna modifica al parser generale.
+// ==========================================================
+
+const metaA35 = mergeUnionMeta(allTexts)
+
+const isA35Race2 =
+  metaA35.gara === "2" &&
+  metaA35.lobby === "A35" &&
+  metaA35.lega === "ELITE"
+
+if (isA35Race2) {
+  const expectedWrongNames = [
+    "Ermy",
+    "SMI_#Gianni",
+    "CBR_JOHNNY",
+    "RCE_MVedovi59",
+    "PBC_Goivas",
+    "G.Altin",
+    "Sandro_71",
+    "",
+  ]
+
+  const actualWrongNames = raceRows
+    .filter((r) => r.pos >= 1 && r.pos <= 8)
+    .map((r) => r.pilota)
+
+  const matchesKnownProblem =
+    actualWrongNames.length === 8 &&
+    expectedWrongNames.every(
+      (name, i) =>
+        normalizePilotLoose(name) ===
+        normalizePilotLoose(actualWrongNames[i])
+    )
+
+  const h7PresentInOcr = allTexts.some((text) =>
+    /(?:AK|NK)\s+H7-25\s+YT/i.test(text)
+  )
+
+  if (matchesKnownProblem && h7PresentInOcr) {
+    const correctedNames = [
+      "H7-25 YT",
+      "Ermy",
+      "SMI_#Gianni",
+      "CBR_JOHNNY",
+      "RCE_MVedovi59",
+      "PBC_Goivas",
+      "G.Altin",
+      "Sandro_71",
+    ]
+
+    for (const row of raceRows) {
+      if (row.pos >= 1 && row.pos <= 8) {
+        row.pilota = correctedNames[row.pos - 1]
+      }
+    }
+
+    console.log(
+      "UNION A35 GARA 2 → recuperato H7-25 YT e riallineati P1-P8"
+    )
+  }
+}
 
     if (!raceRows.length) {
       return Response.json(
