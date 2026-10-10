@@ -1850,9 +1850,21 @@ function AppHeader({
     ) : sideLabel.includes("<gold>/</gold>") ? (
     <span>
       {sideLabel.split("<gold>/</gold>")[0]}
-      <span style={{ color: "#FFD700", padding: "0 10px", fontWeight: 900 }}>
-        /
-      </span>
+      <span
+  style={{
+    color: "#FFD700",
+    padding: "0 10px",
+    fontWeight: 900,
+    fontSize: "1.15em",
+    textShadow:
+      "0 0 4px rgba(255,215,0,1), " +
+      "0 0 10px rgba(255,215,0,0.95), " +
+      "0 0 20px rgba(255,215,0,0.75), " +
+      "0 0 32px rgba(255,215,0,0.45)",
+  }}
+>
+  /
+</span>
       {sideLabel.split("<gold>/</gold>")[1]}
     </span>
   ) : (
