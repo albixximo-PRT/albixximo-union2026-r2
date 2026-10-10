@@ -1847,6 +1847,14 @@ function AppHeader({
         in ordine alfabetico
       </span>
     </>
+    ) : sideLabel.includes("<gold>/</gold>") ? (
+    <span>
+      {sideLabel.split("<gold>/</gold>")[0]}
+      <span style={{ color: "#FFD700", padding: "0 10px", fontWeight: 900 }}>
+        /
+      </span>
+      {sideLabel.split("<gold>/</gold>")[1]}
+    </span>
   ) : (
     sideLabel
   )}
@@ -17974,7 +17982,7 @@ const changed = currentValue !== originalValue
     >
       <AppHeader
   mainTitle={`${provisionalRenderData.lobby} ${provisionalRenderData.league}`}
-  sideLabel={`CLASSIFICHE PROVVISORIE GARA ${provisionalRenderData.raceNumber}`}
+  sideLabel={`CLASSIFICHE PROVVISORIE GARA ${provisionalRenderData.raceNumber} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[provisionalRenderData.raceNumber] || ""}`}
   subtitle="UNION Timing Assistant"
   pngExport={true}
 />
