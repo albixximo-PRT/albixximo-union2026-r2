@@ -1146,7 +1146,7 @@ if (
 
     // Evita intestazioni / metadati / auto / tempi
     if (
-  /GRAN TURISMO|SIMULATOR|LIMULATOR|UNION|GARA|LOBBY/i.test(
+  /GRAN TURISMO|SIMULATOR|LIMULATOR|UNION|GARA|LOBBY|^ELITE$/i.test(
     candidate
   )
 ) {
@@ -1203,12 +1203,12 @@ const stopAnyHeader =
   // Esclude intestazioni e metadati GT7 che possono comparire
   // prima del nome pilota negli screen P9-P16.
   if (
-    /GRAN TURISMO|THE REAL DRIVING SIMULATOR|RED BULL RING|UNION|\bGARA\b|LOBBY|CHIUDI|AVANTI|ALTERNA/i.test(
-      t
-    )
-  ) {
-    return false
-  }
+  /GRAN TURISMO|THE REAL DRIVING SIMULATOR|RED BULL RING|UNION|\bGARA\b|LOBBY|CHIUDI|AVANTI|ALTERNA|^ELITE$/i.test(
+    t
+  )
+) {
+  return false
+}
 
   return /[A-Za-z]/.test(t)
 }
