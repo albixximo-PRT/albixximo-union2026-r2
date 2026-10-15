@@ -2703,8 +2703,9 @@ function renderPrtPenaltyCell({
     <span
       style={{
         justifySelf: "center",
+        alignSelf: "center",
         color: "#facc15",
-        fontSize: exporting ? 24 : 20,
+        fontSize: exporting ? 28 : 25,
         fontWeight: 950,
         lineHeight: 1,
       }}
@@ -2718,7 +2719,7 @@ function renderPrtPenaltyCell({
         width: 190,
         marginRight: -51,
         textAlign: "center",
-        color: "#ff4545",
+        color: "#ff2020",
         fontSize: exporting ? 16 : 12,
         fontWeight: 950,
         lineHeight: 1.4,
@@ -2726,24 +2727,7 @@ function renderPrtPenaltyCell({
       }}
     >
       <div>ESCLUSIONE DAL ROUND</div>
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-        }}
-      >
-        <span>PER DOPPIA</span>
-
-        <Pill
-  left="A"
-  variant="absenceRed"
-  exporting={exporting}
-  compact
-/>
-      </div>
+      <div>PER DOPPIA ASSENZA</div>
     </div>
   </div>
 ) : null
