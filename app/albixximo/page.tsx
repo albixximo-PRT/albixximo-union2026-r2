@@ -2478,6 +2478,7 @@ function renderPrtPenaltyCell({
   penalties,
   dgMeasureTypes,
   dgSpecialMeasures,
+    doubleAbsenceWarning = false,
   exportPenaltyTimeTextStyle,
   exporting = false,
 }: {
@@ -2485,6 +2486,7 @@ function renderPrtPenaltyCell({
   penalties: PenaltyMap
   dgMeasureTypes: Record<string, DgMeasureType>
   dgSpecialMeasures: DgSpecialMeasureMap
+    doubleAbsenceWarning?: boolean
   exportPenaltyTimeTextStyle: React.CSSProperties
   exporting?: boolean
 }) {
@@ -2556,9 +2558,9 @@ function renderPrtPenaltyCell({
     (dgMeasureType === "S" || dgMeasureType === "P_S") &&
     !!specialMeasureLabel
 
-  if (!hasPenalty && !hasSpecialMeasure) {
-    return "-"
-  }
+  if (!hasPenalty && !hasSpecialMeasure && !doubleAbsenceWarning) {
+  return "-"
+}
 
   const penaltyElement = hasPenalty ? (
     <div
@@ -2687,18 +2689,83 @@ function renderPrtPenaltyCell({
     </div>
   ) : null
 
-  return (
-    <div
+  const doubleAbsenceElement = doubleAbsenceWarning ? (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "88px 1fr 88px",
+      alignItems: "center",
+      width: "100%",
+    }}
+  >
+    <div />
+
+    <span
       style={{
-        display: "grid",
-        gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
-        width: "100%",
+        justifySelf: "center",
+        color: "#facc15",
+        fontSize: exporting ? 24 : 20,
+        fontWeight: 950,
+        lineHeight: 1,
       }}
     >
-      {penaltyElement}
-      {specialMeasureElement}
+      ⚠
+    </span>
+
+    <div
+      style={{
+        justifySelf: "end",
+        width: 190,
+        marginRight: -51,
+        textAlign: "center",
+        color: "#ff4545",
+        fontSize: exporting ? 16 : 12,
+        fontWeight: 950,
+        lineHeight: 1.4,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <div>ESCLUSIONE DAL ROUND</div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}
+      >
+        <span>PER DOPPIA</span>
+
+        <Pill
+  left="A"
+  variant="absenceRed"
+  exporting={exporting}
+  compact
+/>
+      </div>
     </div>
-  )
+  </div>
+) : null
+  
+  return (
+  <div
+    style={{
+      display: "grid",
+      gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
+      width: "100%",
+    }}
+  >
+    {doubleAbsenceWarning ? (
+      doubleAbsenceElement
+    ) : (
+      <>
+        {penaltyElement}
+        {specialMeasureElement}
+      </>
+    )}
+  </div>
+)
 }
 
 
@@ -2918,6 +2985,7 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
+    unjustifiedAbsenceCounts = {},
 dgMeasureTypes,
 dgSpecialMeasures,
 forceHideMeta = false,
@@ -2932,6 +3000,7 @@ forceHideMeta = false,
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
+    unjustifiedAbsenceCounts?: Record<string, number>
 dgMeasureTypes: Record<string, DgMeasureType>
 dgSpecialMeasures: DgSpecialMeasureMap
 forceHideMeta?: boolean
@@ -3325,9 +3394,17 @@ return penaltySeconds === 0 && !isDsqRow
   row: r,
   penalties,
   dgMeasureTypes,
-    dgSpecialMeasures,
+  dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
   exporting,
+  doubleAbsenceWarning:
+  (unjustifiedAbsenceCounts[
+    String(r.pilota || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[_\-.]+/g, "")
+      .replace(/\s+/g, "")
+  ] || 0) >= 2,
 })}
                   </TableCell>
 
@@ -14135,6 +14212,7 @@ boxShadow:
 }}
     tableTitle="Classifica (output)"
     verifiedAbsences={verifiedAbsences}
+    unjustifiedAbsenceCounts={unjustifiedAbsenceCounts}
   />
 )}
 
@@ -18108,6 +18186,7 @@ tableTitle="Classifica provvisoria"
           dgMeasureTypes={dgMeasureTypes}
           dgSpecialMeasures={dgSpecialMeasures}
           forceHideMeta={!exportMetaInPng}
+          unjustifiedAbsenceCounts={unjustifiedAbsenceCounts}
           tableTitle="Classifica definitiva"
         />
       </div>
