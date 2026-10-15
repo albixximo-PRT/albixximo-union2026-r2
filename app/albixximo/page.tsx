@@ -88,6 +88,7 @@ type DgMeasureType = "NONE" | "P" | "S" | "P_S" | "INFONDATO"
 type DgSpecialMeasure =
   | "NEXT_RACE_DSQ"
   | "NEXT_RACE_GRID_MINUS_5"
+  | "NEXT_QUALIFYING_DSQ"
 
 type DgSpecialMeasureMap =
   Record<string, DgSpecialMeasure>
@@ -2493,10 +2494,12 @@ function renderPrtPenaltyCell({
   const specialMeasure = dgSpecialMeasures[key]
 
   const specialMeasureLabel =
-    specialMeasure === "NEXT_RACE_DSQ"
-      ? "SQUALIFICA DALLA PROSSIMA GARA"
-      : specialMeasure === "NEXT_RACE_GRID_MINUS_5"
-        ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
+  specialMeasure === "NEXT_RACE_DSQ"
+    ? "SQUALIFICA DALLA PROSSIMA GARA"
+    : specialMeasure === "NEXT_RACE_GRID_MINUS_5"
+      ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
+      : specialMeasure === "NEXT_QUALIFYING_DSQ"
+        ? "SQUALIFICA DALLA PROSSIMA QUALIFICA"
         : ""
 
   const isDsqRow =
@@ -2662,18 +2665,24 @@ function renderPrtPenaltyCell({
         }}
       >
         {specialMeasure === "NEXT_RACE_DSQ" ? (
-          <>
-            SQUALIFICA
-            <br />
-            PROSSIMA GARA
-          </>
-        ) : (
-          <>
-            -5 POSIZIONI IN GRIGLIA
-            <br />
-            PROSSIMA GARA
-          </>
-        )}
+  <>
+    SQUALIFICA
+    <br />
+    PROSSIMA GARA
+  </>
+) : specialMeasure === "NEXT_QUALIFYING_DSQ" ? (
+  <>
+    SQUALIFICA
+    <br />
+    PROSSIMA QUALIFICA
+  </>
+) : (
+  <>
+    -5 POSIZIONI IN GRIGLIA
+    <br />
+    PROSSIMA GARA
+  </>
+)}
       </span>
     </div>
   ) : null
@@ -14520,9 +14529,10 @@ boxShadow:
           const next = { ...prev }
 
           if (
-            value === "NEXT_RACE_DSQ" ||
-            value === "NEXT_RACE_GRID_MINUS_5"
-          ) {
+  value === "NEXT_RACE_DSQ" ||
+  value === "NEXT_RACE_GRID_MINUS_5" ||
+  value === "NEXT_QUALIFYING_DSQ"
+) {
             next[key] = value
           } else {
             delete next[key]
@@ -14554,6 +14564,9 @@ boxShadow:
       <option value="NEXT_RACE_GRID_MINUS_5">
         -5 POSIZIONI IN GRIGLIA PROSSIMA GARA
       </option>
+      <option value="NEXT_QUALIFYING_DSQ">
+  SQUALIFICA DALLA PROSSIMA QUALIFICA
+</option>
     </select>
   )}
 
