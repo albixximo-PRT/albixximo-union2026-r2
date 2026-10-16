@@ -7994,7 +7994,7 @@ async function generateDefinitiveZip() {
       const pngBlob = await renderDefinitiveLobby(item, raceNumber)
 
       zip.file(
-        `${item.lobby}_${leagueName}_DEFINITIVA.png`,
+        `${item.lobby}.png`,
         pngBlob
       )
     }
