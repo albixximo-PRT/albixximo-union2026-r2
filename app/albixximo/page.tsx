@@ -3525,6 +3525,19 @@ const [dgSpecialMeasures, setDgSpecialMeasures] =
 } | null>(null)
 const [provisionalExportRace, setProvisionalExportRace] = useState<number>(2)
 const [provisionalExportDay, setProvisionalExportDay] = useState<string>("lunedi")
+const [showDefinitiveExportModal, setShowDefinitiveExportModal] = useState(false)
+
+const [definitiveExportRace, setDefinitiveExportRace] = useState<number>(2)
+
+const [definitiveExportLeague, setDefinitiveExportLeague] =
+  useState<ChampionshipLeagueKey>("STAR")
+
+const [definitiveRenderData, setDefinitiveRenderData] = useState<{
+  lobby: string
+  league: ChampionshipLeagueKey
+  raceNumber: number
+  snapshot: SavedLeagueSnapshot
+} | null>(null)
   const [manualGaraOverride, setManualGaraOverride] = useState("")
   const [manualLegaOverride, setManualLegaOverride] = useState("")
 
@@ -3685,6 +3698,7 @@ const backupInputRef = useRef<HTMLInputElement | null>(null)
 const htmlFilesInputRef = useRef<HTMLInputElement | null>(null)
 const exportRef = useRef<HTMLDivElement | null>(null)
 const provisionalExportRef = useRef<HTMLDivElement | null>(null)
+const definitiveExportRef = useRef<HTMLDivElement | null>(null)
 const championshipExportBannerRef = useRef<HTMLDivElement | null>(null)
 const championshipExportTableRef = useRef<HTMLDivElement | null>(null)
 const appHeaderExportRef = useRef<HTMLDivElement | null>(null)
@@ -6872,6 +6886,44 @@ const absenceValue: AbsenceOverrideValue =
   return championshipState.races[currentRace] || {}
 }, [championshipState, currentRace])
 
+function getDefinitiveAbsenceCounts(
+  raceNumber: number
+): Record<string, number> {
+  const counts: Record<string, number> = {}
+
+  for (let race = 1; race <= raceNumber; race++) {
+    const raceState = championshipState.races[race]
+    if (!raceState) continue
+
+    for (const league of UNION_RANKS) {
+      const lobbyState = raceState[league]
+      if (!lobbyState) continue
+
+      for (const snapshot of Object.values(lobbyState)) {
+        if (!snapshot) continue
+
+        for (const row of snapshot.finalRows || []) {
+          if (
+            tempoLikeGt7(row).trim().toUpperCase() !== "ASS-I"
+          ) {
+            continue
+          }
+
+          const key = normalizeDriverNameForChampionship(
+            row.pilota
+          )
+
+          if (!key) continue
+
+          counts[key] = (counts[key] || 0) + 1
+        }
+      }
+    }
+  }
+
+  return counts
+}
+
 const unjustifiedAbsenceCounts = useMemo(() => {
   const counts: Record<string, number> = {}
 
@@ -7298,6 +7350,22 @@ function getProvisionalSavedLobbies(
 
     if (!league) return []
 
+    const snapshot = raceSnapshots?.[league]?.[lobby]
+
+    if (!snapshot?.finalRows?.length) return []
+
+    return [{ lobby, league, snapshot }]
+  })
+}
+
+function getDefinitiveSavedLobbies(
+  raceNumber: number,
+  league: ChampionshipLeagueKey
+) {
+  const raceSnapshots = championshipState.races[raceNumber]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+
+  return leagueLobbies.flatMap((lobby) => {
     const snapshot = raceSnapshots?.[league]?.[lobby]
 
     if (!snapshot?.finalRows?.length) return []
@@ -7782,6 +7850,35 @@ const driverChampionshipByLeague = useMemo(() => {
   }
 }, [driverChampionship])
 
+function getDefinitiveRowsForSnapshot(
+  snapshot: SavedLeagueSnapshot
+): DisplayRow[] {
+  const savedRows = snapshot.finalRows || []
+
+  const existingKeys = new Set(
+    savedRows.map((row) =>
+      normalizeDriverNameForChampionship(row.pilota)
+    )
+  )
+
+  const missingPilots = (snapshot.expectedDrivers || []).filter(
+    (pilot) => {
+      const key = normalizeDriverNameForChampionship(pilot)
+
+      return key && !existingKeys.has(key)
+    }
+  )
+
+  const dnpRows = missingPilots.map((pilot, index) =>
+    createDnpDisplayRow(
+      pilot,
+      savedRows.length + index + 1
+    )
+  )
+
+  return [...savedRows, ...dnpRows]
+}
+
 const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
   const raceLeague = normalizeLeagueKey(effectiveLega) || selectedLeague
   const expectedLobbyPilots = expectedLobbyDrivers
@@ -7871,6 +7968,60 @@ const penaltySeconds = penalties[rowKey] || 0
   alert(`File ${leagueForFile}-dg.json esportato correttamente`)
 
   return true
+}
+
+async function generateDefinitiveZip() {
+  if (exporting) return
+
+  const raceNumber = definitiveExportRace
+  const league = definitiveExportLeague
+  const savedLobbies = getDefinitiveSavedLobbies(raceNumber, league)
+
+  if (savedLobbies.length === 0) {
+    setError("Nessuna lobby salvata per la gara e la lega selezionate.")
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const zip = new JSZip()
+    const leagueName = league.replace(/\s+/g, "_")
+
+    for (const item of savedLobbies) {
+      const pngBlob = await renderDefinitiveLobby(item, raceNumber)
+
+      zip.file(
+        `${item.lobby}_${leagueName}_DEFINITIVA.png`,
+        pngBlob
+      )
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" })
+    const url = URL.createObjectURL(zipBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download =
+      `UNION_GARA${raceNumber}_${leagueName}_DEFINITIVE.zip`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setShowDefinitiveExportModal(false)
+  } catch (error: unknown) {
+    setError(
+      `Errore esportazione definitive: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  } finally {
+    setDefinitiveRenderData(null)
+    setExporting(false)
+  }
 }
 
 async function generateProvisionalZip() {
@@ -7972,6 +8123,58 @@ async function captureProvisionalPng(): Promise<Blob> {
 
   if (!element || !element.firstElementChild) {
     throw new Error("Nessuna classifica provvisoria disponibile per l'esportazione.")
+  }
+
+  const dataUrl = await toPng(element, {
+    cacheBust: true,
+    pixelRatio: 2,
+    width: 1920,
+    height: 1080,
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: "#07080c",
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    },
+  })
+
+  const response = await fetch(dataUrl)
+  return response.blob()
+}
+
+async function renderDefinitiveLobby(
+  item: {
+    lobby: string
+    league: ChampionshipLeagueKey
+    snapshot: SavedLeagueSnapshot
+  },
+  raceNumber: number
+): Promise<Blob> {
+  setDefinitiveRenderData({
+    lobby: item.lobby,
+    league: item.league,
+    snapshot: item.snapshot,
+    raceNumber,
+  })
+
+  // Attendiamo il rendering della lobby selezionata.
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+
+  return captureDefinitivePng()
+}
+
+async function captureDefinitivePng(): Promise<Blob> {
+  const element = definitiveExportRef.current
+
+  if (!element || !element.firstElementChild) {
+    throw new Error(
+      "Nessuna classifica definitiva disponibile per l'esportazione."
+    )
   }
 
   const dataUrl = await toPng(element, {
@@ -13984,6 +14187,26 @@ boxShadow:
           Esporta PNG provvisori
         </button>
 
+                <button
+          type="button"
+          onClick={() => setShowDefinitiveExportModal(true)}
+          disabled={exporting}
+          style={{
+            padding: "12px 16px",
+            borderRadius: 14,
+            border: "1px solid rgba(255,215,0,0.55)",
+            background: "rgba(255,215,0,0.18)",
+            color: "#ffe58a",
+            fontWeight: 900,
+            letterSpacing: 0.6,
+            cursor: exporting ? "not-allowed" : "pointer",
+            textTransform: "uppercase",
+            boxShadow: "0 0 18px rgba(255,215,0,0.12)",
+          }}
+        >
+          Esporta PNG definitivi
+        </button>
+        
         <label
           style={{
             display: "inline-flex",
@@ -16662,6 +16885,137 @@ setDrawerOpen(true)
 >
   {exporting ? "GENERAZIONE IN CORSO..." : "GENERA ZIP"}
 </button>
+
+      </div>
+    </div>
+  </div>
+)}
+      
+      {showDefinitiveExportModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.78)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 480,
+        padding: 28,
+        borderRadius: 20,
+        border: "1px solid rgba(255,215,0,0.35)",
+        background: "#11121a",
+        color: "white",
+        boxShadow: "0 0 45px rgba(255,215,0,0.12)",
+      }}
+    >
+      <h2 style={{ marginTop: 0, color: "#ffdf80" }}>
+        ESPORTA CLASSIFICHE DEFINITIVE
+      </h2>
+
+      <p style={{ opacity: 0.75, fontSize: 13 }}>
+        Seleziona la gara e la lega per esportare in un unico ZIP
+        tutte le lobby salvate, con la grafica dei PNG definitivi.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GARA</strong>
+          <select
+            value={definitiveExportRace}
+            onChange={(e) =>
+              setDefinitiveExportRace(Number(e.target.value))
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {[1, 2, 3, 4, 5].map((race) => (
+              <option key={race} value={race}>
+                Gara {race}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>LEGA</strong>
+          <select
+            value={definitiveExportLeague}
+            onChange={(e) =>
+              setDefinitiveExportLeague(
+                e.target.value as ChampionshipLeagueKey
+              )
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {UNION_RANKS.map((league) => (
+              <option key={league} value={league}>
+                {league}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          marginTop: 28,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowDefinitiveExportModal(false)}
+          disabled={exporting}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "#292a35",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.15)",
+            cursor: "pointer",
+          }}
+        >
+          ANNULLA
+        </button>
+
+        <button
+          type="button"
+          onClick={generateDefinitiveZip}
+          disabled={exporting}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "rgba(255,215,0,0.15)",
+            color: "#ffdf80",
+            border: "1px solid rgba(255,215,0,0.35)",
+            opacity: exporting ? 0.55 : 1,
+            cursor: exporting ? "not-allowed" : "pointer",
+            fontWeight: 900,
+          }}
+        >
+          {exporting ? "GENERAZIONE IN CORSO..." : "GENERA ZIP"}
+        </button>
       </div>
     </div>
   </div>
@@ -18206,7 +18560,94 @@ tableTitle="Classifica provvisoria"
     )}
   </div>
 </div>
+  
+{/* CONTENITORE ESPORTAZIONE PNG DEFINITIVI */}
+<div
+  style={{
+    position: "fixed",
+    left: "-28000px",
+    top: 0,
+    width: 1920,
+    height: 1080,
+    pointerEvents: "none",
+    zIndex: -1,
+    opacity: 1,
+  }}
+>
+  <div ref={definitiveExportRef}>
+    {definitiveRenderData && (
+      <div
+        style={{
+          width: 1920,
+          height: 1080,
+          boxSizing: "border-box",
+          display: "grid",
+          gap: 12,
+          padding: "10px 18px 12px 18px",
+          alignContent: "start",
+          borderRadius: 22,
+          background:
+            "radial-gradient(1200px 600px at 15% 10%, rgba(255,215,0,0.14), transparent 50%)," +
+            "radial-gradient(900px 500px at 85% 20%, rgba(160,90,255,0.16), transparent 50%)," +
+            "linear-gradient(180deg, #0b0d12 0%, #07080c 100%)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
+          overflow: "hidden",
+        }}
+      >
+        <AppHeader
+  mainTitle={`UNION 2026 - ROUND 2 | LEGA ${definitiveRenderData.league}`}
+  sideLabel={`CLASSIFICHE DEFINITIVE GARA ${definitiveRenderData.raceNumber} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[definitiveRenderData.raceNumber] || ""}`}
+  subtitle="UNION Timing Assistant"
+  pngExport={true}
+/>
 
+        <SummaryStrip
+          winner={definitiveRenderData.snapshot.winner}
+          bestQuali={definitiveRenderData.snapshot.bestQuali}
+          bestRaceLap={definitiveRenderData.snapshot.bestRaceLap}
+          unionMeta={{
+            ...definitiveRenderData.snapshot.unionMeta,
+            gara: `Gara ${definitiveRenderData.raceNumber}`,
+            lega: definitiveRenderData.league,
+          }}
+          showMeta={showMeta}
+          showLobby={showLobby}
+          exporting={true}
+        />
+
+        <ResultsTable
+          previewRows={getDefinitiveRowsForSnapshot(
+            definitiveRenderData.snapshot
+          )}
+          bestRaceLap={definitiveRenderData.snapshot.bestRaceLap}
+          unionMeta={{
+            ...definitiveRenderData.snapshot.unionMeta,
+            gara: `Gara ${definitiveRenderData.raceNumber}`,
+            lega: definitiveRenderData.league,
+          }}
+          prtMode={false}
+          unionMode={true}
+          exporting={true}
+          penalties={definitiveRenderData.snapshot.penalties}
+          dgMeasureTypes={
+            definitiveRenderData.snapshot.dgMeasureTypes ?? {}
+          }
+          dgSpecialMeasures={
+            definitiveRenderData.snapshot.dgSpecialMeasures ?? {}
+          }
+          forceHideMeta={!exportMetaInPng}
+          unjustifiedAbsenceCounts={getDefinitiveAbsenceCounts(
+            definitiveRenderData.raceNumber
+          )}
+          tableTitle="Classifica definitiva"
+        />
+      </div>
+    )}
+  </div>
+</div>
+
+{/* CONTENITORE ESPORTAZIONE HTML CLASSIFICHE */}
 <div
   style={{
     position: "fixed",
@@ -18238,6 +18679,7 @@ tableTitle="Classifica provvisoria"
         boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
       }}
     >
+
       <AppHeader
   mainTitle={exportTexts.mainTitle}
   sideLabel={exportTexts.sideLabel}
