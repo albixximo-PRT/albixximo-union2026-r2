@@ -3037,7 +3037,8 @@ value === "DOPPIATO" ||
   )
 }).length
 
-const compactStatusPills = exporting && exportStatusPillCount > 2
+const compactStatusPills =
+  exporting && (exportStatusPillCount > 2 || previewRows.length >= 14)
 
   return (
     <div
