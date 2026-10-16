@@ -18528,7 +18528,7 @@ tableTitle="Classifica provvisoria"
       >
         <AppHeader
   mainTitle={exportTexts.mainTitle}
-  sideLabel={exportTexts.sideLabel}
+  sideLabel={`LOBBY ${selectedLobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[currentRace] || ""}`}
   subtitle={exportTexts.subtitle}
   pngExport={true}
 />
@@ -18598,7 +18598,7 @@ tableTitle="Classifica provvisoria"
       >
         <AppHeader
   mainTitle={`UNION 2026 - ROUND 2 | LEGA ${definitiveRenderData.league}`}
-  sideLabel={`CLASSIFICHE DEFINITIVE GARA ${definitiveRenderData.raceNumber} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[definitiveRenderData.raceNumber] || ""}`}
+  sideLabel={`LOBBY ${definitiveRenderData.lobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[definitiveRenderData.raceNumber] || ""}`}
   subtitle="UNION Timing Assistant"
   pngExport={true}
 />
