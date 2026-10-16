@@ -15431,10 +15431,25 @@ boxShadow:
 )}
 
         <div style={{ display: "grid", gap: 6 }}>
-  <label style={{ fontSize: 11, opacity: 0.8, fontWeight: 900, textTransform: "uppercase" }}>
+  <label
+    style={{
+      fontSize: 11,
+      opacity: 0.8,
+      fontWeight: 900,
+      textTransform: "uppercase",
+    }}
+  >
     Lega destinazione
   </label>
-  <div
+
+  <select
+    value={movementDraftTargetLeague}
+    onChange={(e) => {
+      setMovementDraftTargetLeague(
+        e.target.value as ChampionshipLeagueKey
+      )
+      setMovementDraftTargetDriver("")
+    }}
     style={{
       width: "100%",
       padding: "10px 12px",
@@ -15443,14 +15458,28 @@ boxShadow:
       background: "rgba(0,0,0,0.24)",
       color: "white",
       minHeight: 42,
-      display: "flex",
-      alignItems: "center",
       fontWeight: 800,
       boxSizing: "border-box",
+      cursor: "pointer",
     }}
   >
-    {movementDraftTargetLeague}
-  </div>
+    {CHAMPIONSHIP_LEAGUES
+      .filter((league) => {
+        const sourceIndex =
+          CHAMPIONSHIP_LEAGUES.indexOf(movementDraftLeague)
+        const targetIndex =
+          CHAMPIONSHIP_LEAGUES.indexOf(league)
+
+        return movementDraftType === "promote"
+          ? targetIndex < sourceIndex
+          : targetIndex > sourceIndex
+      })
+      .map((league) => (
+        <option key={league} value={league}>
+          {league}
+        </option>
+      ))}
+  </select>
 </div>
       </div>
 <div style={{ display: "grid" }}>
