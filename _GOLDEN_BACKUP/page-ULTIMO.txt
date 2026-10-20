@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { toPng } from "html-to-image"
+import JSZip from "jszip"
 import {
   UNION_DRIVER_NAMES_BY_RANK,
   getUnionDriverTeamCode,
@@ -54,6 +55,22 @@ const UNION_LOBBIES_BY_RANK = {
   AMA: ["A7", "A11", "A19", "A23", "A27", "A33"],
 } as const
 
+const UNION_PROVISIONAL_DAYS = {
+  lunedi: ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
+  martedi: ["A8", "A9", "A10", "A11", "A12", "A13", "A14", "A15"],
+  mercoledi: ["A16", "A17", "A18", "A19", "A20", "A21", "A22"],
+  giovedi: ["A23", "A24", "A25", "A26", "A27", "A28", "A29", "A30"],
+  venerdi: ["A31", "A32", "A33", "A34", "A35", "A36"],
+} as const
+
+const UNION_PROVISIONAL_CIRCUITS: Record<number, string> = {
+  1: "Red Bull Ring",
+  2: "Watkins Glen",
+  3: "Suzuka Circuit",
+  4: "Autopolis",
+  5: "Nürburgring GP",
+}
+
 type UnionRankKey = typeof UNION_RANKS[number]
 
 const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
@@ -67,7 +84,15 @@ const UNION_RANK_LABELS: Record<UnionRankKey, string> = {
 
 type ChampionshipLeagueKey = UnionRankKey
 
-type DgMeasureType = "NONE" | "P" | "S" | "INFONDATO"
+type DgMeasureType = "NONE" | "P" | "S" | "P_S" | "INFONDATO"
+type DgSpecialMeasure =
+  | "NEXT_RACE_DSQ"
+  | "NEXT_RACE_GRID_MINUS_5"
+  | "NEXT_QUALIFYING_DSQ"
+  | "CURRENT_RACE_DSQ"
+
+type DgSpecialMeasureMap =
+  Record<string, DgSpecialMeasure>
 
 type SavedLeagueSnapshot = {
   savedAt: string
@@ -80,6 +105,7 @@ type SavedLeagueSnapshot = {
   unionMeta: UnionMeta
 penalties: PenaltyMap
 dgMeasureTypes?: Record<string, DgMeasureType>
+dgSpecialMeasures?: DgSpecialMeasureMap
 dgUnfoundedPilots?: string[]
 lapOverrides: Record<string, string>
   dnfOverrides: DnfOverrideMap
@@ -1823,6 +1849,26 @@ function AppHeader({
         in ordine alfabetico
       </span>
     </>
+    ) : sideLabel.includes("<gold>/</gold>") ? (
+    <span>
+      {sideLabel.split("<gold>/</gold>")[0]}
+      <span
+  style={{
+    color: "#FFD700",
+    padding: "0 10px",
+    fontWeight: 900,
+    fontSize: "1.15em",
+    textShadow:
+      "0 0 4px rgba(255,215,0,1), " +
+      "0 0 10px rgba(255,215,0,0.95), " +
+      "0 0 20px rgba(255,215,0,0.75), " +
+      "0 0 32px rgba(255,215,0,0.45)",
+  }}
+>
+  /
+</span>
+      {sideLabel.split("<gold>/</gold>")[1]}
+    </span>
   ) : (
     sideLabel
   )}
@@ -2349,6 +2395,15 @@ function renderPrtBestLapCell({
   bestRaceLap: string
   exporting?: boolean
 }) {
+    const raceResult = tempoLikeGt7(row).trim().toUpperCase()
+
+  if (
+    raceResult === "DSQ" ||
+    (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ" ||
+    (row.distaccoDalPrimo || "").trim().toUpperCase() === "DSQ"
+  ) {
+    return "-"
+  }
   if ((bestRaceLap || "").trim().toUpperCase() === "NO TIME") {
   const tempo = tempoLikeGt7(row).trim().toUpperCase()
 
@@ -2426,29 +2481,52 @@ function renderPrtMetaCell({
   return cleanValue || "-"
 }
 
+
+
 function renderPrtPenaltyCell({
   row,
   penalties,
   dgMeasureTypes,
+  dgSpecialMeasures,
+    doubleAbsenceWarning = false,
   exportPenaltyTimeTextStyle,
+  exporting = false,
 }: {
   row: DisplayRow
   penalties: PenaltyMap
   dgMeasureTypes: Record<string, DgMeasureType>
+  dgSpecialMeasures: DgSpecialMeasureMap
+    doubleAbsenceWarning?: boolean
   exportPenaltyTimeTextStyle: React.CSSProperties
+  exporting?: boolean
 }) {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const penaltySeconds = penalties[key] || 0
   const dgMeasureType = dgMeasureTypes[key] || "NONE"
+  const specialMeasure = dgSpecialMeasures[key]
+
+  const specialMeasureLabel =
+  specialMeasure === "NEXT_RACE_DSQ"
+    ? "SQUALIFICA DALLA PROSSIMA GARA"
+    : specialMeasure === "NEXT_RACE_GRID_MINUS_5"
+      ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
+      : specialMeasure === "NEXT_QUALIFYING_DSQ"
+        ? "SQUALIFICA DALLA PROSSIMA QUALIFICA"
+        : specialMeasure === "CURRENT_RACE_DSQ"
+          ? "SQUALIFICA DALLA GARA"
+          : ""
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
 
   const isRecoveredDsqRow = row.sourcePosGara >= 9000
 
-  if (isDsqRow || isRecoveredDsqRow) {
-    return <Pill left="DSQ" variant="dsq" />
-  }
+  if (
+  (isDsqRow || isRecoveredDsqRow) &&
+  dgMeasureType === "NONE"
+) {
+  return <Pill left="DSQ" variant="dsq" />
+}
 
   if (dgMeasureType === "INFONDATO") {
     return (
@@ -2485,16 +2563,21 @@ function renderPrtPenaltyCell({
     )
   }
 
-  if (
-    (dgMeasureType !== "P" && dgMeasureType !== "S") ||
-    penaltySeconds <= 0
-  ) {
-    return "-"
-  }
+  const hasPenalty =
+    (dgMeasureType === "P" ||
+      dgMeasureType === "S" ||
+      dgMeasureType === "P_S") &&
+    penaltySeconds > 0
 
-  const isPenalty = dgMeasureType === "P"
+  const hasSpecialMeasure =
+    (dgMeasureType === "S" || dgMeasureType === "P_S") &&
+    !!specialMeasureLabel
 
-  return (
+  if (!hasPenalty && !hasSpecialMeasure && !doubleAbsenceWarning) {
+  return "-"
+}
+
+  const penaltyElement = hasPenalty ? (
     <div
       style={{
         display: "grid",
@@ -2503,7 +2586,6 @@ function renderPrtPenaltyCell({
         width: "100%",
       }}
     >
-      {/* Spazio speculare al tempo: mantiene P/S al centro reale */}
       <div />
 
       <span
@@ -2515,19 +2597,18 @@ function renderPrtPenaltyCell({
           width: 38,
           height: 26,
           borderRadius: 999,
-
-          background: isPenalty
-            ? "rgba(220,53,69,0.98)"
-            : "rgba(105,105,255,0.98)",
-
-          border: isPenalty
-            ? "1px solid rgba(255,90,105,0.85)"
-            : "1px solid rgba(155,165,255,0.90)",
-
-          boxShadow: isPenalty
-            ? "0 0 13px rgba(220,53,69,0.30)"
-            : "0 0 14px rgba(105,120,255,0.38)",
-
+          background:
+            dgMeasureType === "S"
+              ? "rgba(105,105,255,0.98)"
+              : "rgba(220,53,69,0.98)",
+          border:
+            dgMeasureType === "S"
+              ? "1px solid rgba(155,165,255,0.90)"
+              : "1px solid rgba(255,90,105,0.85)",
+          boxShadow:
+            dgMeasureType === "S"
+              ? "0 0 14px rgba(105,120,255,0.38)"
+              : "0 0 13px rgba(220,53,69,0.30)",
           color: "#ffffff",
           fontSize: 13,
           fontWeight: 950,
@@ -2535,20 +2616,164 @@ function renderPrtPenaltyCell({
           flexShrink: 0,
         }}
       >
-        {dgMeasureType}
+        {dgMeasureType === "S" ? "S" : "P"}
       </span>
 
       <div
         style={{
           ...exportPenaltyTimeTextStyle,
           justifySelf: "end",
+          color:
+            dgMeasureType === "S"
+              ? "rgba(105,105,255,0.98)"
+              : "rgba(220,53,69,0.98)",
         }}
       >
         {formatPenaltyDisplay(penaltySeconds)}
       </div>
     </div>
-  )
+  ) : null
+
+  const specialMeasureElement = hasSpecialMeasure ? (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
+        alignItems: "center",
+        width: "100%",
+        color: "rgba(105,105,255,0.98)",
+      }}
+    >
+      <div />
+
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          justifySelf: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+          background: "rgba(105,105,255,0.98)",
+          border: "1px solid rgba(155,165,255,0.90)",
+          boxShadow: "0 0 14px rgba(105,120,255,0.38)",
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        S
+      </span>
+
+      <span
+        style={{
+          justifySelf: "end",
+          width: 190,
+          marginRight: -51,
+          fontSize: exporting ? 16 : 12,
+          fontWeight: 950,
+          letterSpacing: 0.3,
+          lineHeight: 1.4,
+          whiteSpace: "nowrap",
+          textAlign: "center",
+        }}
+      >
+        {specialMeasure === "NEXT_RACE_DSQ" ? (
+  <>
+    SQUALIFICA
+    <br />
+    PROSSIMA GARA
+  </>
+) : specialMeasure === "NEXT_QUALIFYING_DSQ" ? (
+  <>
+    SQUALIFICA
+    <br />
+    PROSSIMA QUALIFICA
+  </>
+) : specialMeasure === "CURRENT_RACE_DSQ" ? (
+  <>
+    SQUALIFICA
+    <br />
+    DALLA GARA
+  </>
+) : (
+  <>
+    -5 POSIZIONI IN GRIGLIA
+    <br />
+    PROSSIMA GARA
+  </>
+)}
+      </span>
+    </div>
+  ) : null
+
+  const doubleAbsenceElement = doubleAbsenceWarning ? (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "88px 1fr 88px",
+      alignItems: "center",
+      width: "100%",
+    }}
+  >
+    <div />
+
+    <span
+      style={{
+        justifySelf: "center",
+        alignSelf: "center",
+        color: "#facc15",
+        fontSize: exporting ? 28 : 25,
+        fontWeight: 950,
+        lineHeight: 1,
+      }}
+    >
+      ⚠
+    </span>
+
+    <div
+      style={{
+        justifySelf: "end",
+        width: 190,
+        marginRight: -51,
+        textAlign: "center",
+        color: "#ff2020",
+        fontSize: exporting ? 16 : 12,
+        fontWeight: 950,
+        lineHeight: 1.4,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <div>ESCLUSIONE DAL ROUND</div>
+      <div>PER DOPPIA ASSENZA</div>
+    </div>
+  </div>
+) : null
+  
+  return (
+  <div
+    style={{
+      display: "grid",
+      gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
+      width: "100%",
+    }}
+  >
+    {doubleAbsenceWarning ? (
+      doubleAbsenceElement
+    ) : (
+      <>
+        {penaltyElement}
+        {specialMeasureElement}
+      </>
+    )}
+  </div>
+)
 }
+
+
 
 const PRT_TABLE_STYLES = {
   wrapper: {
@@ -2765,8 +2990,10 @@ function ResultsTable({
   unionMode,
   exporting = false,
   penalties,
-  dgMeasureTypes,
-  forceHideMeta = false,
+    unjustifiedAbsenceCounts = {},
+dgMeasureTypes,
+dgSpecialMeasures,
+forceHideMeta = false,
   tableTitle = "Classifica (output)",
   onAbsenceClick,
   verifiedAbsences,
@@ -2778,8 +3005,10 @@ function ResultsTable({
   unionMode: boolean
   exporting?: boolean
   penalties: PenaltyMap
-  dgMeasureTypes: Record<string, DgMeasureType>
-  forceHideMeta?: boolean
+    unjustifiedAbsenceCounts?: Record<string, number>
+dgMeasureTypes: Record<string, DgMeasureType>
+dgSpecialMeasures: DgSpecialMeasureMap
+forceHideMeta?: boolean
   tableTitle?: string
   onAbsenceClick?: (row: DisplayRow) => void
   verifiedAbsences?: Record<string, boolean>
@@ -2829,7 +3058,8 @@ value === "DOPPIATO" ||
   )
 }).length
 
-const compactStatusPills = exporting && exportStatusPillCount > 2
+const compactStatusPills =
+  exporting && (exportStatusPillCount > 2 || previewRows.length >= 14)
 
   return (
     <div
@@ -3170,7 +3400,17 @@ return penaltySeconds === 0 && !isDsqRow
   row: r,
   penalties,
   dgMeasureTypes,
+  dgSpecialMeasures,
   exportPenaltyTimeTextStyle,
+  exporting,
+  doubleAbsenceWarning:
+  (unjustifiedAbsenceCounts[
+    String(r.pilota || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[_\-.]+/g, "")
+      .replace(/\s+/g, "")
+  ] || 0) >= 2,
 })}
                   </TableCell>
 
@@ -3288,6 +3528,8 @@ export default function Page() {
 const [dgMeasureTypes, setDgMeasureTypes] = useState<
   Record<string, DgMeasureType>
 >({})
+const [dgSpecialMeasures, setDgSpecialMeasures] =
+  useState<DgSpecialMeasureMap>({})
   const [exportMetaInPng, setExportMetaInPng] = useState(false)
   const [lapOverrides, setLapOverrides] = useState<Record<string, string>>({})
   const [dnfOverrides, setDnfOverrides] = useState<DnfOverrideMap>({})
@@ -3296,6 +3538,28 @@ const [dgMeasureTypes, setDgMeasureTypes] = useState<
   const [manualDsqOverrides, setManualDsqOverrides] =
   useState<ManualDsqOverrideMap>({})
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showProvisionalExportModal, setShowProvisionalExportModal] = useState(false)
+  const [provisionalRenderData, setProvisionalRenderData] = useState<{
+  lobby: string
+  league: UnionRankKey
+  raceNumber: number
+  snapshot: SavedLeagueSnapshot
+} | null>(null)
+const [provisionalExportRace, setProvisionalExportRace] = useState<number>(2)
+const [provisionalExportDay, setProvisionalExportDay] = useState<string>("lunedi")
+const [showDefinitiveExportModal, setShowDefinitiveExportModal] = useState(false)
+
+const [definitiveExportRace, setDefinitiveExportRace] = useState<number>(2)
+
+const [definitiveExportLeague, setDefinitiveExportLeague] =
+  useState<ChampionshipLeagueKey>("STAR")
+
+const [definitiveRenderData, setDefinitiveRenderData] = useState<{
+  lobby: string
+  league: ChampionshipLeagueKey
+  raceNumber: number
+  snapshot: SavedLeagueSnapshot
+} | null>(null)
   const [manualGaraOverride, setManualGaraOverride] = useState("")
   const [manualLegaOverride, setManualLegaOverride] = useState("")
 
@@ -3384,7 +3648,7 @@ const [editingDriverTeamDraft, setEditingDriverTeamDraft] = useState("")
 
 const [highlightDrawerPilot, setHighlightDrawerPilot] = useState<string | null>(null)
 
-const [dismissedUnknownDriverId, setDismissedUnknownDriverId] = useState<string | null>(null)
+const [dismissedUnknownDriverIds, setDismissedUnknownDriverIds] = useState<string[]>([])
 
   const [driverAliasMap, setDriverAliasMap] = useState<DriverAliasMap>({
   STAR: {},
@@ -3455,6 +3719,8 @@ const [showApplyLastMovementModal, setShowApplyLastMovementModal] = useState(fal
 const backupInputRef = useRef<HTMLInputElement | null>(null)
 const htmlFilesInputRef = useRef<HTMLInputElement | null>(null)
 const exportRef = useRef<HTMLDivElement | null>(null)
+const provisionalExportRef = useRef<HTMLDivElement | null>(null)
+const definitiveExportRef = useRef<HTMLDivElement | null>(null)
 const championshipExportBannerRef = useRef<HTMLDivElement | null>(null)
 const championshipExportTableRef = useRef<HTMLDivElement | null>(null)
 const appHeaderExportRef = useRef<HTMLDivElement | null>(null)
@@ -3776,7 +4042,7 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
   setUnknownDriverSelections({})
-}, [currentRace, selectedLeague, selectedLobby, championshipState])
+}, [currentRace, selectedLeague, selectedLobby])
 
 function normalizeDriverNameForChampionship(value: string) {
   return String(value || "")
@@ -5070,6 +5336,23 @@ const hasChampionshipResults = leagueRows.some(
 
 const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
+const tieGroups = leagueRows.map((driver, index) => {
+  const previous = leagueRows[index - 1]
+  const next = leagueRows[index + 1]
+
+  const tiedWithPrevious =
+    !!previous && previous.totalPoints === driver.totalPoints
+
+  const tiedWithNext =
+    !!next && next.totalPoints === driver.totalPoints
+
+  return {
+    isTied: tiedWithPrevious || tiedWithNext,
+    isFirst: !tiedWithPrevious && tiedWithNext,
+    isLast: tiedWithPrevious && !tiedWithNext,
+  }
+})
+
   const championshipCircuits: Record<
   number,
   { name: string; flagSrc: string; isLogo?: boolean }
@@ -5287,6 +5570,22 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
             }}
           >
             {leagueRows.map((driver, index) => {
+  const tie = tieGroups[index]
+  const tieStartIndex = tie.isTied
+  ? leagueRows.findIndex((row, i) =>
+      i <= index &&
+      row.totalPoints === driver.totalPoints &&
+      (i === 0 ||
+        leagueRows[i - 1].totalPoints !== driver.totalPoints)
+    )
+  : index
+
+const tieColor =
+  tieStartIndex === 0 ? "#FFD700" :
+  tieStartIndex === 1 ? "#E5F5FF" :
+  tieStartIndex === 2 ? "#CD8A52" :
+  "#FFFFFF"
+
   return (
                 <tr
                   key={`${driver.pilota}-${index}`}
@@ -5321,16 +5620,59 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
                   }}
                 >
                   <TableCell
-                    align="center"
-                    style={{
-                      ...s.col.pos,
-                      ...(exporting ? s.posCellExport : s.posCell),
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-  {hasChampionshipResults ? (
-    <PosBadge pos={index + 1} />
+  align="center"
+  style={{
+    ...s.col.pos,
+    ...(exporting ? s.posCellExport : s.posCell),
+    textAlign: "center",
+    position: "relative",
+  }}
+>
+  <div style={{ display: "flex", justifyContent: "center" }}>
+    {(!tie.isTied || tie.isFirst) &&
+  (hasChampionshipResults ? (
+    index < 3 ? (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 34,
+          height: 28,
+          fontSize: 16,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+          color:
+            index === 0
+              ? "#FFD700"
+              : index === 1
+                ? "#E5F5FF"
+                : "#CD8A52",
+          textShadow:
+  index === 0
+    ? "0 0 4px #FFD700, 0 0 10px #FFD700, 0 0 22px rgba(255,215,0,0.85), 0 0 35px rgba(255,215,0,0.4)"
+    : index === 1
+      ? "0 0 4px #FFFFFF, 0 0 10px #DDF5FF, 0 0 22px rgba(170,225,255,0.85), 0 0 35px rgba(170,225,255,0.4)"
+      : "0 0 4px #EAB17A, 0 0 10px #CD8A52, 0 0 22px rgba(205,138,82,0.85), 0 0 35px rgba(205,138,82,0.4)",
+        }}
+      >
+        {index + 1}
+      </span>
+    ) : (
+      <span
+  style={{
+    display: "inline-flex",
+    borderRadius: 12,
+    boxShadow: tie.isTied
+      ? "0 0 5px rgba(255,255,255,0.22)"
+      : "none",
+  }}
+>
+  <PosBadge pos={index + 1} />
+</span>
+    )
   ) : (
     <span
       style={{
@@ -5343,9 +5685,67 @@ const s = PRT_CHAMPIONSHIP_TABLE_STYLES
     >
       {index + 1}
     </span>
-  )}
+  ))}
 </div>
-                  </TableCell>
+
+  {/* Filo colorato nei posti condivisi */}
+{tie.isTied && !tie.isFirst && (
+  <>
+    <span
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: 0,
+        bottom: 0,
+        width: 1,
+        background: `repeating-linear-gradient(
+          to bottom,
+          ${tieColor} 0px,
+          ${tieColor} 3px,
+          transparent 3px,
+          transparent 9px
+        )`,
+        boxShadow: `0 0 7px ${tieColor}`,
+        pointerEvents: "none",
+      }}
+    />
+
+    <span
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        width: 4,
+        height: 4,
+        borderRadius: "50%",
+        background: tieColor,
+        boxShadow: `0 0 7px ${tieColor}`,
+        transform: "translate(-38%, -50%)",
+        pointerEvents: "none",
+      }}
+    />
+  </>
+)}
+
+{/* Lama esterna oro glow */}
+{tie.isTied && (
+  <span
+    style={{
+      position: "absolute",
+      right: -5,
+      top: tie.isFirst ? "25%" : -1,
+bottom: tie.isLast ? "25%" : -1,
+width: 1.5,
+background: "#FFD700",
+boxShadow:
+  "0 0 2px #FFF3A0, " +
+  "0 0 5px rgba(255,215,0,0.75), " +
+  "0 0 10px rgba(255,215,0,0.35)",
+      pointerEvents: "none",
+    }}
+  />
+)}
+</TableCell>
 
                                     <TableCell
                     align="center"
@@ -5692,7 +6092,14 @@ return {
 
 distaccoDalPrimo: (manualDistaccoValue || r.distaccoDalPrimo || "").trim(),
 
-migliorGiroGara: r.migliorGiroGara,
+// Eccezione UNION Gara 1 - AMA A11: GV Bolker
+migliorGiroGara:
+  currentRace === 1 &&
+  selectedLeague === "AMA" &&
+  selectedLobby === "A11" &&
+  normalizeDriverLookupName(resolvedPilot) === "bolker"
+    ? "1:20.715"
+    : r.migliorGiroGara,
 
   tempoQualifica: (() => {
   const value = (
@@ -5782,7 +6189,7 @@ const unresolvedLeagueDrivers = leagueDriverResolution.unresolvedCandidates
 
 const activeUnknownDriver =
   unresolvedLeagueDrivers.find(
-    (driver) => driver.id !== dismissedUnknownDriverId
+    (driver) => !dismissedUnknownDriverIds.includes(driver.id)
   ) || null
 
 const displayRows = useMemo<DisplayRow[]>(() => {
@@ -5831,7 +6238,14 @@ const maxSourcePos = rowsWithPole.reduce(
     posGara: rowsWithPole.length + index + 1,
     sourcePosGara: maxSourcePos + index + 1,
     pilota: pilot,
-    auto: manualAutoOverrides[maxSourcePos + index + 1] || "---",
+    auto:
+  manualAutoOverrides[maxSourcePos + index + 1] ||
+  Object.entries(championshipState.driverCars).find(
+  ([savedPilot]) =>
+    normalizeDriverNameForChampionship(savedPilot) ===
+    normalizeDriverNameForChampionship(pilot)
+)?.[1] ||
+  "---",
     tempoTotaleGara: "ASS-I",
     distaccoDalPrimo: "ASS-I",
     migliorGiroGara: "",
@@ -6494,6 +6908,44 @@ const absenceValue: AbsenceOverrideValue =
   return championshipState.races[currentRace] || {}
 }, [championshipState, currentRace])
 
+function getDefinitiveAbsenceCounts(
+  raceNumber: number
+): Record<string, number> {
+  const counts: Record<string, number> = {}
+
+  for (let race = 1; race <= raceNumber; race++) {
+    const raceState = championshipState.races[race]
+    if (!raceState) continue
+
+    for (const league of UNION_RANKS) {
+      const lobbyState = raceState[league]
+      if (!lobbyState) continue
+
+      for (const snapshot of Object.values(lobbyState)) {
+        if (!snapshot) continue
+
+        for (const row of snapshot.finalRows || []) {
+          if (
+            tempoLikeGt7(row).trim().toUpperCase() !== "ASS-I"
+          ) {
+            continue
+          }
+
+          const key = normalizeDriverNameForChampionship(
+            row.pilota
+          )
+
+          if (!key) continue
+
+          counts[key] = (counts[key] || 0) + 1
+        }
+      }
+    }
+  }
+
+  return counts
+}
+
 const unjustifiedAbsenceCounts = useMemo(() => {
   const counts: Record<string, number> = {}
 
@@ -6906,6 +7358,44 @@ const hasCurrentRoundMovements = useMemo(() => {
   })
 }, [currentRoundMovements])
 
+function getProvisionalSavedLobbies(
+  raceNumber: number,
+  day: keyof typeof UNION_PROVISIONAL_DAYS
+) {
+  const dayLobbies = UNION_PROVISIONAL_DAYS[day]
+  const raceSnapshots = championshipState.races[raceNumber]
+
+  return dayLobbies.flatMap((lobby) => {
+    const league = UNION_RANKS.find((rank) =>
+      (UNION_LOBBIES_BY_RANK[rank] as readonly string[]).includes(lobby)
+    )
+
+    if (!league) return []
+
+    const snapshot = raceSnapshots?.[league]?.[lobby]
+
+    if (!snapshot?.finalRows?.length) return []
+
+    return [{ lobby, league, snapshot }]
+  })
+}
+
+function getDefinitiveSavedLobbies(
+  raceNumber: number,
+  league: ChampionshipLeagueKey
+) {
+  const raceSnapshots = championshipState.races[raceNumber]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+
+  return leagueLobbies.flatMap((lobby) => {
+    const snapshot = raceSnapshots?.[league]?.[lobby]
+
+    if (!snapshot?.finalRows?.length) return []
+
+    return [{ lobby, league, snapshot }]
+  })
+}
+
 const savedLeagueInCurrentRace = useMemo(() => {
   return !!currentRaceSnapshot[selectedLeague]?.[selectedLobby]
 }, [currentRaceSnapshot, selectedLeague, selectedLobby])
@@ -7300,7 +7790,7 @@ if (aHasValidPosition !== bHasValidPosition) {
 
 // 1D. A parità di punti e senza piazzamento valido,
 //     ordina gli stati a 0 punti secondo priorità UNION:
-//     ASS-G (arancione) → BOX → NC → ASS-I (rosso).
+// BOX → NC → ASS-G (arancione) → ASS-I (rosso).
 const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
   const results = Object.values(driver.raceResults)
 
@@ -7320,10 +7810,10 @@ const getZeroPointsStatusPriority = (driver: DriverChampionshipRow) => {
     (result) => result?.status === "ASS-I"
   )
 
-  if (hasAssG) return 0
-  if (hasBox) return 1
-  if (hasNc) return 2
-  if (hasAssI) return 3
+  if (hasBox) return 0
+if (hasNc) return 1
+if (hasAssG) return 2
+if (hasAssI) return 3
 
   return 4
 }
@@ -7382,6 +7872,35 @@ const driverChampionshipByLeague = useMemo(() => {
   }
 }, [driverChampionship])
 
+function getDefinitiveRowsForSnapshot(
+  snapshot: SavedLeagueSnapshot
+): DisplayRow[] {
+  const savedRows = snapshot.finalRows || []
+
+  const existingKeys = new Set(
+    savedRows.map((row) =>
+      normalizeDriverNameForChampionship(row.pilota)
+    )
+  )
+
+  const missingPilots = (snapshot.expectedDrivers || []).filter(
+    (pilot) => {
+      const key = normalizeDriverNameForChampionship(pilot)
+
+      return key && !existingKeys.has(key)
+    }
+  )
+
+  const dnpRows = missingPilots.map((pilot, index) =>
+    createDnpDisplayRow(
+      pilot,
+      savedRows.length + index + 1
+    )
+  )
+
+  return [...savedRows, ...dnpRows]
+}
+
 const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
   const raceLeague = normalizeLeagueKey(effectiveLega) || selectedLeague
   const expectedLobbyPilots = expectedLobbyDrivers
@@ -7390,30 +7909,7 @@ const finalRowsWithDnp = useMemo<DisplayRow[]>(() => {
     finalRows.map((row) => normalizeDriverNameForChampionship(row.pilota))
   )
 
-  const recoveredDsqRows: DisplayRow[] = driverChampionship
-    .filter((driver) => {
-      const driverLeague = normalizeLeagueKey(driver.league)
-      const cell = driver.raceResults[currentRace]
-      const key = normalizeDriverNameForChampionship(driver.pilota)
-
-      return (
-        driverLeague === raceLeague &&
-        cell?.status === "DSQ" &&
-        key &&
-        !existingKeys.has(key)
-      )
-    })
-    .map((driver, index) => ({
-  sourcePosGara: 9000 + index,
-  posGara: finalRows.length + index + 1,
-  pilota: driver.pilota,
-  auto: "---",
-  tempoTotaleGara: "DNP",
-  distaccoDalPrimo: "DNP",
-  migliorGiroGara: "",
-  tempoQualifica: "",
-  pole: "",
-}))
+  const recoveredDsqRows: DisplayRow[] = []
 
   const existingKeysAfterDsq = new Set([
     ...Array.from(existingKeys),
@@ -7496,7 +7992,237 @@ const penaltySeconds = penalties[rowKey] || 0
   return true
 }
 
-async function performExportTablePng() {
+async function generateDefinitiveZip() {
+  if (exporting) return
+
+  const raceNumber = definitiveExportRace
+  const league = definitiveExportLeague
+  const savedLobbies = getDefinitiveSavedLobbies(raceNumber, league)
+
+  if (savedLobbies.length === 0) {
+    setError("Nessuna lobby salvata per la gara e la lega selezionate.")
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const zip = new JSZip()
+    const leagueName = league.replace(/\s+/g, "_")
+
+    for (const item of savedLobbies) {
+      const pngBlob = await renderDefinitiveLobby(item, raceNumber)
+
+      zip.file(
+        `${item.lobby}.png`,
+        pngBlob
+      )
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" })
+    const url = URL.createObjectURL(zipBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download =
+      `UNION_GARA${raceNumber}_${leagueName}_DEFINITIVE.zip`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setShowDefinitiveExportModal(false)
+  } catch (error: unknown) {
+    setError(
+      `Errore esportazione definitive: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  } finally {
+    setDefinitiveRenderData(null)
+    setExporting(false)
+  }
+}
+
+async function generateProvisionalZip() {
+  if (exporting) return
+
+  const raceNumber = provisionalExportRace
+  const day = provisionalExportDay as keyof typeof UNION_PROVISIONAL_DAYS
+
+  const savedLobbies = getProvisionalSavedLobbies(raceNumber, day)
+
+  if (savedLobbies.length === 0) {
+    setError("Nessuna lobby salvata per la gara e il giorno selezionati.")
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const zip = new JSZip()
+
+    const dayNames: Record<string, string> = {
+      lunedi: "Lunedi",
+      martedi: "Martedi",
+      mercoledi: "Mercoledi",
+      giovedi: "Giovedi",
+      venerdi: "Venerdi",
+    }
+
+    const dayFolder = zip.folder(dayNames[day])
+
+    if (!dayFolder) {
+      throw new Error("Impossibile creare la cartella ZIP.")
+    }
+
+    for (const item of savedLobbies) {
+      const pngBlob = await renderProvisionalLobby(item, raceNumber)
+
+      const leagueName = item.league.replace(/\s+/g, "_")
+
+dayFolder.file(
+  `${item.lobby}_${leagueName}_PROVVISORIA.png`,
+  pngBlob
+)
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" })
+    const url = URL.createObjectURL(zipBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download =
+      `UNION_GARA${raceNumber}_${dayNames[day].toUpperCase()}_PROVVISORIE.zip`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setShowProvisionalExportModal(false)
+  } catch (error: any) {
+    setError(
+      `Errore esportazione provvisorie: ${String(error?.message || error)}`
+    )
+  } finally {
+    setProvisionalRenderData(null)
+    setExporting(false)
+  }
+}
+
+async function renderProvisionalLobby(
+  item: {
+    lobby: string
+    league: UnionRankKey
+    snapshot: SavedLeagueSnapshot
+  },
+  raceNumber: number
+): Promise<Blob> {
+  setProvisionalRenderData({
+    lobby: item.lobby,
+    league: item.league,
+    snapshot: item.snapshot,
+    raceNumber,
+  })
+
+  // Attendiamo che React aggiorni il contenitore PNG.
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+
+  return captureProvisionalPng()
+}
+
+async function captureProvisionalPng(): Promise<Blob> {
+  const element = provisionalExportRef.current
+
+  if (!element || !element.firstElementChild) {
+    throw new Error("Nessuna classifica provvisoria disponibile per l'esportazione.")
+  }
+
+  const dataUrl = await toPng(element, {
+    cacheBust: true,
+    pixelRatio: 2,
+    width: 1920,
+    height: 1080,
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: "#07080c",
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    },
+  })
+
+  const response = await fetch(dataUrl)
+  return response.blob()
+}
+
+async function renderDefinitiveLobby(
+  item: {
+    lobby: string
+    league: ChampionshipLeagueKey
+    snapshot: SavedLeagueSnapshot
+  },
+  raceNumber: number
+): Promise<Blob> {
+  setDefinitiveRenderData({
+    lobby: item.lobby,
+    league: item.league,
+    snapshot: item.snapshot,
+    raceNumber,
+  })
+
+  // Attendiamo il rendering della lobby selezionata.
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+
+  return captureDefinitivePng()
+}
+
+async function captureDefinitivePng(): Promise<Blob> {
+  const element = definitiveExportRef.current
+
+  if (!element || !element.firstElementChild) {
+    throw new Error(
+      "Nessuna classifica definitiva disponibile per l'esportazione."
+    )
+  }
+
+  const dataUrl = await toPng(element, {
+    cacheBust: true,
+    pixelRatio: 2,
+    width: 1920,
+    height: 1080,
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: "#07080c",
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    },
+  })
+
+  const response = await fetch(dataUrl)
+  return response.blob()
+}
+
+async function performExportTablePng(
+  options?: {
+    filename?: string
+    provisional?: boolean
+  }
+) {
   if (!exportRef.current || finalRows.length === 0 || exporting) return
 
   try {
@@ -7518,12 +8244,12 @@ async function performExportTablePng() {
     })
 
     const link = document.createElement("a")
-    link.download = `${selectedLobby}.png`
+    link.download = options?.filename || `${selectedLobby}.png`
     link.href = dataUrl
     link.click()
 
-    // 👇 AGGIUNGI SOLO QUESTA RIGA
-    exportRaceDgJson()
+    // JSON DG temporaneamente disattivato
+    // exportRaceDgJson()
 
   } catch (e: any) {
     setError(`Errore esportazione PNG: ${String(e?.message || e)}`)
@@ -9734,12 +10460,12 @@ function openRacePng(league, lobby) {
   racePngViewer.classList.add("visible");
   racePngViewer.classList.add("loading");
   
-  if (raceDgPanel) {
+  if (false && raceDgPanel) {
   raceDgPanel.style.display = "none";
   raceDgPanel.innerHTML = "";
 
   const dgSrc =
-  "/Gare/G" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
+  "/Gare/GAC" + selectedRacePng + "/" + league + "/" + lobby + "-dg.json";
 
   fetch(dgSrc)
     .then(function(response) {
@@ -10174,6 +10900,17 @@ const styles = Array.from(parsed.head.querySelectorAll("style"))
 const bodyContent = parsed.body.innerHTML;
 
 frame.innerHTML = styles + bodyContent;
+// UNION - Linea ex aequo: solo smartphone in verticale
+const mobileTieStyle = document.createElement("style");
+
+mobileTieStyle.textContent =
+  '@media (pointer: coarse) and (orientation: portrait) {' +
+  ' #leagueFrame span[style*="right: -5px"][style*="width: 1.5px"] {' +
+  ' right: 8px !important;' +
+  ' }' +
+  '}';
+
+frame.appendChild(mobileTieStyle);
 
 const mobileScrollArrow = frame.querySelector(".mobile-scroll-arrow");
 const horizontalScrollWrap = mobileScrollArrow?.nextElementSibling;
@@ -10779,6 +11516,200 @@ const detectedLeague = normalizeLeagueKey(nextUnionMeta.lega)
 const effectiveImportLeague =
   targetLeague || detectedLeague || selectedLeague
 
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A20
+const isA20Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A20"
+
+if (isA20Race1ProAma) {
+  // DCT_Pescepoldo compare nello screen qualifica ma non nello screen gara principale:
+  // viene aggiunto come NC esclusivamente in questa lobby.
+  const pescepoldoQuali = extractedQualiRows.find(
+    (q: QualiRow) =>
+      normalizeDriverLookupName(q.pilota) ===
+      normalizeDriverLookupName("DCT_Pescepoldo")
+  )
+
+  const pescepoldoAlreadyInRace = extractedRows.some(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("DCT_Pescepoldo")
+  )
+
+  if (pescepoldoQuali && !pescepoldoAlreadyInRace) {
+    extractedRows.push({
+      posGara: 9,
+      pilota: "DCT_Pescepoldo",
+      auto: "GT-R NISMO GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "1:33.880",
+    } as ExtractRow)
+  }
+
+  // ASC-LupO viene letto dall'OCR nello screen gara,
+  // ma viene perso durante la costruzione delle raceRows.
+  const lupoAlreadyInRace = extractedRows.some(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("ASC-LupO")
+  )
+
+  if (!lupoAlreadyInRace) {
+    extractedRows.push({
+      posGara: 8,
+      pilota: "ASC-LupO",
+      auto: "RS 5 Turbo DTM '19",
+      tempoTotaleGara: "+44.856",
+      distaccoDalPrimo: "+44.856",
+      migliorGiroGara: "1:20.499",
+    } as ExtractRow)
+  }
+}
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A19
+// Praetorian_001 e FMC_Frtta18 sono NC.
+// ARGAMERR e SMI_Kaiser restano assenti.
+// Correzione confinata esclusivamente alla lobby A19.
+const isA19Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A19"
+
+if (isA19Race1ProAma) {
+  const a19SpecialRows = [
+    {
+      posGara: 9,
+      pilota: "Praetorian_001",
+      auto: "GT-R NISMO GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "",
+    },
+    {
+      posGara: 10,
+      pilota: "FMC_Frtta18",
+      auto: "RC F GT500 '16",
+      tempoTotaleGara: "NC",
+      distaccoDalPrimo: "NC",
+      migliorGiroGara: "",
+    },
+  ] as ExtractRow[]
+
+  for (const specialRow of a19SpecialRows) {
+    const specialKey = normalizeDriverLookupName(specialRow.pilota)
+
+    const existingIndex = extractedRows.findIndex(
+      (row: ExtractRow) =>
+        normalizeDriverLookupName(row.pilota) === specialKey
+    )
+
+    if (existingIndex >= 0) {
+      extractedRows[existingIndex] = {
+        ...extractedRows[existingIndex],
+        ...specialRow,
+        auto:
+          specialRow.auto ||
+          extractedRows[existingIndex].auto ||
+          "",
+      }
+    } else {
+      extractedRows.push(specialRow)
+    }
+  }
+
+  extractedRows.sort(
+    (a: ExtractRow, b: ExtractRow) =>
+      Number(a.posGara || 999) - Number(b.posGara || 999)
+  )
+}
+// FIX MIRATO — Gara 1 • PRO AMA • Lobby A26
+// Zagaracing è presente correttamente nel RAW OCR sia in qualifica sia in gara,
+// ma viene perso nel matching finale, causando lo slittamento delle righe 1-8.
+const isA26Race1ProAma =
+  currentRace === 1 &&
+  effectiveImportLeague === "PRO AMA" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A26"
+
+if (isA26Race1ProAma) {
+  const zagaRace = extractedRows.find(
+    (r: ExtractRow) =>
+      normalizeDriverLookupName(r.pilota) ===
+      normalizeDriverLookupName("Zagaracing")
+  )
+
+  if (!zagaRace) {
+    const firstEight = [
+      {
+        posGara: 1,
+        pilota: "Zagaracing",
+        auto: "GT-R NISMO GT500 '16",
+        tempoTotaleGara: "49:25.006",
+        distaccoDalPrimo: "49:25.006",
+        migliorGiroGara: "1:20.381",
+      },
+      {
+        posGara: 2,
+        pilota: "TLM_RiKaS",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+24.373",
+        distaccoDalPrimo: "+24.373",
+        migliorGiroGara: "1:21.457",
+      },
+      {
+        posGara: 3,
+        pilota: "Davide 1972 Ita",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+33.805",
+        distaccoDalPrimo: "+33.805",
+        migliorGiroGara: "1:21.387",
+      },
+      {
+        posGara: 4,
+        pilota: "snoop",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+39.768",
+        distaccoDalPrimo: "+39.768",
+        migliorGiroGara: "1:21.059",
+      },
+      {
+        posGara: 5,
+        pilota: "GTID-D3sTrOX",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+47.187",
+        distaccoDalPrimo: "+47.187",
+        migliorGiroGara: "1:21.263",
+      },
+      {
+        posGara: 6,
+        pilota: "Flippo-Trippo",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+54.528",
+        distaccoDalPrimo: "+54.528",
+        migliorGiroGara: "1:22.147",
+      },
+      {
+        posGara: 7,
+        pilota: "ErMau07",
+        auto: "RS 5 Turbo DTM '19",
+        tempoTotaleGara: "+55.560",
+        distaccoDalPrimo: "+55.560",
+        migliorGiroGara: "1:20.295",
+      },
+      {
+        posGara: 8,
+        pilota: "CBR_FELIX",
+        auto: "RC F GT500 '16",
+        tempoTotaleGara: "+1:13.015",
+        distaccoDalPrimo: "+1:13.015",
+        migliorGiroGara: "1:21.566",
+      },
+    ] as ExtractRow[]
+
+    extractedRows.splice(0, 8, ...firstEight)
+  }
+}
+
 let rowsWithAliases = extractedRows
 
 const aliasMapForLeague =
@@ -10853,7 +11784,9 @@ setQualiRows(extractedQualiRows)
   setShowTable(true)
   setShowReq(false)
   setPenalties({})
-  setExportMetaInPng(false)
+setDgMeasureTypes({})
+setDgSpecialMeasures({})
+setExportMetaInPng(false)
   setLapOverrides({})
   setDnfOverrides({})
   setAbsenceOverrides({})
@@ -11282,19 +12215,20 @@ function editPilotIdFromLeagueDrawer(
 
   if (!newNormalized) return
 
+  const alreadyExists = workbenchDriverLeagueMap[league].some(
+    (pilot) =>
+      normalizeDriverNameForChampionship(pilot) === newNormalized &&
+      normalizeDriverNameForChampionship(pilot) !== oldNormalized
+  )
+
+  if (alreadyExists) {
+    window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
+    return
+  }
+
+  // 1. Aggiorna il pilota nel cassetto
   setWorkbenchDriverLeagueMap((prev) => {
     const next = cloneDriverLeagueMap(prev)
-
-    const alreadyExists = next[league].some(
-      (pilot) =>
-        normalizeDriverNameForChampionship(pilot) === newNormalized &&
-        normalizeDriverNameForChampionship(pilot) !== oldNormalized
-    )
-
-    if (alreadyExists) {
-      window.alert(`⚠️ L'ID ${newId} è già presente nel Rank ${league}.`)
-      return prev
-    }
 
     next[league] = next[league]
       .map((pilot) =>
@@ -11305,6 +12239,62 @@ function editPilotIdFromLeagueDrawer(
       .sort((a, b) =>
         a.localeCompare(b, "it", { sensitivity: "base" })
       )
+
+    return next
+  })
+
+  // 2. Aggiorna lo stesso ID in tutti i dati già salvati
+  setChampionshipState((prev) => {
+    const next = structuredClone(prev)
+
+    for (const raceState of Object.values(next.races)) {
+      if (!raceState) continue
+
+      for (const lobbyState of Object.values(raceState)) {
+        if (!lobbyState) continue
+
+        for (const snapshot of Object.values(lobbyState)) {
+          if (!snapshot) continue
+
+          snapshot.rows = (snapshot.rows || []).map((row) =>
+            normalizeDriverNameForChampionship(row.pilota) === oldNormalized
+              ? { ...row, pilota: newId }
+              : row
+          )
+
+          snapshot.finalRows = (snapshot.finalRows || []).map((row) =>
+            normalizeDriverNameForChampionship(row.pilota) === oldNormalized
+              ? { ...row, pilota: newId }
+              : row
+          )
+
+          snapshot.expectedDrivers = (snapshot.expectedDrivers || []).map(
+            (pilot) =>
+              normalizeDriverNameForChampionship(pilot) === oldNormalized
+                ? newId
+                : pilot
+          )
+        }
+      }
+    }
+
+    for (const raceData of Object.values(next.expectedDrivers || {})) {
+      if (!raceData) continue
+
+      for (const rankData of Object.values(raceData)) {
+        if (!rankData) continue
+
+        for (const lobby of Object.keys(rankData)) {
+          rankData[lobby] = (rankData[lobby] || []).map((pilot) =>
+            normalizeDriverNameForChampionship(pilot) === oldNormalized
+              ? newId
+              : pilot
+          )
+        }
+      }
+    }
+
+    next.driverCars = buildUnionDriverCarsFromRaces(next.races)
 
     return next
   })
@@ -11445,6 +12435,36 @@ function resetExpectedLobbyDrivers() {
 function openConfirmSaveLeagueModal() {
   if (finalRows.length === 0) return
 
+  const expelledDrivers = finalRows.filter((row) => {
+    const status = tempoLikeGt7(row).trim().toUpperCase()
+
+    if (status !== "ASS-I") return false
+
+    const key = normalizeDriverNameForChampionship(row.pilota)
+
+    return (unjustifiedAbsenceCounts[key] || 0) >= 2
+  })
+
+  if (expelledDrivers.length > 0) {
+    window.alert(
+      `⚠️ SECONDA ASSENZA INGIUSTIFICATA\n\n` +
+        expelledDrivers
+          .map((row) => {
+            const team =
+              driverTeamOverrides[row.pilota] ||
+              getUnionDriverTeamCode(row.pilota) ||
+              "—"
+
+            return (
+              `${row.pilota} • ${team} • ${selectedLeague} • ${selectedLobby} • GARA ${currentRace}\n\n` +
+              `2ª assenza ingiustificata raggiunta.\n` +
+              `DA REGOLAMENTO: ESPULSIONE DAL CAMPIONATO.`
+            )
+          })
+          .join("\n\n")
+    )
+  }
+
   const hasUnresolvedAuto = finalRows.some((row) => {
     const raceValue = tempoLikeGt7(row).trim().toUpperCase()
 
@@ -11452,7 +12472,14 @@ function openConfirmSaveLeagueModal() {
       raceValue === "ASS-I" ||
       raceValue === "ASS-G"
 
-    if (isAbsence) return false
+    const isDsqWithoutCar =
+      raceValue === "DSQ" &&
+      (
+        !String(row.auto || "").trim() ||
+        String(row.auto || "").trim() === "---"
+      )
+
+    if (isAbsence || isDsqWithoutCar) return false
 
     const auto = String(row.auto || "").trim()
 
@@ -11486,16 +12513,17 @@ function confirmSaveCurrentLeague() {
   if (!saveLobbyKey) return
 
   const snapshot: SavedLeagueSnapshot = {
-    savedAt: new Date().toISOString(),
-    league: saveLeagueKey,
-    raceNumber: currentRace,
-    expectedDrivers: expectedLobbyDrivers,
-    csv: finalCsv,
-    rows,
-    finalRows,
+  savedAt: new Date().toISOString(),
+  league: saveLeagueKey,
+  raceNumber: currentRace,
+  expectedDrivers: expectedLobbyDrivers,
+  csv: finalCsv,
+  rows,
+  finalRows,
     unionMeta,
 penalties,
 dgMeasureTypes,
+dgSpecialMeasures,
 dgUnfoundedPilots: finalRows
   .filter((row) => {
     const key = getPrtRowStableKey(row.sourcePosGara)
@@ -11580,8 +12608,22 @@ clearCurrentWorkbench(false)
     snapshot.manualGaraOverride || String(snapshot.raceNumber || currentRace)
   )
 
-  setCsv(snapshot.csv || "")
-  setRows(Array.isArray(snapshot.rows) ? snapshot.rows : [])
+  const isA27VicconegtException =
+  currentRace === 1 &&
+  league === "AMA" &&
+  lobby === "A27"
+
+const reopenedRows = Array.isArray(snapshot.rows)
+  ? snapshot.rows.filter(
+      (row) =>
+        !isA27VicconegtException ||
+        normalizeDriverLookupName(row.pilota) !==
+          normalizeDriverLookupName("OES-Vicconegt69")
+    )
+  : []
+
+setCsv(snapshot.csv || "")
+setRows(reopenedRows)
   setUnionMeta(
     snapshot.unionMeta && typeof snapshot.unionMeta === "object"
       ? {
@@ -11600,6 +12642,7 @@ clearCurrentWorkbench(false)
   )
 )
  setDgMeasureTypes(snapshot.dgMeasureTypes || {}) 
+ setDgSpecialMeasures(snapshot.dgSpecialMeasures || {})
 setLapOverrides(snapshot.lapOverrides || {})
 setDnfOverrides(snapshot.dnfOverrides || {})
 setAbsenceOverrides(snapshot.absenceOverrides || {})
@@ -11705,9 +12748,18 @@ function setDgMeasureType(
     ...prev,
     [key]: type,
   }))
+  if (type !== "S" && type !== "P_S") {
+    
+  setDgSpecialMeasures((prev) => {
+    const next = { ...prev }
+    delete next[key]
+    return next
+  })
+}
 
-  // Il reclamo infondato non applica secondi al tempo gara.
-  if (type === "INFONDATO") {
+  // Se non c'è una penalità a tempo, azzera sempre i secondi.
+  // Vale sia tornando su "—" sia scegliendo INFONDATO.
+  if (type === "NONE" || type === "INFONDATO" || type === "S") {
     setPenalties((prev) => {
       const next = { ...prev }
       delete next[key]
@@ -11817,9 +12869,9 @@ function applyPilotCorrections() {
     const draftValue = String(manualPilotDraft[row.sourcePosGara] ?? "").trim()
     const originalValue = String(row.pilota ?? "").trim()
 
-    if (draftValue && draftValue !== originalValue) {
-      cleaned[row.sourcePosGara] = draftValue
-    }
+    if (draftValue !== originalValue) {
+  cleaned[row.sourcePosGara] = draftValue
+}
   }
 
   
@@ -11864,11 +12916,18 @@ function applyAutoCorrections() {
       .toUpperCase()
 
     const isAbsence =
-      rowStatus === "ASS-I" ||
-      rowStatus === "ASS-G"
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
+
+const isDsqWithoutCar =
+  rowStatus === "DSQ" &&
+  (
+  !String(row.auto || "").trim() ||
+  String(row.auto || "").trim() === "---"
+)
 
     // Per un pilota assente l'auto non è obbligatoria.
-    if (isAbsence) return false
+    if (isAbsence || isDsqWithoutCar) return false
 
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
@@ -11894,12 +12953,19 @@ function applyAutoCorrections() {
       .toUpperCase()
 
     const isAbsence =
-      rowStatus === "ASS-I" ||
-      rowStatus === "ASS-G"
+  rowStatus === "ASS-I" ||
+  rowStatus === "ASS-G"
 
-    if (isAbsence) {
-      continue
-    }
+const isDsqWithoutCar =
+  rowStatus === "DSQ" &&
+  (
+  !String(row.auto || "").trim() ||
+  String(row.auto || "").trim() === "---"
+)
+
+    if (isAbsence || isDsqWithoutCar) {
+  continue
+}
 
     const draftValue = String(
       manualAutoDraft[row.sourcePosGara] ?? ""
@@ -11910,6 +12976,20 @@ function applyAutoCorrections() {
 
   setManualAutoOverrides(cleaned)
   setShowAutoModal(false)
+}
+
+function applyLockedCarToDriver(
+  sourcePosGara: number,
+  lockedCar: string
+) {
+  const cleanCar = String(lockedCar || "").trim()
+
+  if (!cleanCar) return
+
+  setManualAutoOverrides((prev) => ({
+    ...prev,
+    [sourcePosGara]: cleanCar,
+  }))
 }
 
 function openQualiCorrectionModal() {
@@ -11962,8 +13042,13 @@ function applyDistaccoCorrections() {
   const cleaned: Record<number, string> = {}
 
   for (const row of displayRows) {
-    const draftValue = String(manualDistaccoDraft[row.sourcePosGara] ?? "").trim()
-    const originalValue = String(row.distaccoDalPrimo ?? "").trim()
+    const draftValue = String(
+      manualDistaccoDraft[row.sourcePosGara] ?? ""
+    ).trim()
+
+    const originalValue = String(
+      row.distaccoDalPrimo ?? ""
+    ).trim()
 
     if (draftValue && draftValue !== originalValue) {
       cleaned[row.sourcePosGara] = draftValue
@@ -11971,21 +13056,40 @@ function applyDistaccoCorrections() {
   }
 
   setAbsenceOverrides((prev) => {
-  const next = { ...prev }
+    const next = { ...prev }
 
-  for (const row of displayRows) {
-    const value = String(cleaned[row.sourcePosGara] ?? "")
-      .trim()
-      .toUpperCase()
+    for (const row of displayRows) {
+      const value = String(cleaned[row.sourcePosGara] ?? "")
+        .trim()
+        .toUpperCase()
 
-    if (value === "NC") {
-      const key = getPrtRowStableKey(row.sourcePosGara)
-      delete next[key]
+      if (value === "NC" || value === "DSQ") {
+        const key = getPrtRowStableKey(row.sourcePosGara)
+        delete next[key]
+      }
     }
-  }
 
-  return next
-})
+    return next
+  })
+
+  setManualDsqOverrides((prev) => {
+    const next = { ...prev }
+
+    for (const row of displayRows) {
+      const value = String(cleaned[row.sourcePosGara] ?? "")
+        .trim()
+        .toUpperCase()
+
+      const key = getPrtRowStableKey(row.sourcePosGara)
+
+      if (value === "DSQ") {
+        next[key] = true
+      }
+    }
+
+    return next
+  })
+
   setManualDistaccoOverrides(cleaned)
   setShowDistaccoModal(false)
 }
@@ -13083,8 +14187,48 @@ boxShadow:
           }}
         >
           {exporting ? "Esportazione PNG..." : "Esporta PNG tabella"}
+                </button>
+
+        <button
+          type="button"
+          onClick={() => setShowProvisionalExportModal(true)}
+          disabled={exporting}
+          style={{
+            padding: "12px 16px",
+            borderRadius: 14,
+            border: "1px solid rgba(255,215,0,0.35)",
+            background: "rgba(255,215,0,0.12)",
+            color: "#ffdf80",
+            fontWeight: 900,
+            letterSpacing: 0.6,
+            cursor: exporting ? "not-allowed" : "pointer",
+            textTransform: "uppercase",
+            boxShadow: "0 0 18px rgba(255,215,0,0.08)",
+          }}
+        >
+          Esporta PNG provvisori
         </button>
 
+                <button
+          type="button"
+          onClick={() => setShowDefinitiveExportModal(true)}
+          disabled={exporting}
+          style={{
+            padding: "12px 16px",
+            borderRadius: 14,
+            border: "1px solid rgba(255,215,0,0.55)",
+            background: "rgba(255,215,0,0.18)",
+            color: "#ffe58a",
+            fontWeight: 900,
+            letterSpacing: 0.6,
+            cursor: exporting ? "not-allowed" : "pointer",
+            textTransform: "uppercase",
+            boxShadow: "0 0 18px rgba(255,215,0,0.12)",
+          }}
+        >
+          Esporta PNG definitivi
+        </button>
+        
         <label
           style={{
             display: "inline-flex",
@@ -13280,6 +14424,7 @@ boxShadow:
     unionMode={unionMode}
     penalties={penalties}
     dgMeasureTypes={dgMeasureTypes}
+    dgSpecialMeasures={dgSpecialMeasures}
     onAbsenceClick={(row) => {
   const key = getPrtRowStableKey(row.sourcePosGara)
   const currentValue = tempoLikeGt7(row).trim().toUpperCase()
@@ -13296,6 +14441,7 @@ boxShadow:
 }}
     tableTitle="Classifica (output)"
     verifiedAbsences={verifiedAbsences}
+    unjustifiedAbsenceCounts={unjustifiedAbsenceCounts}
   />
 )}
 
@@ -13608,7 +14754,7 @@ boxShadow:
     }}
   >
     <select
-      value={dgMeasureType}
+      value={dgMeasureType === "P_S" ? "P_S" : dgMeasureType}
       onChange={(e) =>
         setDgMeasureType(
           row.sourcePosGara,
@@ -13629,23 +14775,84 @@ boxShadow:
       <option value="NONE">—</option>
       <option value="P">PENALITÀ</option>
       <option value="S">SEGNALAZIONE</option>
+      <option value="P_S">PENALITÀ + SEGNALAZIONE</option>
       <option value="INFONDATO">INFONDATO</option>
     </select>
 
-    {(dgMeasureType === "P" || dgMeasureType === "S") && (
+    {(dgMeasureType === "P" || dgMeasureType === "S" || dgMeasureType === "P_S") && (
   <>
-    <input
-      type="number"
-      min="0"
-      step="1"
-      placeholder="0"
-      value={penaltySeconds || ""}
-      onChange={(e) =>
-        setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
-      }
+  {/* PENALITÀ IN SECONDI */}
+  {(dgMeasureType === "P" || dgMeasureType === "P_S") && (
+    <>
+      <select
+        value={penaltySeconds || ""}
+        onChange={(e) =>
+          setUnionPenaltySeconds(row.sourcePosGara, e.target.value)
+        }
+        style={{
+          width: 92,
+          maxWidth: "100%",
+          padding: "8px 8px",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(0,0,0,0.26)",
+          color: "white",
+          textAlign: "center",
+          fontWeight: 900,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        }}
+      >
+        <option value="">—</option>
+        {Array.from({ length: 16 }, (_, i) => (i + 1) * 5).map(
+          (seconds) => (
+            <option key={seconds} value={seconds}>
+              {seconds}
+            </option>
+          )
+        )}
+      </select>
+
+      <span
+        style={{
+          fontSize: 12,
+          opacity: 0.72,
+          fontWeight: 800,
+        }}
+      >
+        sec
+      </span>
+    </>
+  )}
+
+  {/* SEGNALAZIONE */}
+  {(dgMeasureType === "S" || dgMeasureType === "P_S") && (
+    <select
+      value={dgSpecialMeasures[key] || ""}
+      onChange={(e) => {
+        const value = e.target.value
+
+        setDgSpecialMeasures((prev) => {
+          const next = { ...prev }
+
+         if (
+  value === "NEXT_RACE_DSQ" ||
+  value === "NEXT_RACE_GRID_MINUS_5" ||
+  value === "NEXT_QUALIFYING_DSQ" ||
+  value === "CURRENT_RACE_DSQ"
+) {
+  next[key] = value
+} else {
+            delete next[key]
+          }
+
+          return next
+        })
+      }}
       style={{
-        width: 82,
-        padding: "8px 10px",
+        width: 320,
+        maxWidth: "100%",
+        padding: "8px 8px",
         borderRadius: 10,
         border: "1px solid rgba(255,255,255,0.14)",
         background: "rgba(0,0,0,0.26)",
@@ -13655,32 +14862,42 @@ boxShadow:
         fontFamily:
           "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       }}
-    />
-
-    <span
-      style={{
-        fontSize: 12,
-        opacity: 0.72,
-        fontWeight: 800,
-      }}
     >
-      sec
-    </span>
+      <option value="">—</option>
 
-    <div
-      style={{
-        minWidth: 88,
-        fontSize: 12,
-        fontWeight: 900,
-        color:
-          penaltySeconds > 0
-            ? "#ffb3b3"
-            : "rgba(255,255,255,0.55)",
-      }}
-    >
-      {penaltySeconds > 0 ? formatPenaltyDisplay(penaltySeconds) : "-"}
-    </div>
-  </>
+      <option value="NEXT_RACE_DSQ">
+        SQUALIFICA DALLA PROSSIMA GARA
+      </option>
+
+      <option value="NEXT_RACE_GRID_MINUS_5">
+        -5 POSIZIONI IN GRIGLIA PROSSIMA GARA
+      </option>
+      <option value="NEXT_QUALIFYING_DSQ">
+  SQUALIFICA DALLA PROSSIMA QUALIFICA
+</option>
+<option value="CURRENT_RACE_DSQ">
+  SQUALIFICA DALLA GARA
+</option>
+    </select>
+  )}
+
+  {/* RIEPILOGO PENALITÀ */}
+  <div
+    style={{
+      minWidth: 88,
+      fontSize: 12,
+      fontWeight: 900,
+      color:
+        penaltySeconds > 0
+          ? "#ffb3b3"
+          : "rgba(255,255,255,0.55)",
+    }}
+  >
+    {penaltySeconds > 0
+      ? formatPenaltyDisplay(penaltySeconds)
+      : "-"}
+  </div>
+</>
 )}
   </div>
 </TableCell>
@@ -14463,10 +15680,25 @@ boxShadow:
 )}
 
         <div style={{ display: "grid", gap: 6 }}>
-  <label style={{ fontSize: 11, opacity: 0.8, fontWeight: 900, textTransform: "uppercase" }}>
+  <label
+    style={{
+      fontSize: 11,
+      opacity: 0.8,
+      fontWeight: 900,
+      textTransform: "uppercase",
+    }}
+  >
     Lega destinazione
   </label>
-  <div
+
+  <select
+    value={movementDraftTargetLeague}
+    onChange={(e) => {
+      setMovementDraftTargetLeague(
+        e.target.value as ChampionshipLeagueKey
+      )
+      setMovementDraftTargetDriver("")
+    }}
     style={{
       width: "100%",
       padding: "10px 12px",
@@ -14475,14 +15707,28 @@ boxShadow:
       background: "rgba(0,0,0,0.24)",
       color: "white",
       minHeight: 42,
-      display: "flex",
-      alignItems: "center",
       fontWeight: 800,
       boxSizing: "border-box",
+      cursor: "pointer",
     }}
   >
-    {movementDraftTargetLeague}
-  </div>
+    {CHAMPIONSHIP_LEAGUES
+      .filter((league) => {
+        const sourceIndex =
+          CHAMPIONSHIP_LEAGUES.indexOf(movementDraftLeague)
+        const targetIndex =
+          CHAMPIONSHIP_LEAGUES.indexOf(league)
+
+        return movementDraftType === "promote"
+          ? targetIndex < sourceIndex
+          : targetIndex > sourceIndex
+      })
+      .map((league) => (
+        <option key={league} value={league}>
+          {league}
+        </option>
+      ))}
+  </select>
 </div>
       </div>
 <div style={{ display: "grid" }}>
@@ -14696,6 +15942,30 @@ boxShadow:
   }}
 >
   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <select
+      value={selectedLeague}
+      onChange={(e) =>
+        handleSelectLeague(e.target.value as ChampionshipLeagueKey)
+      }
+      style={{
+        padding: "12px 16px",
+        borderRadius: 14,
+        border: "1px solid rgba(255,215,0,0.40)",
+        background: "#252525",
+        color: "#ffffff",
+        cursor: "pointer",
+        fontWeight: 900,
+        fontSize: 13,
+        minWidth: 160,
+      }}
+      title="Seleziona la lega da esportare"
+    >
+      {CHAMPIONSHIP_LEAGUES.map((league) => (
+        <option key={league} value={league}>
+          {league}
+        </option>
+      ))}
+    </select>
     <button
       onClick={() => openExportModal("championship-html")}
       style={{
@@ -15079,10 +16349,42 @@ boxShadow:
         }}
       >
         <b>{item.pilot}</b>
-        <br />
-        Vettura registrata: <b>{item.lockedCar}</b>
-        <br />
-        Vettura rilevata: <b>{item.currentCar}</b>
+<br />
+Vettura registrata: <b>{item.lockedCar}</b>
+<br />
+Vettura rilevata: <b>{item.currentCar}</b>
+
+<div style={{ marginTop: 10 }}>
+  <button
+    type="button"
+    onClick={() => {
+      const row = finalRows.find(
+        (r) => String(r.pilota || "").trim() === item.pilot
+      )
+
+      if (!row) return
+
+      applyLockedCarToDriver(
+        row.sourcePosGara,
+        item.lockedCar
+      )
+    }}
+    style={{
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid rgba(34,197,94,0.35)",
+      background: "rgba(34,197,94,0.16)",
+      color: "white",
+      cursor: "pointer",
+      fontSize: 11,
+      fontWeight: 900,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    }}
+  >
+    Usa vettura registrata
+  </button>
+</div>
       </div>
     ))}
   </div>
@@ -15446,8 +16748,12 @@ non ho trovato un'associazione sicura tra i piloti previsti della lobby.
 
 const leagueToOpen = activeUnknownDriver.league
 
-// Chiude questo popup
-setDismissedUnknownDriverId(activeUnknownDriver.id)
+// Chiude questo popup e lo considera già gestito
+setDismissedUnknownDriverIds((prev) =>
+  prev.includes(activeUnknownDriver.id)
+    ? prev
+    : [...prev, activeUnknownDriver.id]
+)
 
 // Apre il cassetto piloti
 setDrawerOpen(true)
@@ -15503,6 +16809,264 @@ setDrawerOpen(true)
       <div style={{ fontSize: 12, opacity: 0.7, lineHeight: 1.45 }}>
   <b>Alias</b>: quando l’OCR legge questo nome, verrà ricondotto al pilota ufficiale scelto.
 </div>
+    </div>
+  </div>
+)}
+      
+      {showProvisionalExportModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.78)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 480,
+        padding: 28,
+        borderRadius: 20,
+        border: "1px solid rgba(255,215,0,0.35)",
+        background: "#11121a",
+        color: "white",
+        boxShadow: "0 0 45px rgba(255,215,0,0.12)",
+      }}
+    >
+      <h2 style={{ marginTop: 0, color: "#ffdf80" }}>
+        ESPORTA CLASSIFICHE PROVVISORIE
+      </h2>
+
+      <p style={{ opacity: 0.75, fontSize: 13 }}>
+        Seleziona la gara e il giorno per preparare le classifiche
+        provvisorie delle lobby.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GARA</strong>
+          <select
+            value={provisionalExportRace}
+            onChange={(e) =>
+              setProvisionalExportRace(Number(e.target.value))
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {[1, 2, 3, 4, 5].map((race) => (
+              <option key={race} value={race}>
+                Gara {race}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GIORNO</strong>
+          <select
+            value={provisionalExportDay}
+            onChange={(e) =>
+              setProvisionalExportDay(e.target.value)
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            <option value="lunedi">Lunedì</option>
+            <option value="martedi">Martedì</option>
+            <option value="mercoledi">Mercoledì</option>
+            <option value="giovedi">Giovedì</option>
+            <option value="venerdi">Venerdì</option>
+          </select>
+        </label>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          marginTop: 28,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowProvisionalExportModal(false)}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "#292a35",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.15)",
+            cursor: "pointer",
+          }}
+        >
+          ANNULLA
+        </button>
+
+        <button
+  type="button"
+  onClick={generateProvisionalZip}
+  disabled={exporting}
+  style={{
+    padding: "12px 18px",
+    borderRadius: 12,
+    background: "rgba(255,215,0,0.15)",
+    color: "#ffdf80",
+    border: "1px solid rgba(255,215,0,0.35)",
+    opacity: exporting ? 0.55 : 1,
+    cursor: exporting ? "not-allowed" : "pointer",
+    fontWeight: 900,
+  }}
+>
+  {exporting ? "GENERAZIONE IN CORSO..." : "GENERA ZIP"}
+</button>
+
+      </div>
+    </div>
+  </div>
+)}
+      
+      {showDefinitiveExportModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.78)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 480,
+        padding: 28,
+        borderRadius: 20,
+        border: "1px solid rgba(255,215,0,0.35)",
+        background: "#11121a",
+        color: "white",
+        boxShadow: "0 0 45px rgba(255,215,0,0.12)",
+      }}
+    >
+      <h2 style={{ marginTop: 0, color: "#ffdf80" }}>
+        ESPORTA CLASSIFICHE DEFINITIVE
+      </h2>
+
+      <p style={{ opacity: 0.75, fontSize: 13 }}>
+        Seleziona la gara e la lega per esportare in un unico ZIP
+        tutte le lobby salvate, con la grafica dei PNG definitivi.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>GARA</strong>
+          <select
+            value={definitiveExportRace}
+            onChange={(e) =>
+              setDefinitiveExportRace(Number(e.target.value))
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {[1, 2, 3, 4, 5].map((race) => (
+              <option key={race} value={race}>
+                Gara {race}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 8 }}>
+          <strong>LEGA</strong>
+          <select
+            value={definitiveExportLeague}
+            onChange={(e) =>
+              setDefinitiveExportLeague(
+                e.target.value as ChampionshipLeagueKey
+              )
+            }
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {UNION_RANKS.map((league) => (
+              <option key={league} value={league}>
+                {league}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          marginTop: 28,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowDefinitiveExportModal(false)}
+          disabled={exporting}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "#292a35",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.15)",
+            cursor: "pointer",
+          }}
+        >
+          ANNULLA
+        </button>
+
+        <button
+          type="button"
+          onClick={generateDefinitiveZip}
+          disabled={exporting}
+          style={{
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "rgba(255,215,0,0.15)",
+            color: "#ffdf80",
+            border: "1px solid rgba(255,215,0,0.35)",
+            opacity: exporting ? 0.55 : 1,
+            cursor: exporting ? "not-allowed" : "pointer",
+            fontWeight: 900,
+          }}
+        >
+          {exporting ? "GENERAZIONE IN CORSO..." : "GENERA ZIP"}
+        </button>
+      </div>
     </div>
   </div>
 )}
@@ -16906,6 +18470,81 @@ const changed = currentValue !== originalValue
 <div
   style={{
     position: "fixed",
+    left: "-24000px",
+    top: 0,
+    width: 1920,
+    height: 1080,
+    pointerEvents: "none",
+    zIndex: -1,
+    opacity: 1,
+  }}
+>
+  <div ref={provisionalExportRef}>
+  {provisionalRenderData && (
+    <div
+      style={{
+        width: 1920,
+        height: 1080,
+        boxSizing: "border-box",
+        display: "grid",
+        gap: 12,
+        padding: "10px 18px 12px 18px",
+        alignContent: "start",
+        borderRadius: 22,
+        background:
+          "radial-gradient(1200px 600px at 15% 10%, rgba(255,215,0,0.14), transparent 50%)," +
+          "radial-gradient(900px 500px at 85% 20%, rgba(160,90,255,0.16), transparent 50%)," +
+          "linear-gradient(180deg, #0b0d12 0%, #07080c 100%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
+        overflow: "hidden",
+      }}
+    >
+      <AppHeader
+  mainTitle={`${provisionalRenderData.lobby} ${provisionalRenderData.league}`}
+  sideLabel={`CLASSIFICHE PROVVISORIE GARA ${provisionalRenderData.raceNumber} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[provisionalRenderData.raceNumber] || ""}`}
+  subtitle="UNION Timing Assistant"
+  pngExport={true}
+/>
+      <SummaryStrip
+  winner={provisionalRenderData.snapshot.winner}
+  bestQuali={provisionalRenderData.snapshot.bestQuali}
+  bestRaceLap={provisionalRenderData.snapshot.bestRaceLap}
+  unionMeta={{
+    ...provisionalRenderData.snapshot.unionMeta,
+    gara: `Gara ${provisionalRenderData.raceNumber}`,
+    lega: provisionalRenderData.league,
+  }}
+  showMeta={true}
+  showLobby={true}
+  exporting={true}
+/>
+
+<ResultsTable
+  previewRows={provisionalRenderData.snapshot.finalRows}
+  bestRaceLap={provisionalRenderData.snapshot.bestRaceLap}
+  unionMeta={{
+    ...provisionalRenderData.snapshot.unionMeta,
+    gara: `Gara ${provisionalRenderData.raceNumber}`,
+    lega: provisionalRenderData.league,
+  }}
+  prtMode={false}
+  unionMode={true}
+  exporting={true}
+  penalties={provisionalRenderData.snapshot.penalties}
+  dgMeasureTypes={provisionalRenderData.snapshot.dgMeasureTypes ?? {}}
+  dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
+  forceHideMeta={true}
+tableTitle="Classifica provvisoria"
+/>
+    </div>
+  )}
+</div>
+</div>
+
+<div
+  style={{
+    position: "fixed",
     left: "-20000px",
     top: 0,
     width: 1920,
@@ -16938,7 +18577,7 @@ const changed = currentValue !== originalValue
       >
         <AppHeader
   mainTitle={exportTexts.mainTitle}
-  sideLabel={exportTexts.sideLabel}
+  sideLabel={`LOBBY ${selectedLobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[currentRace] || ""}`}
   subtitle={exportTexts.subtitle}
   pngExport={true}
 />
@@ -16962,7 +18601,95 @@ const changed = currentValue !== originalValue
           exporting={true}
           penalties={penalties}
           dgMeasureTypes={dgMeasureTypes}
+          dgSpecialMeasures={dgSpecialMeasures}
           forceHideMeta={!exportMetaInPng}
+          unjustifiedAbsenceCounts={unjustifiedAbsenceCounts}
+          tableTitle="Classifica definitiva"
+        />
+      </div>
+    )}
+  </div>
+</div>
+  
+{/* CONTENITORE ESPORTAZIONE PNG DEFINITIVI */}
+<div
+  style={{
+    position: "fixed",
+    left: "-28000px",
+    top: 0,
+    width: 1920,
+    height: 1080,
+    pointerEvents: "none",
+    zIndex: -1,
+    opacity: 1,
+  }}
+>
+  <div ref={definitiveExportRef}>
+    {definitiveRenderData && (
+      <div
+        style={{
+          width: 1920,
+          height: 1080,
+          boxSizing: "border-box",
+          display: "grid",
+          gap: 12,
+          padding: "10px 18px 12px 18px",
+          alignContent: "start",
+          borderRadius: 22,
+          background:
+            "radial-gradient(1200px 600px at 15% 10%, rgba(255,215,0,0.14), transparent 50%)," +
+            "radial-gradient(900px 500px at 85% 20%, rgba(160,90,255,0.16), transparent 50%)," +
+            "linear-gradient(180deg, #0b0d12 0%, #07080c 100%)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
+          overflow: "hidden",
+        }}
+      >
+        <AppHeader
+  mainTitle={`UNION 2026 - ROUND 2 | LEGA ${definitiveRenderData.league}`}
+  sideLabel={`LOBBY ${definitiveRenderData.lobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[definitiveRenderData.raceNumber] || ""}`}
+  subtitle="UNION Timing Assistant"
+  pngExport={true}
+/>
+
+        <SummaryStrip
+          winner={definitiveRenderData.snapshot.winner}
+          bestQuali={definitiveRenderData.snapshot.bestQuali}
+          bestRaceLap={definitiveRenderData.snapshot.bestRaceLap}
+          unionMeta={{
+            ...definitiveRenderData.snapshot.unionMeta,
+            gara: `Gara ${definitiveRenderData.raceNumber}`,
+            lega: definitiveRenderData.league,
+          }}
+          showMeta={showMeta}
+          showLobby={showLobby}
+          exporting={true}
+        />
+
+        <ResultsTable
+          previewRows={getDefinitiveRowsForSnapshot(
+            definitiveRenderData.snapshot
+          )}
+          bestRaceLap={definitiveRenderData.snapshot.bestRaceLap}
+          unionMeta={{
+            ...definitiveRenderData.snapshot.unionMeta,
+            gara: `Gara ${definitiveRenderData.raceNumber}`,
+            lega: definitiveRenderData.league,
+          }}
+          prtMode={false}
+          unionMode={true}
+          exporting={true}
+          penalties={definitiveRenderData.snapshot.penalties}
+          dgMeasureTypes={
+            definitiveRenderData.snapshot.dgMeasureTypes ?? {}
+          }
+          dgSpecialMeasures={
+            definitiveRenderData.snapshot.dgSpecialMeasures ?? {}
+          }
+          forceHideMeta={!exportMetaInPng}
+          unjustifiedAbsenceCounts={getDefinitiveAbsenceCounts(
+            definitiveRenderData.raceNumber
+          )}
           tableTitle="Classifica definitiva"
         />
       </div>
@@ -16970,6 +18697,7 @@ const changed = currentValue !== originalValue
   </div>
 </div>
 
+{/* CONTENITORE ESPORTAZIONE HTML CLASSIFICHE */}
 <div
   style={{
     position: "fixed",
@@ -17001,6 +18729,7 @@ const changed = currentValue !== originalValue
         boxShadow: "0 14px 60px rgba(0,0,0,0.45)",
       }}
     >
+
       <AppHeader
   mainTitle={exportTexts.mainTitle}
   sideLabel={exportTexts.sideLabel}
