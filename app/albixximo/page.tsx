@@ -89,6 +89,7 @@ type DgSpecialMeasure =
   | "NEXT_RACE_DSQ"
   | "NEXT_RACE_GRID_MINUS_5"
   | "NEXT_QUALIFYING_DSQ"
+  | "CURRENT_RACE_DSQ"
 
 type DgSpecialMeasureMap =
   Record<string, DgSpecialMeasure>
@@ -2502,16 +2503,21 @@ function renderPrtPenaltyCell({
       ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
       : specialMeasure === "NEXT_QUALIFYING_DSQ"
         ? "SQUALIFICA DALLA PROSSIMA QUALIFICA"
-        : ""
+        : specialMeasure === "CURRENT_RACE_DSQ"
+          ? "SQUALIFICA DALLA GARA"
+          : ""
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
 
   const isRecoveredDsqRow = row.sourcePosGara >= 9000
 
-  if (isDsqRow || isRecoveredDsqRow) {
-    return <Pill left="DSQ" variant="dsq" />
-  }
+  if (
+  (isDsqRow || isRecoveredDsqRow) &&
+  dgMeasureType === "NONE"
+) {
+  return <Pill left="DSQ" variant="dsq" />
+}
 
   if (dgMeasureType === "INFONDATO") {
     return (
@@ -2677,6 +2683,12 @@ function renderPrtPenaltyCell({
     SQUALIFICA
     <br />
     PROSSIMA QUALIFICA
+  </>
+) : specialMeasure === "CURRENT_RACE_DSQ" ? (
+  <>
+    SQUALIFICA
+    <br />
+    DALLA GARA
   </>
 ) : (
   <>
@@ -14814,13 +14826,14 @@ boxShadow:
         setDgSpecialMeasures((prev) => {
           const next = { ...prev }
 
-          if (
+         if (
   value === "NEXT_RACE_DSQ" ||
   value === "NEXT_RACE_GRID_MINUS_5" ||
-  value === "NEXT_QUALIFYING_DSQ"
+  value === "NEXT_QUALIFYING_DSQ" ||
+  value === "CURRENT_RACE_DSQ"
 ) {
-            next[key] = value
-          } else {
+  next[key] = value
+} else {
             delete next[key]
           }
 
@@ -14852,6 +14865,9 @@ boxShadow:
       </option>
       <option value="NEXT_QUALIFYING_DSQ">
   SQUALIFICA DALLA PROSSIMA QUALIFICA
+</option>
+<option value="CURRENT_RACE_DSQ">
+  SQUALIFICA DALLA GARA
 </option>
     </select>
   )}
