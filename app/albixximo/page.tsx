@@ -2395,6 +2395,15 @@ function renderPrtBestLapCell({
   bestRaceLap: string
   exporting?: boolean
 }) {
+    const raceResult = tempoLikeGt7(row).trim().toUpperCase()
+
+  if (
+    raceResult === "DSQ" ||
+    (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ" ||
+    (row.distaccoDalPrimo || "").trim().toUpperCase() === "DSQ"
+  ) {
+    return "-"
+  }
   if ((bestRaceLap || "").trim().toUpperCase() === "NO TIME") {
   const tempo = tempoLikeGt7(row).trim().toUpperCase()
 
