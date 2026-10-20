@@ -15933,6 +15933,30 @@ boxShadow:
   }}
 >
   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <select
+      value={selectedLeague}
+      onChange={(e) =>
+        handleSelectLeague(e.target.value as ChampionshipLeagueKey)
+      }
+      style={{
+        padding: "12px 16px",
+        borderRadius: 14,
+        border: "1px solid rgba(255,215,0,0.40)",
+        background: "#252525",
+        color: "#ffffff",
+        cursor: "pointer",
+        fontWeight: 900,
+        fontSize: 13,
+        minWidth: 160,
+      }}
+      title="Seleziona la lega da esportare"
+    >
+      {CHAMPIONSHIP_LEAGUES.map((league) => (
+        <option key={league} value={league}>
+          {league}
+        </option>
+      ))}
+    </select>
     <button
       onClick={() => openExportModal("championship-html")}
       style={{
