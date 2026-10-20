@@ -490,6 +490,7 @@ function normalizeTimeText(s: string) {
     .replace(/\s+/g, "")
     .replace(/O/g, "0")
     .replace(/I/g, "1")
+    .replace(/^(\d{1,2}):(\d{2}):(\d{3})$/, "$1:$2.$3")
     .trim()
 }
 
