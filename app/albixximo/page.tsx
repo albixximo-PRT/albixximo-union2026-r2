@@ -14346,7 +14346,7 @@ const lastCreatedMovementText = useMemo(() => {
     <div
       style={{
         width: "100%",
-        maxWidth: 460,
+        maxWidth: 820,
         padding: 28,
         borderRadius: 20,
         border: "1px solid #3b82f6",
