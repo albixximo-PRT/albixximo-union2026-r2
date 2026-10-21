@@ -3513,6 +3513,10 @@ export default function Page() {
   // UNION - Popup interno per la visibilità delle provvisorie
 const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
   useState<"preview" | "export" | null>(null)
+  const [unionOfficialRaceDialog, setUnionOfficialRaceDialog] =
+  useState<"preview" | "export" | null>(null)
+  const [unionOfficialRaceForExport, setUnionOfficialRaceForExport] =
+  useState<number | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [shortLobbyMode, setShortLobbyMode] = useState(false)
   const [csv, setCsv] = useState("")
@@ -8495,21 +8499,25 @@ body {
 
 async function downloadChampionshipGeneralHtmlExport(
   preview = false,
-  showProvisionalInExport = true
+  showProvisionalInExport = true,
+  officialRaceForExport: number | null = null
 ) {
-  const latestSavedRace = [1, 2, 3, 4, 5]
-  .filter((raceNumber) => {
-    const raceState = championshipState.races[raceNumber]
-    if (!raceState) return false
+  const latestSavedRace =
+  showProvisionalInExport && officialRaceForExport !== null
+    ? officialRaceForExport
+    : [1, 2, 3, 4, 5]
+        .filter((raceNumber) => {
+          const raceState = championshipState.races[raceNumber]
+          if (!raceState) return false
 
-    return CHAMPIONSHIP_LEAGUES.some((league) => {
-      const lobbyState = raceState[league]
-      if (!lobbyState) return false
+          return CHAMPIONSHIP_LEAGUES.some((league) => {
+            const lobbyState = raceState[league]
+            if (!lobbyState) return false
 
-      return Object.values(lobbyState).some((snapshot) => !!snapshot)
-    })
-  })
-  .pop() ?? 1
+            return Object.values(lobbyState).some((snapshot) => !!snapshot)
+          })
+        })
+        .pop() ?? 1
   const savedPages: Partial<Record<ChampionshipLeagueKey, string>> = {}
 
   for (const league of CHAMPIONSHIP_LEAGUES) {
@@ -14136,10 +14144,10 @@ const lastCreatedMovementText = useMemo(() => {
         <button
           type="button"
           onClick={() => {
-            const preview = unionProvisionalExportDialog === "preview"
-            setUnionProvisionalExportDialog(null)
-            void downloadChampionshipGeneralHtmlExport(preview, true)
-          }}
+  const mode = unionProvisionalExportDialog
+  setUnionProvisionalExportDialog(null)
+  setUnionOfficialRaceDialog(mode)
+}}
           style={{
             padding: "16px 10px",
             borderRadius: 14,
@@ -14183,6 +14191,126 @@ const lastCreatedMovementText = useMemo(() => {
       >
         La scelta sarà applicata al portale generato.
       </p>
+    </div>
+  </div>
+)}
+{unionOfficialRaceDialog !== null && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 10001,
+      background: "rgba(0,0,0,0.85)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 460,
+        padding: 28,
+        borderRadius: 20,
+        border: "1px solid #3b82f6",
+        background: "#0f172a",
+        boxShadow: "0 20px 80px rgba(0,0,0,0.6)",
+        color: "#ffffff",
+      }}
+    >
+      <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 14 }}>
+        CLASSIFICHE UFFICIALI
+      </h2>
+
+      <p style={{ color: "#cbd5e1", marginBottom: 22 }}>
+        A quale gara devono riferirsi le classifiche ufficiali
+        del portale?
+      </p>
+
+      <select
+        value={unionOfficialRaceForExport ?? ""}
+        onChange={(e) =>
+          setUnionOfficialRaceForExport(Number(e.target.value) || null)
+        }
+        style={{
+          width: "100%",
+          padding: 14,
+          borderRadius: 12,
+          background: "#1e293b",
+          color: "#ffffff",
+          border: "1px solid #64748b",
+          marginBottom: 24,
+          fontSize: 16,
+        }}
+      >
+        <option value="">Seleziona una gara</option>
+        {UNION_RACE_OPTIONS.filter(
+          (race) => race.value < currentRace
+        ).map((race) => (
+          <option key={race.value} value={race.value}>
+            {race.label}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ display: "flex", gap: 12 }}>
+        <button
+          type="button"
+          onClick={() => {
+            setUnionOfficialRaceDialog(null)
+            setUnionOfficialRaceForExport(null)
+          }}
+          style={{
+            flex: 1,
+            padding: 14,
+            borderRadius: 12,
+            background: "#334155",
+            color: "#ffffff",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 800,
+          }}
+        >
+          ANNULLA
+        </button>
+
+        <button
+          type="button"
+          disabled={unionOfficialRaceForExport === null}
+          onClick={() => {
+  if (unionOfficialRaceForExport === null) return
+
+  const preview = unionOfficialRaceDialog === "preview"
+  const officialRace = unionOfficialRaceForExport
+
+  setUnionOfficialRaceDialog(null)
+  setUnionOfficialRaceForExport(null)
+
+  void downloadChampionshipGeneralHtmlExport(
+    preview,
+    true,
+    officialRace
+  )
+}}
+          style={{
+            flex: 1,
+            padding: 14,
+            borderRadius: 12,
+            background:
+              unionOfficialRaceForExport === null ? "#475569" : "#2563eb",
+            color: "#ffffff",
+            border: "none",
+            cursor:
+              unionOfficialRaceForExport === null
+                ? "not-allowed"
+                : "pointer",
+            fontWeight: 900,
+          }}
+        >
+          CONFERMA
+        </button>
+      </div>
     </div>
   </div>
 )}
