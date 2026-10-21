@@ -3517,6 +3517,8 @@ const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
   useState<"preview" | "export" | null>(null)
   const [unionOfficialRaceForExport, setUnionOfficialRaceForExport] =
   useState<number | null>(null)
+  const [unionPublishedProvisionalDays, setUnionPublishedProvisionalDays] =
+  useState<string[]>(["lunedi"])
   const [files, setFiles] = useState<File[]>([])
   const [shortLobbyMode, setShortLobbyMode] = useState(false)
   const [csv, setCsv] = useState("")
@@ -3671,6 +3673,9 @@ const [driverIdCorrections, setDriverIdCorrections] = useState<
   Record<string, string>
 >({})
 const [uploadedLeagueHtmls, setUploadedLeagueHtmls] = useState<
+  Partial<Record<ChampionshipLeagueKey, string>>
+>({})
+const [unionOfficialLeagueHtmls, setUnionOfficialLeagueHtmls] = useState<
   Partial<Record<ChampionshipLeagueKey, string>>
 >({})
 const [loadingLeagueHtmls, setLoadingLeagueHtmls] = useState<
@@ -8521,7 +8526,13 @@ async function downloadChampionshipGeneralHtmlExport(
   const savedPages: Partial<Record<ChampionshipLeagueKey, string>> = {}
 
   for (const league of CHAMPIONSHIP_LEAGUES) {
-    const html = String(uploadedLeagueHtmls[league] || "").trim()
+    const html = String(
+  (
+    showProvisionalInExport && officialRaceForExport !== null
+      ? unionOfficialLeagueHtmls[league]
+      : uploadedLeagueHtmls[league]
+  ) || ""
+).trim()
     if (html) {
       savedPages[league] = html
     }
@@ -10840,7 +10851,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="martedi"
-    disabled
+        ${unionPublishedProvisionalDays.includes("martedi") ? "" : "disabled"}
     title="Classifiche non ancora pubblicate"
   >
     MARTEDÌ
@@ -10850,7 +10861,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="mercoledi"
-    disabled
+    ${unionPublishedProvisionalDays.includes("mercoledi") ? "" : "disabled"}
     title="Classifiche non ancora pubblicate"
   >
     MERCOLEDÌ
@@ -10860,7 +10871,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="giovedi"
-    disabled
+    ${unionPublishedProvisionalDays.includes("giovedi") ? "" : "disabled"}
     title="Classifiche non ancora pubblicate"
   >
     GIOVEDÌ
@@ -10870,7 +10881,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="venerdi"
-    disabled
+    ${unionPublishedProvisionalDays.includes("venerdi") ? "" : "disabled"}
     title="Classifiche non ancora pubblicate"
   >
     VENERDÌ
@@ -10884,6 +10895,35 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
   <button type="button" class="union-provisional-lobby" data-lobby="A5">A5 <span>STAR</span></button>
   <button type="button" class="union-provisional-lobby" data-lobby="A6">A6 <span>PRO AMA</span></button>
   <button type="button" class="union-provisional-lobby" data-lobby="A7">A7 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A8">A8 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A9">A9 <span>PRO SILVER</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A10">A10 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A11">A11 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A12">A12 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A13">A13 <span>PRO SILVER</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A14">A14 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A15">A15 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A16">A16 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A17">A17 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A18">A18 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A19">A19 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A20">A20 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A21">A21 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A22">A22 <span>PRO SILVER</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A23">A23 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A24">A24 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A25">A25 <span>PRO SILVER</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A26">A26 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A27">A27 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A28">A28 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A29">A29 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A30">A30 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A31">A31 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A32">A32 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A33">A33 <span>AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A34">A34 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A35">A35 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A36">A36 <span>PRO SILVER</span></button>
 </div>
       <div id="unionProvisionalViewer"></div>
     </div>
@@ -10914,11 +10954,17 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 </div>
 
 <select class="race-png-select" id="racePngSelect">
-  <option value="1">Gara 1</option>
-  <option value="2">Gara 2</option>
-  <option value="3">Gara 3</option>
-  <option value="4">Gara 4</option>
-  <option value="5">Gara 5</option>
+  ${[1, 2, 3, 4, 5]
+    .filter((race) =>
+      !showProvisionalInExport ||
+      officialRaceForExport === null ||
+      race <= officialRaceForExport
+    )
+    .map(
+      (race) =>
+        `<option value="${race}">Gara ${race}</option>`
+    )
+    .join("")}
 </select>
     </div>
   </div>
@@ -11794,33 +11840,116 @@ renderLeagueMovements(league);
 
   // Associazione lobby -> nome originale del PNG
   const unionProvisionalFiles = {
-    A1: "A1_STAR_PROVVISORIA.png",
-    A2: "A2_ELITE_PROVVISORIA.png",
-    A3: "A3_PRO_GOLD_PROVVISORIA.png",
-    A4: "A4_PRO_SILVER_PROVVISORIA.png",
-    A5: "A5_STAR_PROVVISORIA.png",
-    A6: "A6_PRO_AMA_PROVVISORIA.png",
-    A7: "A7_AMA_PROVVISORIA.png"
-  };
+  A1: "A1_STAR_PROVVISORIA.png",
+  A2: "A2_ELITE_PROVVISORIA.png",
+  A3: "A3_PRO_GOLD_PROVVISORIA.png",
+  A4: "A4_PRO_SILVER_PROVVISORIA.png",
+  A5: "A5_STAR_PROVVISORIA.png",
+  A6: "A6_PRO_AMA_PROVVISORIA.png",
+  A7: "A7_AMA_PROVVISORIA.png",
+  A8: "A8_ELITE_PROVVISORIA.png",
+  A9: "A9_PRO_SILVER_PROVVISORIA.png",
+  A10: "A10_STAR_PROVVISORIA.png",
+  A11: "A11_AMA_PROVVISORIA.png",
+  A12: "A12_ELITE_PROVVISORIA.png",
+  A13: "A13_PRO_SILVER_PROVVISORIA.png",
+  A14: "A14_PRO_GOLD_PROVVISORIA.png",
+  A15: "A15_PRO_AMA_PROVVISORIA.png",
+  A16: "A16_PRO_AMA_PROVVISORIA.png",
+  A17: "A17_STAR_PROVVISORIA.png",
+  A18: "A18_ELITE_PROVVISORIA.png",
+  A19: "A19_AMA_PROVVISORIA.png",
+  A20: "A20_PRO_AMA_PROVVISORIA.png",
+  A21: "A21_PRO_GOLD_PROVVISORIA.png",
+  A22: "A22_PRO_SILVER_PROVVISORIA.png",
+  A23: "A23_AMA_PROVVISORIA.png",
+  A24: "A24_PRO_GOLD_PROVVISORIA.png",
+  A25: "A25_PRO_SILVER_PROVVISORIA.png",
+  A26: "A26_PRO_AMA_PROVVISORIA.png",
+  A27: "A27_AMA_PROVVISORIA.png",
+  A28: "A28_PRO_GOLD_PROVVISORIA.png",
+  A29: "A29_STAR_PROVVISORIA.png",
+  A30: "A30_ELITE_PROVVISORIA.png",
+  A31: "A31_PRO_GOLD_PROVVISORIA.png",
+  A32: "A32_PRO_AMA_PROVVISORIA.png",
+  A33: "A33_AMA_PROVVISORIA.png",
+  A34: "A34_STAR_PROVVISORIA.png",
+  A35: "A35_ELITE_PROVVISORIA.png",
+  A36: "A36_PRO_SILVER_PROVVISORIA.png"
+};
 
   let previousFocus = null;
+  let unionSelectedProvisionalDay = "lunedi";
+  const unionProvisionalDayButtons =
+  document.querySelectorAll(".union-provisional-day");
+
+unionProvisionalDayButtons.forEach(function (button) {
+  button.addEventListener("click", function () {
+    if (button.disabled) return;
+
+    unionSelectedProvisionalDay = button.getAttribute("data-day") || "lunedi";
+
+    unionProvisionalDayButtons.forEach(function (dayButton) {
+      const active = dayButton === button;
+      dayButton.classList.toggle("active", active);
+      dayButton.setAttribute("aria-pressed", String(active));
+    });
+
+    showProvisionalLobbies();
+  });
+});
 
   function showProvisionalLobbies() {
-    viewerContainer.hidden = true;
-    viewerContainer.innerHTML = "";
-    lobbiesContainer.hidden = false;
-    dialog.classList.remove("union-viewing-png");
-  }
+  viewerContainer.hidden = true;
+  viewerContainer.innerHTML = "";
+  lobbiesContainer.hidden = false;
+  dialog.classList.remove("union-viewing-png");
+
+  const dayRanges = {
+    lunedi: [1, 7],
+    martedi: [8, 15],
+    mercoledi: [16, 22],
+    giovedi: [23, 30],
+    venerdi: [31, 36]
+  };
+
+  const range =
+    dayRanges[unionSelectedProvisionalDay] || dayRanges.lunedi;
+
+  lobbiesContainer
+    .querySelectorAll(".union-provisional-lobby")
+    .forEach(function (button) {
+      const lobby = button.getAttribute("data-lobby") || "";
+      const number = Number(lobby.replace("A", ""));
+
+      const isVisible =
+  number >= range[0] && number <= range[1];
+
+button.hidden = !isVisible;
+button.style.display = isVisible ? "" : "none";
+    });
+}
 
   function showProvisionalImage(lobby) {
     const fileName = unionProvisionalFiles[lobby];
-    if (!fileName) return;
+if (!fileName) return;
 
-    const imagePath =
-      "/Provvisorie/G" +
-      unionProvisionalRace +
-      "/lunedì/" +
-      encodeURIComponent(fileName);
+const lobbyNumber = Number(lobby.replace("A", ""));
+
+const dayFolder =
+  lobbyNumber <= 7 ? "lunedì" :
+  lobbyNumber <= 15 ? "martedì" :
+  lobbyNumber <= 22 ? "mercoledì" :
+  lobbyNumber <= 30 ? "giovedì" :
+  "venerdì";
+
+const imagePath =
+  "/Provvisorie/G" +
+  unionProvisionalRace +
+  "/" +
+  dayFolder +
+  "/" +
+  encodeURIComponent(fileName);
 
     // Creiamo gli elementi senza modificare il resto del portale
     const wrapper = document.createElement("div");
@@ -11880,6 +12009,13 @@ requestAnimationFrame(function () {
   });
 
   function openProvisionalModal() {
+  unionSelectedProvisionalDay = "lunedi";
+
+unionProvisionalDayButtons.forEach(function (button) {
+  const isMonday = button.getAttribute("data-day") === "lunedi";
+  button.classList.toggle("active", isMonday);
+  button.setAttribute("aria-pressed", String(isMonday));
+});
     previousFocus = document.activeElement;
     showProvisionalLobbies();
     modal.hidden = false;
@@ -14254,6 +14390,214 @@ const lastCreatedMovementText = useMemo(() => {
         ))}
       </select>
 
+            <input
+  id="union-official-html-upload"
+  type="file"
+  accept=".html,.htm"
+  multiple
+  style={{ display: "none" }}
+  onChange={async (e) => {
+    const input = e.currentTarget
+const files = Array.from(input.files ?? [])
+    if (files.length === 0) return
+
+    if (
+      files.length !== 6 ||
+      files.some((file) => !/\.html?$/i.test(file.name))
+    ) {
+      alert("Seleziona esattamente 6 file HTML.")
+      input.value = ""
+      return
+    }
+
+    const contents = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        html: await file.text(),
+      }))
+    )
+
+    const recognized: Partial<
+  Record<ChampionshipLeagueKey, string>
+> = {}
+
+for (const file of contents) {
+  const filename = file.name
+    .toUpperCase()
+    .replace(/[_-]/g, " ")
+
+  const league = UNION_RANKS.find((rank) => {
+    const escaped = rank.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    return new RegExp(
+      `(^|[^A-Z])${escaped}([^A-Z]|$)`
+    ).test(filename)
+  })
+
+  if (!league || recognized[league]) {
+    alert(
+      `Impossibile riconoscere una lega oppure lega duplicata: ${file.name}`
+    )
+    return
+  }
+
+  recognized[league] = file.html
+}
+
+if (UNION_RANKS.some((rank) => !recognized[rank])) {
+  alert("Manca almeno una delle sei leghe.")
+  return
+}
+
+setUnionOfficialLeagueHtmls(recognized)
+
+    input.value = ""
+  }}
+/>
+      
+            <div
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.currentTarget.style.borderColor = "#60a5fa"
+        }}
+        onDragLeave={(e) => {
+          e.currentTarget.style.borderColor = "#475569"
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          e.currentTarget.style.borderColor = "#475569"
+
+          const input = document.getElementById(
+            "union-official-html-upload"
+          ) as HTMLInputElement | null
+
+          if (!input) return
+          input.files = e.dataTransfer.files
+          input.dispatchEvent(
+            new Event("change", { bubbles: true })
+          )
+        }}
+        onClick={() => {
+          document.getElementById(
+            "union-official-html-upload"
+          )?.click()
+        }}
+        style={{
+          border: "2px dashed #475569",
+          borderRadius: 16,
+          padding: "28px 16px",
+          marginBottom: 24,
+          background: "#1e293b",
+          textAlign: "center",
+          cursor: "pointer",
+        }}
+      >
+        <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
+
+        <div style={{ fontSize: 16, fontWeight: 900 }}>
+          TRASCINA QUI I 6 HTML
+        </div>
+
+        <div
+  style={{
+    marginBottom: 22,
+    padding: 14,
+    borderRadius: 12,
+    background: "#1e293b",
+    border: "1px solid #334155",
+  }}
+>
+  <div
+    style={{
+      fontWeight: 900,
+      marginBottom: 12,
+      color: "#93c5fd",
+    }}
+  >
+    HTML UFFICIALI CARICATI:{" "}
+    {
+      UNION_RANKS.filter(
+        (rank) => !!unionOfficialLeagueHtmls[rank]
+      ).length
+    }/6
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+      gap: 8,
+      fontSize: 13,
+    }}
+  >
+    {UNION_RANKS.map((rank) => (
+      <div key={rank}>
+        {unionOfficialLeagueHtmls[rank] ? "✅" : "⬜"}{" "}
+        {rank}
+      </div>
+    ))}
+  </div>
+</div>
+        
+        <div
+          style={{
+            color: "#94a3b8",
+            fontSize: 13,
+            marginTop: 8,
+          }}
+        >
+          Oppure clicca per selezionarli tutti insieme
+        </div>
+      </div>
+      
+      <div
+  style={{
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 14,
+    border: "1px solid #334155",
+    background: "#1e293b",
+  }}
+>
+  <div
+    style={{
+      fontWeight: 900,
+      color: "#93c5fd",
+      marginBottom: 12,
+    }}
+  >
+    GIORNATE PROVVISORIE DA PUBBLICARE
+  </div>
+
+  {Object.entries(UNION_PROVISIONAL_DAYS).map(([day, lobbies]) => (
+    <label
+      key={day}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "8px 0",
+        cursor: "pointer",
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={unionPublishedProvisionalDays.includes(day)}
+        onChange={(e) => {
+          setUnionPublishedProvisionalDays((previous) =>
+            e.target.checked
+              ? [...previous, day]
+              : previous.filter((item) => item !== day)
+          )
+        }}
+      />
+
+      <span>
+        {day.toUpperCase()} — {lobbies[0]}–{lobbies[lobbies.length - 1]}
+      </span>
+    </label>
+  ))}
+</div>
+      
       <div style={{ display: "flex", gap: 12 }}>
         <button
           type="button"
@@ -14277,7 +14621,12 @@ const lastCreatedMovementText = useMemo(() => {
 
         <button
           type="button"
-          disabled={unionOfficialRaceForExport === null}
+          disabled={
+  unionOfficialRaceForExport === null ||
+  UNION_RANKS.some(
+    (rank) => !unionOfficialLeagueHtmls[rank]
+  )
+}
           onClick={() => {
   if (unionOfficialRaceForExport === null) return
 
