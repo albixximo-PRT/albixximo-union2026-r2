@@ -14347,6 +14347,9 @@ const lastCreatedMovementText = useMemo(() => {
       style={{
         width: "100%",
         maxWidth: 820,
+        maxHeight: "calc(100dvh - 40px)",
+overflowY: "auto",
+boxSizing: "border-box",
         padding: 28,
         borderRadius: 20,
         border: "1px solid #3b82f6",
