@@ -3510,6 +3510,9 @@ const vampireWarsFontStyle = `
 `
 
 export default function Page() {
+  // UNION - Popup interno per la visibilità delle provvisorie
+const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
+  useState<"preview" | "export" | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [shortLobbyMode, setShortLobbyMode] = useState(false)
   const [csv, setCsv] = useState("")
@@ -8490,7 +8493,10 @@ body {
   }
 }
 
-async function downloadChampionshipGeneralHtmlExport(preview = false) {
+async function downloadChampionshipGeneralHtmlExport(
+  preview = false,
+  showProvisionalInExport = true
+) {
   const latestSavedRace = [1, 2, 3, 4, 5]
   .filter((raceNumber) => {
     const raceState = championshipState.races[raceNumber]
@@ -8733,7 +8739,527 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
       flex-shrink: 0;
     }
 
-    .hero-logo img {
+            /* UNION - Schede giornate provvisorie */
+    .union-provisional-days {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .union-provisional-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      min-width: 0;
+      padding: 15px 8px;
+      border: 1px solid rgba(90, 140, 240, 0.45);
+      border-radius: 12px;
+      background: rgba(20, 45, 105, 0.35);
+      color: #dce7ff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .union-provisional-day-date {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      opacity: 0.85;
+    }
+
+    .union-provisional-day.active {
+      background: linear-gradient(135deg, #09266f, #1646b2);
+      border-color: #558dff;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(45, 105, 235, 0.30);
+    }
+
+    .union-provisional-day:disabled {
+      background: rgba(255, 255, 255, 0.035);
+      border-color: rgba(255, 255, 255, 0.10);
+      color: #858b9c;
+      opacity: 1;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .union-provisional-day:not(:disabled):not(.active):hover {
+      background: rgba(35, 80, 175, 0.50);
+      border-color: rgba(100, 160, 255, 0.75);
+    }
+
+    @media (max-width: 700px) {
+      .union-provisional-days {
+        grid-template-columns: repeat(5, minmax(85px, 1fr));
+        gap: 7px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+      }
+
+      .union-provisional-day {
+        padding: 12px 5px;
+        font-size: 10px;
+        letter-spacing: 0;
+      }
+
+      .union-provisional-day-date {
+        font-size: 10px;
+      }
+    }
+
+    /* UNION - Finestra classifiche provvisorie */
+    .union-provisional-overlay[hidden] {
+      display: none !important;
+    }
+
+    .union-provisional-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+    }
+
+    .union-provisional-modal {
+      display: flex;
+      flex-direction: column;
+      width: min(1100px, 100%);
+      max-height: calc(100dvh - 40px);
+      overflow: hidden;
+      border: 1px solid rgba(65, 110, 215, 0.55);
+      border-radius: 20px;
+      background: linear-gradient(
+        145deg,
+        #11172b 0%,
+        #080c17 65%,
+        #070914 100%
+      );
+      box-shadow:
+        0 0 50px rgba(0, 0, 0, 0.65),
+        0 0 35px rgba(25, 65, 170, 0.20);
+      color: #ffffff;
+    }
+
+    .union-provisional-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 24px 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      background: linear-gradient(
+        90deg,
+        rgba(9, 31, 99, 0.55),
+        rgba(20, 12, 42, 0.35)
+      );
+    }
+
+    /* UNION - Logo e intestazione provvisorie */
+    .union-provisional-brand {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      min-width: 0;
+    }
+
+    .union-provisional-logo {
+      width: 90px;
+      height: 100px;
+      object-fit: contain;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.25));
+    }
+
+    @media (max-width: 700px) {
+      .union-provisional-brand {
+        gap: 12px;
+      }
+
+      .union-provisional-logo {
+        width: 55px;
+        height: 65px;
+      }
+    }
+
+    @media (max-height: 500px) and (orientation: landscape) {
+      .union-provisional-logo {
+        width: 45px;
+        height: 50px;
+      }
+    }
+
+    .union-provisional-heading {
+      min-width: 0;
+    }
+
+    .union-provisional-kicker {
+      margin-bottom: 8px;
+      color: #9abaff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+    }
+
+    .union-provisional-heading h2 {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 29px);
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+
+    .union-provisional-circuit {
+      margin-top: 9px;
+      color: #b8c5e6;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .union-provisional-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 42px;
+      height: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+    }
+
+        /* UNION - Pulsante blu classifiche provvisorie */
+    .hero-logo .union-provisional-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin-right: 20px;
+      padding: 13px 20px;
+      border: 1px solid #3568e0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #061b64, #103a9b);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(35, 90, 220, 0.45);
+    }
+
+    /* UNION - Correzione esclusiva telefono verticale */
+@media (max-width: 1100px) and (orientation: portrait) {
+  .hero {
+  position: relative;
+  min-height: 230px;
+  padding-bottom: 24px;
+}
+
+  .hero-logo .union-provisional-btn {
+    position: absolute;
+    left: 16px;
+    bottom: 22px;
+    margin: 0;
+    max-width: calc(100% - 32px);
+    padding: 18px 30px;
+    font-size: 16px;
+    min-height: 58px;
+    border-radius: 14px;
+    white-space: nowrap;
+  }
+}
+    
+    .hero-logo .union-provisional-btn:hover {
+      background: linear-gradient(135deg, #103a9b, #2057d5);
+      border-color: #78a4ff;
+    }
+
+    /* UNION - Finestra provvisorie a schermo intero */
+.union-provisional-overlay {
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.union-provisional-modal {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.union-provisional-result-image {
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
+
+    .union-provisional-content {
+      padding: 32px 34px 36px;
+    }
+
+    /* UNION - Giorni e date più grandi */
+    .union-provisional-day {
+      min-height: 100px;
+      gap: 10px;
+      padding: 18px 12px;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .union-provisional-day-date {
+      font-size: 23px;
+      font-weight: 900;
+      line-height: 1.1;
+      opacity: 1;
+    }
+
+    /* UNION - Chiusura finestra */
+    .union-provisional-close {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font-size: 29px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 700px) {
+      .union-provisional-content {
+        padding: 18px 12px 22px;
+      }
+
+      .union-provisional-day {
+        min-height: 76px;
+        padding: 12px 5px;
+        font-size: 11px;
+        gap: 7px;
+      }
+
+      .union-provisional-day-date {
+        font-size: 17px;
+      }
+
+      .hero-logo .union-provisional-btn {
+        margin-right: 8px;
+        padding: 10px 12px;
+        font-size: 10px;
+        white-space: normal;
+        text-align: center;
+      }
+    }
+
+        /* UNION - Lobby classifiche provvisorie */
+    .union-provisional-lobbies {
+      display: grid;
+      grid-template-columns: repeat(var(--union-lobby-count, 7), minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .union-provisional-lobby {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 82px;
+      padding: 14px 10px;
+      border: 1px solid rgba(95, 145, 240, 0.40);
+      border-radius: 12px;
+      background: linear-gradient(
+        135deg,
+        rgba(14, 39, 104, 0.70),
+        rgba(12, 22, 54, 0.85)
+      );
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .union-provisional-lobby span {
+      color: #a9c4ff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .union-provisional-lobby:hover {
+      background: linear-gradient(135deg, #103a9b, #1646b2);
+      border-color: #78a4ff;
+    }
+
+    @media (max-width: 700px) {
+      .union-provisional-lobbies {
+        gap: 9px;
+      }
+
+      .union-provisional-lobby {
+        min-height: 72px;
+        font-size: 17px;
+      }
+
+      .union-provisional-lobby span {
+        font-size: 11px;
+      }
+    }
+    
+    /* UNION - Logo APEX responsive */
+.union-provisional-apex {
+  display: block;
+  width: clamp(110px, 12vw, 190px);
+  height: clamp(75px, 8vw, 125px);
+  object-fit: contain;
+  margin-left: auto;
+  margin-right: 24px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* Smartphone verticale */
+@media (max-width: 700px) {
+  .union-provisional-apex {
+    width: clamp(55px, 16vw, 95px);
+    height: 65px;
+    margin-right: 8px;
+  }
+}
+
+/* Smartphone orizzontale (landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .union-provisional-apex {
+    width: clamp(75px, 11vw, 125px);
+    height: 65px;
+    margin-right: 10px;
+  }
+}
+    
+/* UNION - Visualizzatore PNG classifiche provvisorie */
+#unionProvisionalLobbies[hidden],
+#unionProvisionalViewer[hidden] {
+  display: none !important;
+}
+
+.union-provisional-image-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-top: 22px;
+}
+
+.union-provisional-back {
+  align-self: flex-start;
+  padding: 12px 20px;
+  border: 1px solid #5279d4;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #102b73, #1745a0);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.union-provisional-back:hover {
+  background: linear-gradient(135deg, #1745a0, #2563d8);
+}
+
+.union-provisional-result-image {
+  display: block;
+  width: 100%;
+  max-width: 1050px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+}    
+
+/* UNION - PNG provvisorie a tutta larghezza */
+#unionProvisionalViewer {
+  width: 100%;
+  max-width: none;
+}
+
+.union-provisional-image-view {
+  width: 100%;
+  max-width: none;
+  align-items: stretch;
+}
+
+.union-provisional-result-image {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+}
+
+/* UNION - Logo APEX adattivo */
+.union-provisional-apex {
+  width: clamp(190px, 18vw, 330px);
+  height: 150px;
+  max-width: 30%;
+  object-fit: contain;
+  margin-left: auto;
+  margin-right: 28px;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-apex {
+    width: clamp(70px, 20vw, 120px);
+    height: 75px;
+    max-width: 23%;
+    margin-right: 8px;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .union-provisional-apex {
+    width: clamp(100px, 15vw, 180px);
+    height: 80px;
+    max-width: 25%;
+    margin-right: 12px;
+  }
+}
+
+/* UNION - Banner a tendina durante visualizzazione PNG */
+.union-provisional-header {
+  max-height: 250px;
+  overflow: hidden;
+  transition:
+    max-height 0.45s ease,
+    padding 0.45s ease,
+    opacity 0.35s ease,
+    border-width 0.45s ease;
+}
+
+.union-provisional-modal.union-viewing-png .union-provisional-header {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  border-bottom-width: 0;
+}
+
+.hero-logo img {
       height: 120px;
       width: auto;
       max-width: 100%;
@@ -10218,10 +10744,142 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
       </div>
     </div>
 
-    <div class="hero-logo">
-      ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
-    </div>
+        <div class="hero-logo">
+  ${showProvisionalInExport ? `
+    <button
+      class="union-provisional-btn"
+      type="button"
+      id="unionProvisionalOpen"
+      title="Apri le classifiche provvisorie"
+      aria-haspopup="dialog"
+    >
+      <span class="union-provisional-dot"></span>
+      <span>CLASSIFICHE PROVVISORIE · GARA 3</span>
+    </button>
+  ` : ""}
+
+    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
+</div>
   </div>
+</div>
+
+<!-- UNION - Finestra classifiche provvisorie -->
+<div
+  id="unionProvisionalModal"
+  class="union-provisional-overlay"
+  role="presentation"
+  hidden
+>
+  <section
+    class="union-provisional-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="unionProvisionalTitle"
+    tabindex="-1"
+  >
+        <div class="union-provisional-header">
+      <div class="union-provisional-brand">
+        <img
+          src="/union-logo.png"
+          alt="Logo UNION"
+          class="union-provisional-logo"
+        />
+
+        <div class="union-provisional-heading">
+          <div class="union-provisional-kicker">
+            UNION 2026 • ROUND 2
+          </div>
+
+          <h2 id="unionProvisionalTitle">
+            CLASSIFICHE PROVVISORIE
+          </h2>
+
+          <div class="union-provisional-circuit">
+            GARA 3 • SUZUKA CIRCUIT
+          </div>
+        </div>
+      </div>
+<img
+  src="/logoapex.png"
+  alt="Logo APEX"
+  class="union-provisional-apex"
+/>
+
+<button
+  type="button"
+  id="unionProvisionalClose"
+  class="union-provisional-close"
+  aria-label="Chiudi classifiche provvisorie"
+  title="Chiudi"
+>
+  &times;
+</button>
+      
+    </div>
+
+    <div class="union-provisional-content">
+      <div id="unionProvisionalDays" class="union-provisional-days">
+  <button
+    type="button"
+    class="union-provisional-day active"
+    data-day="lunedi"
+    aria-pressed="true"
+  >
+    LUNEDÌ
+  </button>
+
+  <button
+    type="button"
+    class="union-provisional-day"
+    data-day="martedi"
+    disabled
+    title="Classifiche non ancora pubblicate"
+  >
+    MARTEDÌ
+  </button>
+
+  <button
+    type="button"
+    class="union-provisional-day"
+    data-day="mercoledi"
+    disabled
+    title="Classifiche non ancora pubblicate"
+  >
+    MERCOLEDÌ
+  </button>
+
+  <button
+    type="button"
+    class="union-provisional-day"
+    data-day="giovedi"
+    disabled
+    title="Classifiche non ancora pubblicate"
+  >
+    GIOVEDÌ
+  </button>
+
+  <button
+    type="button"
+    class="union-provisional-day"
+    data-day="venerdi"
+    disabled
+    title="Classifiche non ancora pubblicate"
+  >
+    VENERDÌ
+  </button>
+</div>
+      <div id="unionProvisionalLobbies" class="union-provisional-lobbies">
+  <button type="button" class="union-provisional-lobby" data-lobby="A1">A1 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A2">A2 <span>ELITE</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A3">A3 <span>PRO GOLD</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A4">A4 <span>PRO SILVER</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A5">A5 <span>STAR</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A6">A6 <span>PRO AMA</span></button>
+  <button type="button" class="union-provisional-lobby" data-lobby="A7">A7 <span>AMA</span></button>
+</div>
+      <div id="unionProvisionalViewer"></div>
+    </div>
+  </section>
 </div>
 
 <div class="race-png-panel">
@@ -11074,7 +11732,205 @@ renderLeagueMovements(league);
       setTimeout(finishBoot, 80);
     }
 
-// SPLASH SCREEN
+// UNION - Apertura e chiusura classifiche provvisorie
+(function () {
+  // UNION - Calendario provvisorie
+  // Modificare soltanto la data del lunedì (AAAA-MM-GG)
+  const unionProvisionalMonday = "2026-10-19";
+
+  // Gara attualmente in corso
+  const unionProvisionalRace = 3;
+
+  const unionMondayParts = unionProvisionalMonday
+    .split("-")
+    .map(Number);
+
+  const unionMondayDate = new Date(
+    unionMondayParts[0],
+    unionMondayParts[1] - 1,
+    unionMondayParts[2]
+  );
+
+  document.querySelectorAll(".union-provisional-day").forEach(function (button, index) {
+    const date = new Date(unionMondayDate);
+    date.setDate(unionMondayDate.getDate() + index);
+
+    const dateLabel =
+      String(date.getDate()).padStart(2, "0") +
+      "/" +
+      String(date.getMonth() + 1).padStart(2, "0");
+
+    const dayName = button.textContent.trim();
+
+    button.innerHTML =
+      '<span class="union-provisional-day-name">' + dayName + '</span>' +
+      '<span class="union-provisional-day-date">' + dateLabel + '</span>';
+  });
+
+  const openButton = document.getElementById("unionProvisionalOpen");
+  const modal = document.getElementById("unionProvisionalModal");
+  const closeButton = document.getElementById("unionProvisionalClose");
+  const dialog = modal ? modal.querySelector(".union-provisional-modal") : null;
+
+  const lobbiesContainer = document.getElementById("unionProvisionalLobbies");
+  const viewerContainer = document.getElementById("unionProvisionalViewer");
+
+  if (
+    !openButton ||
+    !modal ||
+    !closeButton ||
+    !dialog ||
+    !lobbiesContainer ||
+    !viewerContainer
+  ) return;
+
+  // Associazione lobby -> nome originale del PNG
+  const unionProvisionalFiles = {
+    A1: "A1_STAR_PROVVISORIA.png",
+    A2: "A2_ELITE_PROVVISORIA.png",
+    A3: "A3_PRO_GOLD_PROVVISORIA.png",
+    A4: "A4_PRO_SILVER_PROVVISORIA.png",
+    A5: "A5_STAR_PROVVISORIA.png",
+    A6: "A6_PRO_AMA_PROVVISORIA.png",
+    A7: "A7_AMA_PROVVISORIA.png"
+  };
+
+  let previousFocus = null;
+
+  function showProvisionalLobbies() {
+    viewerContainer.hidden = true;
+    viewerContainer.innerHTML = "";
+    lobbiesContainer.hidden = false;
+    dialog.classList.remove("union-viewing-png");
+  }
+
+  function showProvisionalImage(lobby) {
+    const fileName = unionProvisionalFiles[lobby];
+    if (!fileName) return;
+
+    const imagePath =
+      "/Provvisorie/G" +
+      unionProvisionalRace +
+      "/lunedì/" +
+      encodeURIComponent(fileName);
+
+    // Creiamo gli elementi senza modificare il resto del portale
+    const wrapper = document.createElement("div");
+    wrapper.className = "union-provisional-image-view";
+
+    const backButton = document.createElement("button");
+    backButton.type = "button";
+    backButton.className = "union-provisional-back";
+    backButton.textContent = "← TORNA ALLE LOBBY";
+    backButton.addEventListener("click", function () {
+      showProvisionalLobbies();
+    });
+
+    const image = document.createElement("img");
+    image.className = "union-provisional-result-image";
+    image.src = imagePath;
+    image.alt = "Classifica provvisoria " + lobby;
+    image.loading = "eager";
+
+    image.addEventListener("error", function () {
+      image.replaceWith(
+        document.createTextNode(
+          "Impossibile caricare il PNG della lobby " + lobby + "."
+        )
+      );
+    });
+
+    wrapper.appendChild(backButton);
+    wrapper.appendChild(image);
+
+    viewerContainer.innerHTML = "";
+    viewerContainer.appendChild(wrapper);
+
+    lobbiesContainer.hidden = true;
+viewerContainer.hidden = false;
+
+// Chiude a tendina il banner UNION/APEX
+dialog.classList.add("union-viewing-png");
+
+// Porta la visualizzazione all'inizio della classifica
+requestAnimationFrame(function () {
+  viewerContainer.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+});
+  }
+
+  // Collegamento delle sette lobby del lunedì
+  lobbiesContainer.querySelectorAll(".union-provisional-lobby").forEach(function (button) {
+    button.addEventListener("click", function () {
+      const lobby = button.getAttribute("data-lobby");
+      if (lobby) {
+        showProvisionalImage(lobby);
+      }
+    });
+  });
+
+  function openProvisionalModal() {
+    previousFocus = document.activeElement;
+    showProvisionalLobbies();
+    modal.hidden = false;
+    dialog.focus();
+  }
+
+  function closeProvisionalModal() {
+    modal.hidden = true;
+    showProvisionalLobbies();
+
+    if (previousFocus && typeof previousFocus.focus === "function") {
+      previousFocus.focus();
+    }
+  }
+
+  openButton.addEventListener("click", openProvisionalModal);
+  closeButton.addEventListener("click", closeProvisionalModal);
+
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) {
+      closeProvisionalModal();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (modal.hidden) return;
+
+    if (event.key === "Escape") {
+      closeProvisionalModal();
+    }
+
+    if (event.key === "Tab") {
+      const focusable = Array.from(
+        modal.querySelectorAll(
+          'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+})();
+
+    // SPLASH SCREEN
 
 setTimeout(() => {
   const splash = document.getElementById("splashScreen");
@@ -13183,6 +14039,153 @@ const lastCreatedMovementText = useMemo(() => {
           "linear-gradient(180deg, #0b0d12 0%, #07080c 100%)",
       }}
     >
+      {/* UNION - Popup visibilità classifiche provvisorie */}
+{unionProvisionalExportDialog !== null && (
+  <div
+    role="presentation"
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 99999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      background: "rgba(2, 6, 23, 0.88)",
+      backdropFilter: "blur(12px)",
+    }}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="union-provisional-export-title"
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: 480,
+        padding: 30,
+        borderRadius: 22,
+        border: "1px solid rgba(96,165,250,0.45)",
+        background:
+          "linear-gradient(145deg, #142448 0%, #090f22 100%)",
+        boxShadow: "0 25px 90px rgba(0,0,0,0.65)",
+        textAlign: "center",
+      }}
+    >
+      <button
+        type="button"
+        aria-label="Chiudi"
+        onClick={() => setUnionProvisionalExportDialog(null)}
+        style={{
+          position: "absolute",
+          top: 14,
+          right: 16,
+          background: "transparent",
+          border: "none",
+          color: "#aabbdc",
+          fontSize: 26,
+          cursor: "pointer",
+        }}
+      >
+        ×
+      </button>
+
+      <div
+        style={{
+          color: "#93c5fd",
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: 2,
+          marginBottom: 16,
+        }}
+      >
+        UNION 2026 · ROUND 2
+      </div>
+
+      <h2
+        id="union-provisional-export-title"
+        style={{
+          fontSize: 23,
+          fontWeight: 900,
+          marginBottom: 12,
+          color: "#ffffff",
+        }}
+      >
+        CLASSIFICHE PROVVISORIE
+      </h2>
+
+      <p
+        style={{
+          fontSize: 15,
+          lineHeight: 1.6,
+          color: "#cbd5e1",
+          marginBottom: 28,
+        }}
+      >
+        Vuoi mostrare anche le classifiche provvisorie
+        nel portale UNION?
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            const preview = unionProvisionalExportDialog === "preview"
+            setUnionProvisionalExportDialog(null)
+            void downloadChampionshipGeneralHtmlExport(preview, true)
+          }}
+          style={{
+            padding: "16px 10px",
+            borderRadius: 14,
+            border: "1px solid #60a5fa",
+            background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+            color: "#ffffff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          SÌ, MOSTRA
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const preview = unionProvisionalExportDialog === "preview"
+            setUnionProvisionalExportDialog(null)
+            void downloadChampionshipGeneralHtmlExport(preview, false)
+          }}
+          style={{
+            padding: "16px 10px",
+            borderRadius: 14,
+            border: "1px solid #64748b",
+            background: "#1e293b",
+            color: "#ffffff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          NO, NASCONDI
+        </button>
+      </div>
+
+      <p
+        style={{
+          marginTop: 20,
+          fontSize: 12,
+          color: "#94a3b8",
+        }}
+      >
+        La scelta sarà applicata al portale generato.
+      </p>
+    </div>
+  </div>
+)}
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
   <div ref={appHeaderExportRef}>
     <AppHeader />
@@ -15985,7 +16988,7 @@ boxShadow:
     </button>
 
     <button
-  onClick={() => downloadChampionshipGeneralHtmlExport(true)}
+  onClick={() => setUnionProvisionalExportDialog("preview")}
   style={{
     padding: "12px 16px",
     borderRadius: 14,
@@ -16003,7 +17006,7 @@ boxShadow:
 </button>
     
     <button
-  onClick={() => downloadChampionshipGeneralHtmlExport()}
+  onClick={() => setUnionProvisionalExportDialog("export")}
   disabled={!canExportGeneralHtml}
   style={{
     padding: "12px 16px",
