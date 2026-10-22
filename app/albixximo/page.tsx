@@ -1317,6 +1317,31 @@ function renderTempoCell(tempo: string, exporting = false, compact = false) {
   const upper = t.toUpperCase()
 
   if (!t || t === "-") return "-"
+  
+  if (upper === "RED FLAG") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: exporting ? "8px 14px" : "6px 11px",
+          borderRadius: 12,
+          background: "linear-gradient(180deg, #87263f, #571426)",
+          border: "1px solid #b94b68",
+          boxShadow: "0 0 15px rgba(135,38,63,0.35)",
+          color: "#ffffff",
+          fontWeight: 900,
+          fontSize: exporting ? 13 : 11,
+          letterSpacing: 0.6,
+          whiteSpace: "nowrap",
+        }}
+      >
+        RED FLAG
+      </span>
+    )
+  }
+
 
   if (
   upper === "NC" ||
@@ -12709,6 +12734,64 @@ if (isA26Race1ProAma) {
     extractedRows.splice(0, 8, ...firstEight)
   }
 }
+
+
+// FIX MIRATO — Gara 3 • PRO SILVER • Lobby A09 — RED FLAG
+const isA09Race3RedFlag =
+  currentRace === 3 &&
+  effectiveImportLeague === "PRO SILVER" &&
+  /^A0?9$/.test(String(nextUnionMeta.lobby || selectedLobby || "").trim().toUpperCase())
+
+if (isA09Race3RedFlag) {
+  const ordineArrivo = [
+    "GTRC-Checco",
+    "Scgt-mattia",
+    "SMI_Stefano",
+    "Clesh555",
+    "SMI_Jackengi",
+    "TLM_IL_DUCA_VASH",
+    "KSI-firefoxgold",
+    "F. Amerio",
+    "M_ApeX",
+    "MMS_GattoNero70",
+  ]
+
+  const autoPerPilota: Record<string, string> = {
+    [normalizeDriverLookupName("GTRC-Checco")]: "RC F GT500 '16",
+    [normalizeDriverLookupName("Scgt-mattia")]: "RS 5 Turbo DTM '19",
+    [normalizeDriverLookupName("SMI_Stefano")]: "RS 5 Turbo DTM '19",
+    [normalizeDriverLookupName("Clesh555")]: "GT-R NISMO GT500 '16",
+    [normalizeDriverLookupName("SMI_Jackengi")]: "RC F GT500 '16",
+    [normalizeDriverLookupName("TLM_IL_DUCA_VASH")]: "RC F GT500 '16",
+    [normalizeDriverLookupName("KSI-firefoxgold")]: "RS 5 Turbo DTM '19",
+    [normalizeDriverLookupName("F. Amerio")]: "RS 5 Turbo DTM '19",
+    [normalizeDriverLookupName("M_ApeX")]: "RS 5 Turbo DTM '19",
+    [normalizeDriverLookupName("MMS_GattoNero70")]: "GT-R NISMO GT500 '16",
+  }
+
+  const correctedRows: ExtractRow[] = ordineArrivo.map((pilota, index) => {
+    const key = normalizeDriverLookupName(pilota)
+
+    const quali = extractedQualiRows.find(
+      (q) => normalizeDriverLookupName(q.pilota) === key
+    )
+
+    return {
+      posGara: index + 1,
+      pilota,
+      auto: quali?.auto || autoPerPilota[key] || "",
+      tempoTotaleGara: index === 0 ? "RED FLAG" : "-",
+      distaccoDalPrimo: index === 0 ? "RED FLAG" : "-",
+      migliorGiroGara:
+        pilota === "TLM_IL_DUCA_VASH" ? "1:47.729" : "",
+      tempoQualifica: quali?.tempo || "",
+      pole: pilota === "Clesh555" ? "POLE" : "",
+    }
+  })
+
+  extractedRows.splice(0, extractedRows.length, ...correctedRows)
+}
+
 
 let rowsWithAliases = extractedRows
 
