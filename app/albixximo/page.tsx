@@ -3703,6 +3703,60 @@ const [uploadedLeagueHtmls, setUploadedLeagueHtmls] = useState<
 const [unionOfficialLeagueHtmls, setUnionOfficialLeagueHtmls] = useState<
   Partial<Record<ChampionshipLeagueKey, string>>
 >({})
+const openUnionOfficialHtmlDb = (): Promise<IDBDatabase> =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open("union-official-html-db", 1)
+
+    request.onupgradeneeded = () => {
+      const db = request.result
+
+      if (!db.objectStoreNames.contains("races")) {
+        db.createObjectStore("races")
+      }
+    }
+
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+
+const saveUnionOfficialHtmls = async (
+  race: number,
+  htmls: Partial<Record<ChampionshipLeagueKey, string>>
+): Promise<void> => {
+  const db = await openUnionOfficialHtmlDb()
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("races", "readwrite")
+
+      transaction.objectStore("races").put(htmls, race)
+
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error)
+    })
+  } finally {
+    db.close()
+  }
+}
+
+const loadUnionOfficialHtmls = async (
+  race: number
+): Promise<Partial<Record<ChampionshipLeagueKey, string>> | null> => {
+  const db = await openUnionOfficialHtmlDb()
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction("races", "readonly")
+      const request = transaction.objectStore("races").get(race)
+
+      request.onsuccess = () => resolve(request.result ?? null)
+      request.onerror = () => reject(request.error)
+    })
+  } finally {
+    db.close()
+  }
+}
 const [loadingLeagueHtmls, setLoadingLeagueHtmls] = useState<
   Partial<Record<ChampionshipLeagueKey, boolean>>
 >({})
@@ -14452,9 +14506,31 @@ boxSizing: "border-box",
 
       <select
         value={unionOfficialRaceForExport ?? ""}
-        onChange={(e) =>
-          setUnionOfficialRaceForExport(Number(e.target.value) || null)
-        }
+        onChange={async (e) => {
+  const race = Number(e.target.value) || null
+
+  setUnionOfficialRaceForExport(race)
+  setUnionOfficialLeagueHtmls({})
+
+  if (race === null) return
+
+  try {
+    const htmls = await loadUnionOfficialHtmls(race)
+
+    if (
+      htmls &&
+      UNION_RANKS.every(
+        (rank) =>
+          typeof htmls[rank] === "string" &&
+          htmls[rank]!.length > 0
+      )
+    ) {
+      setUnionOfficialLeagueHtmls(htmls)
+    }
+  } catch (error) {
+    console.error("Errore recupero HTML ufficiali:", error)
+  }
+}}
         style={{
           width: "100%",
           padding: 14,
@@ -14535,7 +14611,16 @@ if (UNION_RANKS.some((rank) => !recognized[rank])) {
 }
 
 setUnionOfficialLeagueHtmls(recognized)
-
+try {
+  if (unionOfficialRaceForExport !== null) {
+    await saveUnionOfficialHtmls(
+      unionOfficialRaceForExport,
+      recognized
+    )
+  }
+} catch (error) {
+  console.error("Errore salvataggio HTML ufficiali:", error)
+}
     input.value = ""
   }}
 />
