@@ -2344,6 +2344,84 @@ if (isA35Race2) {
     )
   }
 }
+    // ==========================================================
+    // FIX ESCLUSIVO UNION 2026 - GARA 3 - A16 PRO-AMA
+    // OCR intercalato: ricostruzione qualifiche e gara.
+    // Nessuna modifica ai parser generali o alle altre lobby.
+    // ==========================================================
+
+    const metaA16 = mergeUnionMeta(allTexts)
+
+    const isA16Race3 =
+      metaA16.gara === "3" &&
+      metaA16.lobby === "A16" &&
+      metaA16.lega === "PRO-AMA"
+
+    const matchesA16Screens =
+      allTexts.some(
+        (t) =>
+          t.includes("Micius") &&
+          t.includes("1:45.916") &&
+          t.includes("Spadino 77")
+      ) &&
+      allTexts.some(
+        (t) =>
+          t.includes("Micius") &&
+          t.includes("50:02.940") &&
+          t.includes("Ice_Fire") &&
+          t.includes("+14.081")
+      ) &&
+      allTexts.some(
+        (t) =>
+          t.includes("SMI_bibieffe") &&
+          t.includes("+1:06.438") &&
+          t.includes("DNF")
+      )
+
+    if (isA16Race3 && matchesA16Screens) {
+      const correctedQuali: QualiRow[] = [
+        { pos: 1, pilota: "Micius", auto: "RS 5 Turbo DTM '19", tempo: "1:45.916", distacco: "" },
+        { pos: 2, pilota: "Spadino 77", auto: "RS 5 Turbo DTM '19", tempo: "1:46.889", distacco: "+00.973" },
+        { pos: 3, pilota: "HULK1959", auto: "RS 5 Turbo DTM '19", tempo: "1:47.458", distacco: "+01.542" },
+        { pos: 4, pilota: "Mastro", auto: "RS 5 Turbo DTM '19", tempo: "1:47.647", distacco: "+01.731" },
+        { pos: 5, pilota: "Fmc_Fulminato199", auto: "RS 5 Turbo DTM '19", tempo: "1:47.788", distacco: "+01.872" },
+        { pos: 6, pilota: "SCGT-DjVituc", auto: "RS 5 Turbo DTM '19", tempo: "1:47.873", distacco: "+01.957" },
+        { pos: 7, pilota: "SMI_bibieffe", auto: "RC F GT500 '16", tempo: "1:47.976", distacco: "+02.060" },
+        { pos: 8, pilota: "Ice_Fire", auto: "RS 5 Turbo DTM '19", tempo: "1:48.027", distacco: "+02.111" },
+        { pos: 9, pilota: "CBR_MBBerto", auto: "RS 5 Turbo DTM '19", tempo: "1:50.166", distacco: "+04.250" },
+        { pos: 10, pilota: "Riccio Antonio", auto: "RC F GT500 '16", tempo: "1:51.232", distacco: "+05.316" },
+        { pos: 11, pilota: "ARC-SalvinoKing", auto: "RS 5 Turbo DTM '19", tempo: "1:55.500", distacco: "+09.584" },
+        { pos: 12, pilota: "tcarlisi", auto: "RC F GT500 '16", tempo: "1:56.784", distacco: "+10.868" },
+      ]
+
+      const correctedRace: RaceRow[] = [
+        { pos: 1, pilota: "Micius", auto: "RS 5 Turbo DTM '19", tempoTotale: "50:02.940", distacco: "", migliorGiro: "1:48.686" },
+        { pos: 2, pilota: "Ice_Fire", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+14.081", migliorGiro: "1:48.882" },
+        { pos: 3, pilota: "SCGT-DjVituc", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+14.677", migliorGiro: "1:48.801" },
+        { pos: 4, pilota: "Fmc_Fulminato199", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+18.284", migliorGiro: "1:46.816" },
+        { pos: 5, pilota: "Mastro", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+36.545", migliorGiro: "1:47.543" },
+        { pos: 6, pilota: "ARC-SalvinoKing", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+41.513", migliorGiro: "1:48.666" },
+        { pos: 7, pilota: "tcarlisi", auto: "RC F GT500 '16", tempoTotale: "", distacco: "+41.903", migliorGiro: "1:48.700" },
+        { pos: 8, pilota: "HULK1959", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+58.460", migliorGiro: "1:49.269" },
+        { pos: 9, pilota: "SMI_bibieffe", auto: "RC F GT500 '16", tempoTotale: "", distacco: "+1:06.438", migliorGiro: "1:50.383" },
+        { pos: 10, pilota: "CBR_MBBerto", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "1giro", migliorGiro: "1:50.125" },
+        { pos: 11, pilota: "Riccio Antonio", auto: "RC F GT500 '16", tempoTotale: "", distacco: "1giro", migliorGiro: "1:52.225" },
+        { pos: 12, pilota: "Spadino 77", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "DNF", migliorGiro: "1:49.365" },
+      ]
+
+      qualiRows.length = 0
+      qualiRows.push(...correctedQuali)
+
+      raceRows.length = 0
+      raceRows.push(...correctedRace)
+
+      polePilot = "Micius"
+
+      console.log(
+        "UNION GARA 3 A16 → qualifiche e gara riallineate"
+      )
+    }
+
 
     if (!raceRows.length) {
       return Response.json(
