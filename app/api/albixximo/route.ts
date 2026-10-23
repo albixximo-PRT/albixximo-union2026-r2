@@ -2422,6 +2422,89 @@ if (isA35Race2) {
       )
     }
 
+    // ==========================================================
+    // FIX ESCLUSIVO UNION 2026 - GARA 3 - A17 STAR
+    // Riallineamento qualifiche e gara da screenshot originali.
+    // Nessuna modifica ai parser generali.
+    // ==========================================================
+
+    const metaA17 = mergeUnionMeta(allTexts)
+
+    const isA17Race3 =
+      metaA17.gara === "3" &&
+      metaA17.lobby === "A17" &&
+      metaA17.lega === "STAR"
+
+    const matchesA17Screens =
+      allTexts.some(
+        (t) =>
+          t.includes("Richie") &&
+          t.includes("1:44.963") &&
+          t.includes("PRT_Perdinci")
+      ) &&
+      allTexts.some(
+        (t) =>
+          t.includes("Nicco.rs") &&
+          t.includes("1:45.706") &&
+          t.includes("Rareseed92")
+      ) &&
+      allTexts.some(
+        (t) =>
+          t.includes("SMI_vicktor21") &&
+          t.includes("49:31.085") &&
+          t.includes("+00.088")
+      ) &&
+      allTexts.some(
+        (t) =>
+          t.includes("BAD_brucem84") &&
+          t.includes("+47.883") &&
+          t.includes("+54.878")
+      )
+
+    if (isA17Race3 && matchesA17Screens) {
+      const correctedQuali: QualiRow[] = [
+        { pos: 1, pilota: "Richie", auto: "RS 5 Turbo DTM '19", tempo: "1:44.963", distacco: "" },
+        { pos: 2, pilota: "PRT_Perdinci", auto: "RS 5 Turbo DTM '19", tempo: "1:45.063", distacco: "+00.100" },
+        { pos: 3, pilota: "SMI_vicktor21", auto: "RS 5 Turbo DTM '19", tempo: "1:45.326", distacco: "+00.363" },
+        { pos: 4, pilota: "C.Zuccaro", auto: "RS 5 Turbo DTM '19", tempo: "1:45.447", distacco: "+00.484" },
+        { pos: 5, pilota: "TLM_Proietti", auto: "RS 5 Turbo DTM '19", tempo: "1:45.465", distacco: "+00.502" },
+        { pos: 6, pilota: "SMI_Massi TopGun", auto: "RS 5 Turbo DTM '19", tempo: "1:45.477", distacco: "+00.514" },
+        { pos: 7, pilota: "Drugo", auto: "RS 5 Turbo DTM '19", tempo: "1:45.547", distacco: "+00.584" },
+        { pos: 8, pilota: "BAD_brucem84", auto: "RC F GT500 '16", tempo: "1:45.694", distacco: "+00.731" },
+        { pos: 9, pilota: "Nicco.rs", auto: "RS 5 Turbo DTM '19", tempo: "1:45.706", distacco: "+00.743" },
+        { pos: 10, pilota: "The Iceman00", auto: "RC F GT500 '16", tempo: "1:46.054", distacco: "+01.091" },
+        { pos: 11, pilota: "#GO1FREE!!!!", auto: "GT-R NISMO GT500 '16", tempo: "1:46.091", distacco: "+01.128" },
+        { pos: 12, pilota: "Rareseed92", auto: "RS 5 Turbo DTM '19", tempo: "1:46.374", distacco: "+01.411" },
+      ]
+
+      const correctedRace: RaceRow[] = [
+        { pos: 1, pilota: "SMI_vicktor21", auto: "RS 5 Turbo DTM '19", tempoTotale: "49:31.085", distacco: "", migliorGiro: "1:45.856" },
+        { pos: 2, pilota: "C.Zuccaro", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+00.088", migliorGiro: "1:45.617" },
+        { pos: 3, pilota: "Richie", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+00.669", migliorGiro: "1:46.178" },
+        { pos: 4, pilota: "PRT_Perdinci", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+21.753", migliorGiro: "1:47.979" },
+        { pos: 5, pilota: "Nicco.rs", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+25.072", migliorGiro: "1:48.647" },
+        { pos: 6, pilota: "TLM_Proietti", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+32.031", migliorGiro: "1:48.167" },
+        { pos: 7, pilota: "The Iceman00", auto: "RC F GT500 '16", tempoTotale: "", distacco: "+33.311", migliorGiro: "1:47.816" },
+        { pos: 8, pilota: "SMI_Massi TopGun", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+43.686", migliorGiro: "1:48.146" },
+        { pos: 9, pilota: "BAD_brucem84", auto: "RC F GT500 '16", tempoTotale: "", distacco: "+47.883", migliorGiro: "1:46.495" },
+        { pos: 10, pilota: "#GO1FREE!!!!", auto: "GT-R NISMO GT500 '16", tempoTotale: "", distacco: "+51.360", migliorGiro: "1:47.277" },
+        { pos: 11, pilota: "Rareseed92", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+54.878", migliorGiro: "1:46.761" },
+        { pos: 12, pilota: "Drugo", auto: "RS 5 Turbo DTM '19", tempoTotale: "", distacco: "+1:09.976", migliorGiro: "1:47.203" },
+      ]
+
+      qualiRows.length = 0
+      qualiRows.push(...correctedQuali)
+
+      raceRows.length = 0
+      raceRows.push(...correctedRace)
+
+      polePilot = "Richie"
+
+      console.log(
+        "UNION GARA 3 A17 → qualifiche e gara riallineate"
+      )
+    }
+
 
     if (!raceRows.length) {
       return Response.json(
