@@ -6,7 +6,6 @@ export const runtime = "nodejs"
 /* -------------------- Helpers OCR -------------------- */
 
 const OCR_PRO_ENDPOINTS = [
-  "https://apipro2.ocr.space/parse/image",
   "https://apipro1.ocr.space/parse/image",
 ] as const
 
