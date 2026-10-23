@@ -6,7 +6,7 @@ export const runtime = "nodejs"
 /* -------------------- Helpers OCR -------------------- */
 
 const OCR_PRO_ENDPOINTS = [
-  "https://apipro1.ocr.space/parse/image",
+  "https://apipro2.ocr.space/parse/image",
 ] as const
 
 type OcrServerLabel = "API PRO 1" | "API PRO 2" | "UNKNOWN"
