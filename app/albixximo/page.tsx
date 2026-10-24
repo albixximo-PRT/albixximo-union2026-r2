@@ -144,6 +144,7 @@ type ChampionshipState = {
   roundMovements: Partial<Record<number, RoundMovementState>>
   expectedDrivers: ExpectedDriversByLobby
   driverCars: Record<string, string>
+  closedLobbies?: Record<string, number>
 }
 
 type ChampionshipCellStatus =
@@ -3618,6 +3619,7 @@ const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   roundMovements: {},
   expectedDrivers: {},
   driverCars: {},
+  closedLobbies: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -3920,7 +3922,13 @@ setChampionshipState({
     parsedState.expectedDrivers && typeof parsedState.expectedDrivers === "object"
       ? parsedState.expectedDrivers
       : {},
-  driverCars: buildUnionDriverCarsFromRaces(restoredRaces),
+    driverCars: buildUnionDriverCarsFromRaces(restoredRaces),
+  closedLobbies:
+    parsedState.closedLobbies &&
+    typeof parsedState.closedLobbies === "object" &&
+    !Array.isArray(parsedState.closedLobbies)
+      ? parsedState.closedLobbies
+      : {},
 })
 }
     }
@@ -7449,11 +7457,92 @@ const hasCurrentRoundMovements = useMemo(() => {
   })
 }, [currentRoundMovements])
 
+function isLobbyClosedForRace(
+  lobby: string,
+  raceNumber: number
+): boolean {
+  const closedFromRace = championshipState.closedLobbies?.[lobby]
+
+  return (
+    typeof closedFromRace === "number" &&
+    raceNumber >= closedFromRace
+  )
+}
+
+function isLobbyVisibleInProvisional(
+  lobby: string,
+  raceNumber: number
+): boolean {
+  const closedFromRace = championshipState.closedLobbies?.[lobby]
+
+  return (
+    typeof closedFromRace !== "number" ||
+    raceNumber <= closedFromRace
+  )
+}
+
+function closeSelectedLobby() {
+  const existingClosure = championshipState.closedLobbies?.[selectedLobby]
+
+  if (typeof existingClosure === "number") {
+    window.alert(
+      `La lobby ${selectedLobby} è già chiusa dalla Gara ${existingClosure}.`
+    )
+    return
+  }
+
+  const confirmed = window.confirm(
+    `CHIUSURA LOBBY\n\n` +
+    `Lobby: ${selectedLobby}\n` +
+    `Lega: ${selectedLeague}\n` +
+    `Decorrenza: Gara ${currentRace}\n\n` +
+    `La lobby non sarà più operativa da questa gara fino alla fine del round.\n` +
+    `I risultati delle gare precedenti resteranno invariati.\n\n` +
+    `Confermi la chiusura?`
+  )
+
+  if (!confirmed) return
+
+  setChampionshipState((prev) => ({
+    ...prev,
+    closedLobbies: {
+      ...(prev.closedLobbies || {}),
+      [selectedLobby]: currentRace,
+    },
+  }))
+}
+
+function reopenSelectedLobby() {
+  const existingClosure = championshipState.closedLobbies?.[selectedLobby]
+
+  if (typeof existingClosure !== "number") return
+
+  const confirmed = window.confirm(
+    `Vuoi riaprire la lobby ${selectedLobby}?\n\n` +
+    `La chiusura dalla Gara ${existingClosure} sarà annullata.\n` +
+    `Nessun risultato storico verrà cancellato.`
+  )
+
+  if (!confirmed) return
+
+  setChampionshipState((prev) => {
+    const closedLobbies = { ...(prev.closedLobbies || {}) }
+    delete closedLobbies[selectedLobby]
+
+    return {
+      ...prev,
+      closedLobbies,
+    }
+  })
+}
+
 function getProvisionalSavedLobbies(
   raceNumber: number,
   day: keyof typeof UNION_PROVISIONAL_DAYS
 ) {
-  const dayLobbies = UNION_PROVISIONAL_DAYS[day]
+  const dayLobbies = UNION_PROVISIONAL_DAYS[day].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, raceNumber)
+)
   const raceSnapshots = championshipState.races[raceNumber]
 
   return dayLobbies.flatMap((lobby) => {
@@ -7476,7 +7565,9 @@ function getDefinitiveSavedLobbies(
   league: ChampionshipLeagueKey
 ) {
   const raceSnapshots = championshipState.races[raceNumber]
-  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, raceNumber)
+)
 
   return leagueLobbies.flatMap((lobby) => {
     const snapshot = raceSnapshots?.[league]?.[lobby]
@@ -7494,7 +7585,9 @@ const savedLeagueInCurrentRace = useMemo(() => {
 const savedLeagueStatus = useMemo(() => {
   return Object.fromEntries(
     CHAMPIONSHIP_LEAGUES.map((league) => {
-      const activeLobbies = UNION_LOBBIES_BY_RANK[league]
+      const activeLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, currentRace)
+)
 
       const isComplete =
         activeLobbies.length > 0 &&
@@ -7505,7 +7598,7 @@ const savedLeagueStatus = useMemo(() => {
       return [league, isComplete]
     })
   ) as Record<ChampionshipLeagueKey, boolean>
-}, [championshipState.expectedDrivers, currentRace, currentRaceSnapshot])
+}, [championshipState.expectedDrivers, championshipState.closedLobbies, currentRace, currentRaceSnapshot])
 
 const availableImportLeagues = useMemo(() => {
   return CHAMPIONSHIP_LEAGUES.filter((league) => !savedLeagueStatus[league])
@@ -11867,12 +11960,20 @@ renderLeagueMovements(league);
 
 // UNION - Apertura e chiusura classifiche provvisorie
 (function () {
-  // UNION - Calendario provvisorie
-  // Modificare soltanto la data del lunedì (AAAA-MM-GG)
-  const unionProvisionalMonday = "2026-10-19";
-
   // Gara attualmente in corso
-  const unionProvisionalRace = 3;
+  const unionProvisionalRace = ${currentRace};
+
+  // UNION - Calendario provvisorie
+  const unionProvisionalMondays = {
+    1: "2026-09-21",
+    2: "2026-10-05",
+    3: "2026-10-19",
+    4: "2026-11-02",
+    5: "2026-11-16"
+  };
+
+  const unionProvisionalMonday =
+    unionProvisionalMondays[unionProvisionalRace] || "2026-10-19";
 
   const unionMondayParts = unionProvisionalMonday
     .split("-")
@@ -12001,8 +12102,16 @@ unionProvisionalDayButtons.forEach(function (button) {
       const lobby = button.getAttribute("data-lobby") || "";
       const number = Number(lobby.replace("A", ""));
 
-      const isVisible =
-  number >= range[0] && number <= range[1];
+      const closedLobbies = ${JSON.stringify(championshipState.closedLobbies || {})};
+const closedFromRace = closedLobbies[lobby];
+
+const isVisible =
+  number >= range[0] &&
+  number <= range[1] &&
+  (
+    typeof closedFromRace !== "number" ||
+    unionProvisionalRace <= closedFromRace
+  );
 
 button.hidden = !isVisible;
 button.style.display = isVisible ? "" : "none";
@@ -13080,7 +13189,13 @@ setChampionshipState({
     typeof importedChampionshipState.expectedDrivers === "object"
       ? importedChampionshipState.expectedDrivers
       : {},
-  driverCars: buildUnionDriverCarsFromRaces(importedRaces),
+    driverCars: buildUnionDriverCarsFromRaces(importedRaces),
+  closedLobbies:
+    importedChampionshipState?.closedLobbies &&
+    typeof importedChampionshipState.closedLobbies === "object" &&
+    !Array.isArray(importedChampionshipState.closedLobbies)
+      ? importedChampionshipState.closedLobbies
+      : {},
 })
 setCurrentRace(race)
 setSelectedLeague(league)
@@ -13602,6 +13717,13 @@ function openConfirmSaveLeagueModal() {
     )
   }
 
+  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+  window.alert(
+    `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
+  )
+  return
+}
+  
   const hasUnresolvedAuto = finalRows.some((row) => {
     const raceValue = tempoLikeGt7(row).trim().toUpperCase()
 
@@ -13636,6 +13758,14 @@ function openConfirmSaveLeagueModal() {
 }
 
 function confirmSaveCurrentLeague() {
+  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+    window.alert(
+      `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
+    )
+    setShowConfirmSaveLeagueModal(false)
+    return
+  }
+
   if (finalRows.length === 0) return
 
   const saveLeagueKey =
@@ -15319,7 +15449,9 @@ try {
   const isActive = selectedLeague === league
   const isSaved = savedLeagueStatus[league]
 
-  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, currentRace)
+)
 
   const savedLobbyCount = leagueLobbies.filter(
     (lobby) => !!currentRaceSnapshot[league]?.[lobby]
@@ -15420,6 +15552,40 @@ boxShadow:
         Lobby {selectedLeague}
       </div>
 
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+  {isLobbyClosedForRace(selectedLobby, currentRace) ? (
+    <button
+      type="button"
+      onClick={reopenSelectedLobby}
+      style={{
+        padding: "8px 12px",
+        borderRadius: 8,
+        background: "#166534",
+        color: "white",
+        fontWeight: 900,
+        cursor: "pointer",
+      }}
+    >
+      RIAPRI LOBBY {selectedLobby}
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={closeSelectedLobby}
+      style={{
+        padding: "8px 12px",
+        borderRadius: 8,
+        background: "#991b1b",
+        color: "white",
+        fontWeight: 900,
+        cursor: "pointer",
+      }}
+    >
+      CHIUDI LOBBY {selectedLobby}
+    </button>
+  )}
+</div>
+      
       <div
         style={{
           display: "grid",
@@ -15427,8 +15593,10 @@ boxShadow:
           gap: 10,
         }}
       >
-        {UNION_LOBBIES_BY_RANK[selectedLeague].map((lobby) => {
+        {UNION_LOBBIES_BY_RANK[selectedLeague]
+  .map((lobby) => {
           const isActiveLobby = selectedLobby === lobby
+          const isClosedLobby = isLobbyClosedForRace(lobby, currentRace)
           const lobbyState = currentRaceSnapshot[selectedLeague]
           const isSavedLobby = !!lobbyState?.[lobby]
 
@@ -15436,9 +15604,13 @@ boxShadow:
             <button
               key={lobby}
               onClick={() => {
-                setSelectedLobby(lobby)
+  setSelectedLobby(lobby)
 
-                if (isSavedLobby) {
+  if (isLobbyClosedForRace(lobby, currentRace)) {
+    return
+  }
+
+  if (isSavedLobby) {
                   reopenSavedLeague(selectedLeague, lobby)
                   return
                 }
@@ -15478,7 +15650,7 @@ boxShadow:
                 textTransform: "uppercase",
               }}
             >
-              {lobby} {isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
+              {lobby} {isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
             </button>
           )
         })}
