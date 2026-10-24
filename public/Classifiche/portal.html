@@ -2227,7 +2227,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="giovedi"
-    disabled
+    
     title="Classifiche non ancora pubblicate"
   >
     GIOVEDÌ
@@ -3188,12 +3188,20 @@ renderLeagueMovements(league);
 
 // UNION - Apertura e chiusura classifiche provvisorie
 (function () {
-  // UNION - Calendario provvisorie
-  // Modificare soltanto la data del lunedì (AAAA-MM-GG)
-  const unionProvisionalMonday = "2026-10-19";
-
   // Gara attualmente in corso
   const unionProvisionalRace = 3;
+
+  // UNION - Calendario provvisorie
+  const unionProvisionalMondays = {
+    1: "2026-09-21",
+    2: "2026-10-05",
+    3: "2026-10-19",
+    4: "2026-11-02",
+    5: "2026-11-16"
+  };
+
+  const unionProvisionalMonday =
+    unionProvisionalMondays[unionProvisionalRace] || "2026-10-19";
 
   const unionMondayParts = unionProvisionalMonday
     .split("-")
@@ -3322,8 +3330,16 @@ unionProvisionalDayButtons.forEach(function (button) {
       const lobby = button.getAttribute("data-lobby") || "";
       const number = Number(lobby.replace("A", ""));
 
-      const isVisible =
-  number >= range[0] && number <= range[1];
+      const closedLobbies = {"A23":3};
+const closedFromRace = closedLobbies[lobby];
+
+const isVisible =
+  number >= range[0] &&
+  number <= range[1] &&
+  (
+    typeof closedFromRace !== "number" ||
+    unionProvisionalRace <= closedFromRace
+  );
 
 button.hidden = !isVisible;
 button.style.display = isVisible ? "" : "none";
