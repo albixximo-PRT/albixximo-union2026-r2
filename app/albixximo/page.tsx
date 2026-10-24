@@ -3582,6 +3582,7 @@ const [dgSpecialMeasures, setDgSpecialMeasures] =
 } | null>(null)
 const [provisionalExportRace, setProvisionalExportRace] = useState<number>(2)
 const [provisionalExportDay, setProvisionalExportDay] = useState<string>("lunedi")
+const [provisionalExportLobby, setProvisionalExportLobby] = useState<string>("A1")
 const [showDefinitiveExportModal, setShowDefinitiveExportModal] = useState(false)
 
 const [definitiveExportRace, setDefinitiveExportRace] = useState<number>(2)
@@ -8226,6 +8227,68 @@ async function generateDefinitiveZip() {
     )
   } finally {
     setDefinitiveRenderData(null)
+    setExporting(false)
+  }
+}
+
+async function downloadSingleProvisionalPng() {
+  if (exporting) return
+
+  const raceNumber = provisionalExportRace
+  const lobby = provisionalExportLobby
+
+  const league = UNION_RANKS.find((rank) =>
+    UNION_LOBBIES_BY_RANK[rank].some(
+      (l) => l === lobby
+    )
+  )
+
+  if (!league) {
+    setError(`Lega non trovata per ${lobby}.`)
+    return
+  }
+
+  const snapshot =
+    championshipState.races[raceNumber]?.[league]?.[lobby]
+
+  if (!snapshot || !snapshot.finalRows?.length) {
+    setError(
+      `Nessuna classifica salvata per Gara ${raceNumber}, ${lobby}.`
+    )
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const pngBlob = await renderProvisionalLobby(
+      { lobby, league, snapshot },
+      raceNumber
+    )
+
+    const url = URL.createObjectURL(pngBlob)
+    const link = document.createElement("a")
+
+    link.href = url
+    link.download =
+      `${lobby}_${league.replace(/\s+/g, "_")}_PROVVISORIA.png`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setShowProvisionalExportModal(false)
+  } catch (error: unknown) {
+    setError(
+      `Errore esportazione lobby: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  } finally {
+    setProvisionalRenderData(null)
     setExporting(false)
   }
 }
@@ -18769,6 +18832,72 @@ setDrawerOpen(true)
 </button>
 
       </div>
+
+      {/* ESPORTAZIONE SINGOLA LOBBY */}
+      <div
+        style={{
+          marginTop: 24,
+          paddingTop: 20,
+          borderTop: "1px solid rgba(255,255,255,0.15)",
+        }}
+      >
+        <strong style={{ color: "#ffdf80" }}>
+          OPPURE SCARICA UNA SINGOLA LOBBY
+        </strong>
+
+        <label
+          style={{
+            display: "grid",
+            gap: 8,
+            marginTop: 16,
+          }}
+        >
+          <strong>LOBBY</strong>
+
+          <select
+            value={provisionalExportLobby}
+            onChange={(e) => setProvisionalExportLobby(e.target.value)}
+            disabled={exporting}
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {Array.from({ length: 36 }, (_, i) => `A${i + 1}`).map(
+              (lobby) => (
+                <option key={lobby} value={lobby}>
+                  {`A${String(Number(lobby.slice(1))).padStart(2, "0")}`}
+                </option>
+              )
+            )}
+          </select>
+        </label>
+
+        <button
+          type="button"
+          onClick={downloadSingleProvisionalPng}
+          disabled={exporting}
+          style={{
+            display: "block",
+            marginTop: 16,
+            marginLeft: "auto",
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "rgba(255,215,0,0.15)",
+            color: "#ffdf80",
+            border: "1px solid rgba(255,215,0,0.35)",
+            opacity: exporting ? 0.55 : 1,
+            cursor: exporting ? "not-allowed" : "pointer",
+            fontWeight: 900,
+          }}
+        >
+          {exporting ? "GENERAZIONE IN CORSO..." : "SCARICA PNG"}
+        </button>
+      </div>
+
     </div>
   </div>
 )}
