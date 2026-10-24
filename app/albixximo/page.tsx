@@ -15552,110 +15552,119 @@ boxShadow:
         Lobby {selectedLeague}
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+    gap: 10,
+  }}
+>
+  {UNION_LOBBIES_BY_RANK[selectedLeague].map((lobby) => {
+    const isActiveLobby = selectedLobby === lobby
+    const isClosedLobby = isLobbyClosedForRace(lobby, currentRace)
+    const lobbyState = currentRaceSnapshot[selectedLeague]
+    const isSavedLobby = !!lobbyState?.[lobby]
+
+    return (
+      <button
+        key={lobby}
+        onClick={() => {
+          setSelectedLobby(lobby)
+
+          if (isLobbyClosedForRace(lobby, currentRace)) {
+            return
+          }
+
+          if (isSavedLobby) {
+            reopenSavedLeague(selectedLeague, lobby)
+            return
+          }
+
+          clearCurrentWorkbench(false)
+
+          setUnionMeta((prev) => ({
+            ...prev,
+            lobby,
+            lega: selectedLeague,
+          }))
+
+          setManualLegaOverride(selectedLeague)
+        }}
+        style={{
+          padding: "10px 8px",
+          borderRadius: 10,
+          border: isSavedLobby
+            ? isActiveLobby
+              ? "1px solid rgba(255,215,0,0.45)"
+              : "1px solid rgba(34,197,94,0.35)"
+            : isActiveLobby
+              ? "1px solid rgba(255,215,0,0.35)"
+              : "1px solid rgba(255,255,255,0.08)",
+          background: isSavedLobby
+            ? isActiveLobby
+              ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
+              : "rgba(34,197,94,0.14)"
+            : isActiveLobby
+              ? "rgba(255,215,0,0.12)"
+              : "rgba(255,255,255,0.03)",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: 900,
+          fontSize: 11,
+          letterSpacing: 0.35,
+          textTransform: "uppercase",
+        }}
+      >
+        {lobby} {isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
+      </button>
+    )
+  })}
+</div>
+
+<div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
   {isLobbyClosedForRace(selectedLobby, currentRace) ? (
     <button
       type="button"
       onClick={reopenSelectedLobby}
       style={{
-        padding: "8px 12px",
-        borderRadius: 8,
-        background: "#166534",
-        color: "white",
-        fontWeight: 900,
+        padding: "9px 16px",
+        borderRadius: 10,
+        border: "1px solid #15803d",
+        background: "#052e16",
+        color: "#86efac",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 0.4,
+        boxShadow: "none",
+        textShadow: "none",
         cursor: "pointer",
       }}
     >
-      RIAPRI LOBBY {selectedLobby}
+      🔓 RIAPRI LOBBY {selectedLobby}
     </button>
   ) : (
     <button
       type="button"
       onClick={closeSelectedLobby}
       style={{
-        padding: "8px 12px",
-        borderRadius: 8,
-        background: "#991b1b",
-        color: "white",
-        fontWeight: 900,
+        padding: "9px 16px",
+        borderRadius: 10,
+        border: "1px solid #7f1d1d",
+        background: "#2a1014",
+        color: "#fca5a5",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 0.4,
+        boxShadow: "none",
+        textShadow: "none",
         cursor: "pointer",
       }}
     >
-      CHIUDI LOBBY {selectedLobby}
+      🔒 CHIUDI LOBBY {selectedLobby}
     </button>
   )}
 </div>
-      
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-          gap: 10,
-        }}
-      >
-        {UNION_LOBBIES_BY_RANK[selectedLeague]
-  .map((lobby) => {
-          const isActiveLobby = selectedLobby === lobby
-          const isClosedLobby = isLobbyClosedForRace(lobby, currentRace)
-          const lobbyState = currentRaceSnapshot[selectedLeague]
-          const isSavedLobby = !!lobbyState?.[lobby]
-
-          return (
-            <button
-              key={lobby}
-              onClick={() => {
-  setSelectedLobby(lobby)
-
-  if (isLobbyClosedForRace(lobby, currentRace)) {
-    return
-  }
-
-  if (isSavedLobby) {
-                  reopenSavedLeague(selectedLeague, lobby)
-                  return
-                }
-
-                clearCurrentWorkbench(false)
-
-                setUnionMeta((prev) => ({
-                  ...prev,
-                  lobby,
-                  lega: selectedLeague,
-                }))
-
-                setManualLegaOverride(selectedLeague)
-              }}
-              style={{
-                padding: "10px 8px",
-                borderRadius: 10,
-                border: isSavedLobby
-                  ? isActiveLobby
-                    ? "1px solid rgba(255,215,0,0.45)"
-                    : "1px solid rgba(34,197,94,0.35)"
-                  : isActiveLobby
-                    ? "1px solid rgba(255,215,0,0.35)"
-                    : "1px solid rgba(255,255,255,0.08)",
-                background: isSavedLobby
-                  ? isActiveLobby
-                    ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
-                    : "rgba(34,197,94,0.14)"
-                  : isActiveLobby
-                    ? "rgba(255,215,0,0.12)"
-                    : "rgba(255,255,255,0.03)",
-                color: "white",
-                cursor: "pointer",
-                fontWeight: 900,
-                fontSize: 11,
-                letterSpacing: 0.35,
-                textTransform: "uppercase",
-              }}
-            >
-              {lobby} {isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+</div>
         <div
       style={{
         display: "grid",
