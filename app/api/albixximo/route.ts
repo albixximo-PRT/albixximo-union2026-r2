@@ -2279,6 +2279,41 @@ if (useAltInsteadOfBase) {
 
     const qualiRows = Array.from(qualiRowsMerged.values()).sort((a, b) => a.pos - b.pos)
     const raceRows = Array.from(raceRowsMerged.values()).sort((a, b) => a.pos - b.pos)
+
+    // ==========================================================
+// ECCEZIONE ESCLUSIVA UNION 2026 - GARA 3 - PRO-GOLD A28
+// OCR spezza MF_Marekiaro in "MF" e "_Marekiaro".
+// Nessuna modifica al parser generale o alle altre lobby.
+// ==========================================================
+
+const metaA28 = mergeUnionMeta(allTexts)
+
+if (
+  metaA28.gara === "3" &&
+  metaA28.lobby === "A28" &&
+  metaA28.lega === "PRO-GOLD"
+) {
+  const q9 = qualiRows.find((r) => r.pos === 9)
+  const q10 = qualiRows.find((r) => r.pos === 10)
+
+  const knownOcrError =
+    q9?.pilota === "MF" &&
+    q10?.pilota === "_Marekiaro" &&
+    q9.tempo === "1:47.780" &&
+    q10.tempo === "1:48.655" &&
+    raceRows.some((r) => r.pos === 9 && r.pilota === "MF_Marekiaro") &&
+    raceRows.some((r) => r.pos === 10 && r.pilota === "Andre86")
+
+  if (knownOcrError && q9 && q10) {
+    q9.pilota = "MF_Marekiaro"
+    q10.pilota = "Andre86"
+
+    console.log(
+      "UNION GARA 3 A28 → corretti nomi qualifiche P9 e P10"
+    )
+  }
+}
+
     // ==========================================================
 // ECCEZIONE ESCLUSIVA UNION 2026 - GARA 2 - ELITE A35
 // Recupero H7-25 YT e riallineamento nomi P1-P8.
