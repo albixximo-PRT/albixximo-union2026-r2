@@ -13158,9 +13158,11 @@ const isA24Race3ProGold =
 
 if (isA24Race3ProGold) {
   const correctPilot = (name: string) =>
-    String(name || "").trim() === "M.Ruggieri"
-      ? "M. Ruggeri"
-      : name
+  ["M.Ruggieri", "M._Ruggeri", "M. Ruggeri"].includes(
+    String(name || "").trim()
+  )
+    ? "M. Ruggeri"
+    : name
 
   extractedRows.forEach((row) => {
     row.pilota = correctPilot(row.pilota)
