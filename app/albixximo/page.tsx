@@ -145,6 +145,7 @@ type ChampionshipState = {
   expectedDrivers: ExpectedDriversByLobby
   driverCars: Record<string, string>
   closedLobbies?: Record<string, number>
+incompleteLobbies?: Record<string, number>
 }
 
 type ChampionshipCellStatus =
@@ -3621,6 +3622,7 @@ const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   expectedDrivers: {},
   driverCars: {},
   closedLobbies: {},
+  incompleteLobbies: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -3929,6 +3931,12 @@ setChampionshipState({
     typeof parsedState.closedLobbies === "object" &&
     !Array.isArray(parsedState.closedLobbies)
       ? parsedState.closedLobbies
+      : {},
+        incompleteLobbies:
+    parsedState.incompleteLobbies &&
+    typeof parsedState.incompleteLobbies === "object" &&
+    !Array.isArray(parsedState.incompleteLobbies)
+      ? parsedState.incompleteLobbies
       : {},
 })
 }
@@ -7480,6 +7488,29 @@ function isLobbyVisibleInProvisional(
     typeof closedFromRace !== "number" ||
     raceNumber <= closedFromRace
   )
+}
+
+function isLobbyIncomplete(lobby: string, raceNumber: number): boolean {
+  return championshipState.incompleteLobbies?.[`${raceNumber}:${lobby}`] === 1
+}
+
+function toggleIncompleteLobby() {
+  const key = `${currentRace}:${selectedLobby}`
+
+  setChampionshipState((prev) => {
+    const incompleteLobbies = { ...(prev.incompleteLobbies || {}) }
+
+    if (incompleteLobbies[key] === 1) {
+      delete incompleteLobbies[key]
+    } else {
+      incompleteLobbies[key] = 1
+    }
+
+    return {
+      ...prev,
+      incompleteLobbies,
+    }
+  })
 }
 
 function closeSelectedLobby() {
@@ -13259,6 +13290,12 @@ setChampionshipState({
     !Array.isArray(importedChampionshipState.closedLobbies)
       ? importedChampionshipState.closedLobbies
       : {},
+      incompleteLobbies:
+  importedChampionshipState?.incompleteLobbies &&
+  typeof importedChampionshipState.incompleteLobbies === "object" &&
+  !Array.isArray(importedChampionshipState.incompleteLobbies)
+    ? importedChampionshipState.incompleteLobbies
+    : {},
 })
 setCurrentRace(race)
 setSelectedLeague(league)
@@ -15516,9 +15553,15 @@ try {
   (lobby) => !isLobbyClosedForRace(lobby, currentRace)
 )
 
-  const savedLobbyCount = leagueLobbies.filter(
-    (lobby) => !!currentRaceSnapshot[league]?.[lobby]
-  ).length
+  const incompleteLobbyCount = leagueLobbies.filter(
+  (lobby) => isLobbyIncomplete(lobby, currentRace)
+).length
+
+const savedLobbyCount = leagueLobbies.filter(
+  (lobby) =>
+    !!currentRaceSnapshot[league]?.[lobby] &&
+    !isLobbyIncomplete(lobby, currentRace)
+).length
 
   return (
     <button
@@ -15588,11 +15631,15 @@ try {
           background:
   index < savedLobbyCount
     ? "#39ff88"
-    : "rgba(255,255,255,0.20)",
+    : index < savedLobbyCount + incompleteLobbyCount
+      ? "#f97316"
+      : "rgba(255,255,255,0.20)",
 boxShadow:
   index < savedLobbyCount
     ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
-    : "none",
+    : index < savedLobbyCount + incompleteLobbyCount
+      ? "0 0 6px rgba(249,115,22,0.95), 0 0 10px rgba(249,115,22,0.45)"
+      : "none",
         }}
       />
     ))}
@@ -15627,6 +15674,7 @@ boxShadow:
     const isClosedLobby = isLobbyClosedForRace(lobby, currentRace)
     const lobbyState = currentRaceSnapshot[selectedLeague]
     const isSavedLobby = !!lobbyState?.[lobby]
+    const isIncompleteLobby = isLobbyIncomplete(lobby, currentRace)
 
     return (
       <button
@@ -15656,20 +15704,25 @@ boxShadow:
         style={{
           padding: "10px 8px",
           borderRadius: 10,
-          border: isSavedLobby
-            ? isActiveLobby
-              ? "1px solid rgba(255,215,0,0.45)"
-              : "1px solid rgba(34,197,94,0.35)"
-            : isActiveLobby
-              ? "1px solid rgba(255,215,0,0.35)"
-              : "1px solid rgba(255,255,255,0.08)",
-          background: isSavedLobby
-            ? isActiveLobby
-              ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
-              : "rgba(34,197,94,0.14)"
-            : isActiveLobby
-              ? "rgba(255,215,0,0.12)"
-              : "rgba(255,255,255,0.03)",
+          border: isIncompleteLobby
+  ? "1px solid rgba(249,115,22,0.85)"
+  : isSavedLobby
+    ? isActiveLobby
+      ? "1px solid rgba(255,215,0,0.45)"
+      : "1px solid rgba(34,197,94,0.35)"
+    : isActiveLobby
+      ? "1px solid rgba(255,215,0,0.35)"
+      : "1px solid rgba(255,255,255,0.08)",
+
+background: isIncompleteLobby
+  ? "rgba(249,115,22,0.25)"
+  : isSavedLobby
+    ? isActiveLobby
+      ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
+      : "rgba(34,197,94,0.14)"
+    : isActiveLobby
+      ? "rgba(255,215,0,0.12)"
+      : "rgba(255,255,255,0.03)",
           color: "white",
           cursor: "pointer",
           fontWeight: 900,
@@ -15678,13 +15731,34 @@ boxShadow:
           textTransform: "uppercase",
         }}
       >
-        {lobby} {isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
+        {lobby} {isIncompleteLobby ? "⚠️" : isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
       </button>
     )
   })}
 </div>
 
-<div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+<div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 10 }}>
+  <button
+    type="button"
+    onClick={toggleIncompleteLobby}
+    style={{
+      padding: "9px 16px",
+      borderRadius: 10,
+      border: "1px solid #f59e0b",
+      background: isLobbyIncomplete(selectedLobby, currentRace)
+        ? "rgba(245,158,11,0.28)"
+        : "rgba(245,158,11,0.08)",
+      color: "#fbbf24",
+      fontSize: 12,
+      fontWeight: 800,
+      letterSpacing: 0.4,
+      cursor: "pointer",
+    }}
+  >
+    ⚠️ {isLobbyIncomplete(selectedLobby, currentRace)
+      ? "RIMUOVI SEGNALAZIONE"
+      : "LOBBY INCOMPLETA"}
+  </button>
   {isLobbyClosedForRace(selectedLobby, currentRace) ? (
     <button
       type="button"
