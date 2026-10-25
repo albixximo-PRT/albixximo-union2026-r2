@@ -13149,6 +13149,29 @@ if (isA22Race3ProSilver) {
 }
 
 
+
+ // FIX MIRATO — Gara 3 • PRO GOLD • Lobby A24
+const isA24Race3ProGold =
+  currentRace === 3 &&
+  effectiveImportLeague === "PRO GOLD" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A24"
+
+if (isA24Race3ProGold) {
+  const correctPilot = (name: string) =>
+    String(name || "").trim() === "M.Ruggieri"
+      ? "M. Ruggeri"
+      : name
+
+  extractedRows.forEach((row) => {
+    row.pilota = correctPilot(row.pilota)
+  })
+
+  extractedQualiRows.forEach((row) => {
+    row.pilota = correctPilot(row.pilota)
+  })
+}
+
+
 let rowsWithAliases = extractedRows
 
 const aliasMapForLeague =
