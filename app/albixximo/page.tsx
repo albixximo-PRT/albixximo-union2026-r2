@@ -13441,27 +13441,45 @@ function hasUnsavedLobbyChanges() {
   )
 }
 
+
 function handleSelectLeague(league: ChampionshipLeagueKey) {
+  if (league === selectedLeague) return
+
+  if (
+    hasUnsavedLobbyChanges() &&
+    !window.confirm(
+      "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+      "Sei sicuro di voler cambiare lega?\n" +
+      "Le modifiche non salvate andranno perse.\n\n" +
+      "OK = ESCI SENZA SALVARE\n" +
+      "ANNULLA = RIMANI NELLA LOBBY"
+    )
+  ) {
+    return
+  }
+
   setUnknownDriverSelections({})
   const defaultLobby = UNION_LOBBIES_BY_RANK[league][0]
-setSelectedLobby(defaultLobby)
-setUnionMeta((prev) => ({
-  ...prev,
-  lobby: defaultLobby,
-  lega: league,
-}))
+  setSelectedLobby(defaultLobby)
+  setUnionMeta((prev) => ({
+    ...prev,
+    lobby: defaultLobby,
+    lega: league,
+  }))
+
   const lobbyState = currentRaceSnapshot[league]
 
-if (lobbyState?.[defaultLobby]) {
-  reopenSavedLeague(league, defaultLobby)
-  return
-}
+  if (lobbyState?.[defaultLobby]) {
+    reopenSavedLeague(league, defaultLobby)
+    return
+  }
 
   clearCurrentWorkbench(false)
 
   setSelectedLeague(league)
   setManualLegaOverride(league)
 }
+
 
 function applyBulkPilotsToLeagueDrawer(league: ChampionshipLeagueKey) {
   const raw = String(drawerBulkDrafts[league] || "").trim()
