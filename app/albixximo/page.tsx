@@ -15629,16 +15629,16 @@ const savedLobbyCount = leagueLobbies.filter(
           height: 12,
           borderRadius: 1,
           background:
-  index < savedLobbyCount
-    ? "#39ff88"
-    : index < savedLobbyCount + incompleteLobbyCount
-      ? "#f97316"
+  isLobbyIncomplete(lobby, currentRace)
+    ? "#f97316"
+    : currentRaceSnapshot[league]?.[lobby]
+      ? "#39ff88"
       : "rgba(255,255,255,0.20)",
 boxShadow:
-  index < savedLobbyCount
-    ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
-    : index < savedLobbyCount + incompleteLobbyCount
-      ? "0 0 6px rgba(249,115,22,0.95), 0 0 10px rgba(249,115,22,0.45)"
+  isLobbyIncomplete(lobby, currentRace)
+    ? "0 0 6px rgba(249,115,22,0.95), 0 0 10px rgba(249,115,22,0.45)"
+    : currentRaceSnapshot[league]?.[lobby]
+      ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
       : "none",
         }}
       />
