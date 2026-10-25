@@ -13050,6 +13050,105 @@ if (isA09Race3RedFlag) {
 }
 
 
+
+// FIX MIRATO — Gara 3 • PRO SILVER • Lobby A22
+const isA22Race3ProSilver =
+  currentRace === 3 &&
+  effectiveImportLeague === "PRO SILVER" &&
+  /^A0?22$/.test(
+    String(selectedLobby || "").trim().toUpperCase()
+  )
+
+if (isA22Race3ProSilver) {
+  const qualificheA22 = [
+    ["SMI_Gas89", "RS 5 Turbo DTM '19", "1:45.402"],
+    ["Zabo", "GT-R NISMO GT500 '16", "1:45.536"],
+    ["Pete", "RS 5 Turbo DTM '19", "1:45.733"],
+    ["ScarsFess", "RS 5 Turbo DTM '19", "1:46.159"],
+    ["Sun)own", "RC F GT500 '16", "1:46.450"],
+    ["M.Gatti", "RS 5 Turbo DTM '19", "1:47.100"],
+    ["SMI_Maureddu77", "RS 5 Turbo DTM '19", "1:47.425"],
+    ["Rekkiaspeed", "RS 5 Turbo DTM '19", "1:48.115"],
+  ]
+
+  const ordineGaraA22 = [
+    "SMI_Gas89",
+    "Pete",
+    "ScarsFess",
+    "Sun)own",
+    "M.Gatti",
+    "Rekkiaspeed",
+    "SMI_Maureddu77",
+    "Zabo",
+  ]
+
+  const distacchiA22 = [
+    "",
+    "+10.330",
+    "+15.326",
+    "+17.735",
+    "+36.305",
+    "+48.149",
+    "+1:00.451",
+    "+1:07.883",
+  ]
+
+  const miglioriGiriA22 = [
+    "1:48.054",
+    "1:47.881",
+    "1:49.060",
+    "1:49.165",
+    "1:49.583",
+    "1:48.797",
+    "1:48.225",
+    "1:46.724",
+  ]
+
+  extractedQualiRows.splice(
+    0,
+    extractedQualiRows.length,
+    ...qualificheA22.map(([pilota, auto, tempo], index) => ({
+      pos: index + 1,
+      pilota,
+      auto,
+      tempo,
+      distacco: [
+  "",
+  "+00.134",
+  "+00.331",
+  "+00.757",
+  "+01.048",
+  "+01.698",
+  "+02.023",
+  "+02.713",
+][index],
+    }))
+  )
+
+  extractedRows.splice(
+    0,
+    extractedRows.length,
+    ...ordineGaraA22.map((pilota, index) => {
+      const quali = extractedQualiRows.find(
+        (q) => q.pilota === pilota
+      )
+
+      return {
+        posGara: index + 1,
+        pilota,
+        auto: quali?.auto || "",
+        tempoTotaleGara:
+          index === 0 ? "50:00.484" : "",
+        distaccoDalPrimo: distacchiA22[index],
+        migliorGiroGara: miglioriGiriA22[index],
+        tempoQualifica: quali?.tempo || "",
+        pole: pilota === "SMI_Gas89" ? "POLE" : "",
+      }
+    })
+  )
+}
+
+
 let rowsWithAliases = extractedRows
 
 const aliasMapForLeague =
