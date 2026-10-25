@@ -6071,7 +6071,12 @@ console.log(
         ...r,
         sourcePosGara: r.posGara,
         posGara: merged.posGara || r.posGara,
-        pilota: merged.pilota || r.pilota,
+        pilota:
+  currentRace === 3 &&
+  selectedLeague === "PRO GOLD" &&
+  selectedLobby === "A24"
+    ? r.pilota || merged.pilota
+    : merged.pilota || r.pilota,
         auto: merged.auto || r.auto,
         tempoTotaleGara: merged.tempoTotaleGara || r.tempoTotaleGara,
         distaccoDalPrimo: merged.distaccoDalPrimo || r.distaccoDalPrimo,
@@ -6080,7 +6085,7 @@ console.log(
         pole: merged.pole || r.pole,
       }
     })
-  }, [rows, csv])
+  }, [rows, csv, currentRace, selectedLeague, selectedLobby])
 
   const hasExtractedRaceData = useMemo(() => {
   return previewRows.length > 0
@@ -13156,20 +13161,20 @@ const isA24Race3ProGold =
   effectiveImportLeague === "PRO GOLD" &&
   String(selectedLobby || "").trim().toUpperCase() === "A24"
 
-if (isA24Race3ProGold) {
-  const correctPilot = (name: string) =>
+const correctPilotA24 = (name: string) =>
   ["M.Ruggieri", "M._Ruggeri", "M. Ruggeri"].includes(
     String(name || "").trim()
   )
     ? "M. Ruggeri"
     : name
 
+if (isA24Race3ProGold) {
   extractedRows.forEach((row) => {
-    row.pilota = correctPilot(row.pilota)
+    row.pilota = correctPilotA24(row.pilota)
   })
 
   extractedQualiRows.forEach((row) => {
-    row.pilota = correctPilot(row.pilota)
+    row.pilota = correctPilotA24(row.pilota)
   })
 }
 
@@ -13207,7 +13212,14 @@ for (const [rawAliasKey, officialName] of Object.entries(aliasMapForLeague)) {
   })
 }
 
-setRows(rowsWithAliases)
+setRows(
+  isA24Race3ProGold
+    ? rowsWithAliases.map((row) => ({
+        ...row,
+        pilota: correctPilotA24(row.pilota),
+      }))
+    : rowsWithAliases
+)
 setQualiRows(extractedQualiRows)
 
       if (effectiveImportLeague) {
