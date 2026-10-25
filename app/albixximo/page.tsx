@@ -18826,6 +18826,32 @@ setDrawerOpen(true)
   Correggi ID GT7
 </button>
 
+
+<button
+  onClick={() => {
+    setDismissedUnknownDriverIds((prev) =>
+      prev.includes(activeUnknownDriver.id)
+        ? prev
+        : [...prev, activeUnknownDriver.id]
+    )
+  }}
+  style={{
+    gridColumn: "1 / -1",
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(245,158,11,0.40)",
+    background: "rgba(245,158,11,0.15)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  }}
+>
+  Prosegui senza associare
+</button>
+
+
       </div>
 
       <div style={{ fontSize: 12, opacity: 0.7, lineHeight: 1.45 }}>
