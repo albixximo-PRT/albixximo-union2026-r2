@@ -13421,6 +13421,26 @@ setUploadedLeagueHtmls(
   }
 }
 
+function hasUnsavedLobbyChanges() {
+  if (finalRows.length === 0) return false
+
+  const saved = currentRaceSnapshot[selectedLeague]?.[selectedLobby]
+
+  if (!saved) return true
+
+  return (
+    JSON.stringify(finalRows) !== JSON.stringify(saved.finalRows) ||
+    JSON.stringify(penalties) !== JSON.stringify(saved.penalties) ||
+    JSON.stringify(dgMeasureTypes) !== JSON.stringify(saved.dgMeasureTypes || {}) ||
+    JSON.stringify(dgSpecialMeasures) !== JSON.stringify(saved.dgSpecialMeasures || {}) ||
+    JSON.stringify(lapOverrides) !== JSON.stringify(saved.lapOverrides) ||
+    JSON.stringify(dnfOverrides) !== JSON.stringify(saved.dnfOverrides) ||
+    JSON.stringify(absenceOverrides) !== JSON.stringify(saved.absenceOverrides) ||
+    JSON.stringify(verifiedAbsences) !== JSON.stringify(saved.verifiedAbsences || {}) ||
+    JSON.stringify(manualDsqOverrides) !== JSON.stringify(saved.manualDsqOverrides)
+  )
+}
+
 function handleSelectLeague(league: ChampionshipLeagueKey) {
   setUnknownDriverSelections({})
   const defaultLobby = UNION_LOBBIES_BY_RANK[league][0]
@@ -15680,11 +15700,24 @@ boxShadow:
       <button
         key={lobby}
         onClick={() => {
-          setSelectedLobby(lobby)
+  if (lobby === selectedLobby) return
 
-          if (isLobbyClosedForRace(lobby, currentRace)) {
-            return
-          }
+  if (isLobbyClosedForRace(lobby, currentRace)) {
+    return
+  }
+
+  if (
+    hasUnsavedLobbyChanges() &&
+    !window.confirm(
+      "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+      "Sei sicuro di voler uscire da questa lobby?\n" +
+      "Le modifiche non salvate andranno perse."
+    )
+  ) {
+    return
+  }
+
+  setSelectedLobby(lobby)
 
           if (isSavedLobby) {
             reopenSavedLeague(selectedLeague, lobby)
