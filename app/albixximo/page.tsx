@@ -15727,10 +15727,12 @@ boxShadow:
   if (
     hasUnsavedLobbyChanges() &&
     !window.confirm(
-      "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
-      "Sei sicuro di voler uscire da questa lobby?\n" +
-      "Le modifiche non salvate andranno perse."
-    )
+  "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+  "Sei sicuro di voler uscire da questa lobby?\n" +
+  "Le modifiche non salvate andranno perse.\n\n" +
+  "OK = ESCI SENZA SALVARE\n" +
+  "ANNULLA = RIMANI NELLA LOBBY"
+)
   ) {
     return
   }
