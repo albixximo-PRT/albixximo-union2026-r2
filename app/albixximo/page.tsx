@@ -9630,17 +9630,18 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 
 
 
+
 /* UNION - Navigazione rapida classifiche provvisorie */
 .union-provisional-navigation {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 14px;
   width: 100%;
 }
 
 .union-provisional-navigation .union-provisional-back {
-  align-self: center;
+  align-self: flex-start;
   white-space: nowrap;
 }
 
@@ -9649,31 +9650,61 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  text-align: center;
+  gap: 10px;
+  width: 100%;
   min-width: 0;
+  text-align: center;
 }
 
 .union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
   color: #f3d478;
   font-size: clamp(17px, 2vw, 26px);
   font-weight: 900;
   letter-spacing: 1.4px;
+  text-align: center;
   text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
 }
 
+.union-provisional-current-day::after {
+  content: "";
+  order: 1;
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  flex-shrink: 0;
+  margin: 4px auto;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow:
+    0 0 10px rgba(255, 202, 65, 0.65),
+    0 0 22px rgba(255, 185, 35, 0.22);
+}
+
 .union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
   color: #ffffff;
   font-size: clamp(15px, 1.4vw, 20px);
   font-weight: 900;
   letter-spacing: 1px;
+  text-align: center;
 }
 
 .union-provisional-quick-lobbies {
-  grid-column: 1 / -1;
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
+  width: 100%;
   gap: 9px;
 }
 
@@ -9704,22 +9735,29 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 
 @media (max-width: 700px) {
   .union-provisional-navigation {
-    grid-template-columns: 1fr;
     gap: 14px;
   }
 
   .union-provisional-navigation .union-provisional-back {
-    justify-self: center;
+    align-self: center;
     padding: 10px 14px;
     font-size: 11px;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
   }
 
   .union-provisional-current-day strong {
     font-size: 16px;
   }
 
+  .union-provisional-current-day::after {
+    width: 85%;
+  }
+
   .union-provisional-quick-lobbies {
-    grid-column: 1;
     gap: 6px;
   }
 
@@ -9729,6 +9767,7 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
     font-size: 12px;
   }
 }
+
 
 
 .union-provisional-result-image {
