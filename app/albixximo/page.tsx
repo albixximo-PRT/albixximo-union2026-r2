@@ -9474,6 +9474,132 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 }
 
 
+/* UNION - Restyling oro e intestazione PNG */
+
+#unionProvisionalClose.union-provisional-close {
+  background: linear-gradient(135deg, #f5d778 0%, #c99a25 55%, #926515 100%);
+  color: #17120a;
+  border: 1px solid #f6df92;
+  border-radius: 12px;
+  box-shadow: 0 3px 18px rgba(218, 166, 36, 0.22),
+              inset 0 1px 0 rgba(255,255,255,0.35);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+#unionProvisionalClose.union-provisional-close:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 24px rgba(237, 184, 48, 0.42);
+}
+
+/* Nasconde i cinque giorni soltanto quando si visualizza un PNG */
+.union-provisional-modal.union-viewing-png #unionProvisionalDays {
+  display: none !important;
+}
+
+.union-provisional-modal.union-viewing-png .union-provisional-content {
+  padding-top: 16px;
+}
+
+.union-provisional-navigation {
+  grid-template-columns: 1fr;
+  position: relative;
+  gap: 12px;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: start;
+  z-index: 1;
+}
+
+.union-provisional-current-day {
+  grid-row: 2;
+  grid-column: 1;
+  width: 100%;
+  gap: 10px;
+  padding: 4px 0 10px;
+}
+
+.union-provisional-current-day span {
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 950;
+  letter-spacing: 1.4px;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
+}
+
+.union-provisional-current-day strong {
+  color: #ffffff;
+  font-size: clamp(15px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.union-provisional-current-day::after {
+  content: "";
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  margin: 6px auto 0;
+  background: linear-gradient(90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(255, 202, 65, 0.65),
+              0 0 22px rgba(255, 185, 35, 0.22);
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  margin-top: 0;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+}
+
+.union-provisional-quick-lobbies {
+  grid-row: 3;
+  grid-column: 1;
+  margin-top: 2px;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    gap: 12px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    justify-self: center;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 14px;
+  }
+
+  #unionProvisionalClose.union-provisional-close {
+    font-size: 9px;
+    padding: 7px 9px;
+    max-width: 125px;
+  }
+}
+
+
+
 /* UNION - Navigazione rapida classifiche provvisorie */
 .union-provisional-navigation {
   display: grid;
@@ -12379,7 +12505,7 @@ const imagePath =
     }).toUpperCase();
 
     dayHeading.innerHTML =
-      '<span>GARA ' + unionProvisionalRace + ' · PROVVISORIE</span>' +
+      '<span>GARA ' + unionProvisionalRace + ' · CLASSIFICHE PROVVISORIE</span>' +
       '<strong>' +
       dayNames[unionSelectedProvisionalDay] + ' ' + formattedDate +
       '</strong>';
