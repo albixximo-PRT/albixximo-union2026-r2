@@ -313,7 +313,64 @@
       border-radius: 12px;
     }
 
-        /* UNION - Pulsante blu classifiche provvisorie */
+    
+/* UNION - Data aggiornamento classifiche provvisorie */
+.union-provisional-button-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-right: 20px;
+}
+
+.hero-logo .union-provisional-button-wrap .union-provisional-btn {
+  margin-right: 0;
+}
+
+
+
+.union-provisional-updated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #e4c46e;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(220, 175, 55, 0.25);
+}
+
+
+
+@media (max-width: 1100px) and (orientation: portrait) {
+  .hero-logo .union-provisional-button-wrap {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    margin: 0;
+    max-width: calc(100% - 32px);
+    gap: 7px;
+  }
+
+  .hero-logo .union-provisional-button-wrap .union-provisional-btn {
+    position: static;
+    max-width: 100%;
+    padding: 14px 16px;
+    min-height: 52px;
+    font-size: 12px;
+  }
+
+  .union-provisional-updated {
+    font-size: 10px;
+  }
+}
+    
+    
+    /* UNION - Pulsante blu classifiche provvisorie */
     .hero-logo .union-provisional-btn {
       display: inline-flex;
       align-items: center;
@@ -557,6 +614,303 @@
 .union-provisional-back:hover {
   background: linear-gradient(135deg, #1745a0, #2563d8);
 }
+
+
+/* UNION - Restyling oro e intestazione PNG */
+
+#unionProvisionalClose.union-provisional-close {
+  background: linear-gradient(135deg, #f5d778 0%, #c99a25 55%, #926515 100%);
+  color: #17120a;
+  border: 1px solid #f6df92;
+  border-radius: 12px;
+  box-shadow: 0 3px 18px rgba(218, 166, 36, 0.22),
+              inset 0 1px 0 rgba(255,255,255,0.35);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+#unionProvisionalClose.union-provisional-close:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 24px rgba(237, 184, 48, 0.42);
+}
+
+/* Nasconde i cinque giorni soltanto quando si visualizza un PNG */
+.union-provisional-modal.union-viewing-png #unionProvisionalDays {
+  display: none !important;
+}
+
+.union-provisional-modal.union-viewing-png .union-provisional-content {
+  padding-top: 16px;
+}
+
+.union-provisional-navigation {
+  grid-template-columns: 1fr;
+  position: relative;
+  gap: 12px;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: start;
+  z-index: 1;
+}
+
+.union-provisional-current-day {
+  grid-row: 2;
+  grid-column: 1;
+  width: 100%;
+  gap: 10px;
+  padding: 4px 0 10px;
+}
+
+.union-provisional-current-day span {
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 950;
+  letter-spacing: 1.4px;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
+}
+
+.union-provisional-current-day strong {
+  color: #ffffff;
+  font-size: clamp(15px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.union-provisional-current-day::after {
+  content: "";
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  margin: 6px auto 0;
+  background: linear-gradient(90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(255, 202, 65, 0.65),
+              0 0 22px rgba(255, 185, 35, 0.22);
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  margin-top: 0;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+}
+
+/* UNION - FIX centratura intestazione classifiche provvisorie */
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  width: min(680px, 85%);
+  margin: 8px auto;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-quick-lobbies {
+  grid-row: 3;
+  grid-column: 1;
+  margin-top: 2px;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    gap: 12px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    justify-self: center;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 14px;
+  }
+
+  #unionProvisionalClose.union-provisional-close {
+    font-size: 9px;
+    padding: 7px 9px;
+    max-width: 125px;
+  }
+}
+
+
+
+
+/* UNION - Navigazione rapida classifiche provvisorie */
+.union-provisional-navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-align: center;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
+}
+
+.union-provisional-current-day::after {
+  content: "";
+  order: 1;
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  flex-shrink: 0;
+  margin: 4px auto;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow:
+    0 0 10px rgba(255, 202, 65, 0.65),
+    0 0 22px rgba(255, 185, 35, 0.22);
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
+  color: #ffffff;
+  font-size: clamp(15px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.union-provisional-quick-lobbies {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 9px;
+}
+
+.union-provisional-quick-lobby {
+  min-width: 54px;
+  padding: 11px 14px;
+  border: 1px solid #405171;
+  border-radius: 9px;
+  background: #1a2947;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.union-provisional-quick-lobby:hover {
+  background: #294577;
+  border-color: #82aaff;
+}
+
+.union-provisional-quick-lobby.active {
+  background: #2054b6;
+  border-color: #8cb0ff;
+  box-shadow: 0 0 0 1px #8cb0ff;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    gap: 14px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    align-self: center;
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 16px;
+  }
+
+  .union-provisional-current-day::after {
+    width: 85%;
+  }
+
+  .union-provisional-quick-lobbies {
+    gap: 6px;
+  }
+
+  .union-provisional-quick-lobby {
+    min-width: 43px;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
+
+
 
 .union-provisional-result-image {
   display: block;
@@ -2121,6 +2475,40 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 
         <div class="hero-logo">
   
+    
+<div class="union-provisional-button-wrap">
+  <button
+    class="union-provisional-btn"
+    type="button"
+    id="unionProvisionalOpen"
+    title="Apri le classifiche provvisorie"
+    aria-haspopup="dialog"
+  >
+    <span class="union-provisional-dot"></span>
+    <span>CLASSIFICHE PROVVISORIE · GARA 4</span>
+  </button>
+  
+<div class="union-provisional-updated">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M12 7v5l3 2"></path>
+  </svg>
+  Aggiornato il 03/11/2026 · ore 14:30
+</div>
+
+</div>
+
+  
 
     <img src="/union-logo.png" alt="UNION 2026 Logo" />
 </div>
@@ -2173,10 +2561,11 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
   type="button"
   id="unionProvisionalClose"
   class="union-provisional-close"
-  aria-label="Chiudi classifiche provvisorie"
-  title="Chiudi"
+  aria-label="Torna alle classifiche definitive"
+  title="Torna alle classifiche definitive"
+  style="width: 168px; height: auto; min-height: 48px; padding: 9px 12px; font-size: 11px; font-weight: 800; line-height: 1.35; text-align: center; letter-spacing: 0.4px; white-space: normal; flex-shrink: 0;"
 >
-  &times;
+  TORNA ALLE<br/>CLASSIFICHE DEFINITIVE
 </button>
       
     </div>
@@ -2196,7 +2585,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="martedi"
-        
+        disabled
     title="Classifiche non ancora pubblicate"
   >
     MARTEDÌ
@@ -2206,7 +2595,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="mercoledi"
-    
+    disabled
     title="Classifiche non ancora pubblicate"
   >
     MERCOLEDÌ
@@ -2216,7 +2605,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="giovedi"
-    
+    disabled
     title="Classifiche non ancora pubblicate"
   >
     GIOVEDÌ
@@ -2226,7 +2615,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="venerdi"
-    
+    disabled
     title="Classifiche non ancora pubblicate"
   >
     VENERDÌ
@@ -2353,7 +2742,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 </div>
 
 <select class="race-png-select" id="racePngSelect">
-  <option value="1">Gara 1</option><option value="2">Gara 2</option><option value="3">Gara 3</option><option value="4">Gara 4</option><option value="5">Gara 5</option>
+  <option value="1">Gara 1</option><option value="2">Gara 2</option><option value="3">Gara 3</option>
 </select>
     </div>
   </div>
@@ -3178,7 +3567,7 @@ renderLeagueMovements(league);
 // UNION - Apertura e chiusura classifiche provvisorie
 (function () {
   // Gara attualmente in corso
-  const unionProvisionalRace = 3;
+  const unionProvisionalRace = 4;
 
   // UNION - Calendario provvisorie
   const unionProvisionalMondays = {
@@ -3284,7 +3673,8 @@ unionProvisionalDayButtons.forEach(function (button) {
   button.addEventListener("click", function () {
     if (button.disabled) return;
 
-    unionSelectedProvisionalDay = button.getAttribute("data-day") || "lunedi";
+    unionSelectedProvisionalDay =
+      button.getAttribute("data-day") || "lunedi";
 
     unionProvisionalDayButtons.forEach(function (dayButton) {
       const active = dayButton === button;
@@ -3292,15 +3682,29 @@ unionProvisionalDayButtons.forEach(function (button) {
       dayButton.setAttribute("aria-pressed", String(active));
     });
 
+    // Aggiorna le lobby disponibili per la giornata
     showProvisionalLobbies();
+
+    // Apre direttamente la prima lobby disponibile
+    const firstLobby = Array.from(
+      lobbiesContainer.querySelectorAll(".union-provisional-lobby")
+    ).find(function (lobbyButton) {
+      return !lobbyButton.hidden &&
+        lobbyButton.style.display !== "none";
+    });
+
+    if (firstLobby) {
+      const lobbyId = firstLobby.getAttribute("data-lobby");
+      if (lobbyId) showProvisionalImage(lobbyId);
+    }
   });
 });
 
   function showProvisionalLobbies() {
   viewerContainer.hidden = true;
-  viewerContainer.innerHTML = "";
-  lobbiesContainer.hidden = false;
-  dialog.classList.remove("union-viewing-png");
+viewerContainer.innerHTML = "";
+lobbiesContainer.hidden = true;
+dialog.classList.remove("union-viewing-png");
 
   const dayRanges = {
     lunedi: [1, 7],
@@ -3319,7 +3723,7 @@ unionProvisionalDayButtons.forEach(function (button) {
       const lobby = button.getAttribute("data-lobby") || "";
       const number = Number(lobby.replace("A", ""));
 
-      const closedLobbies = {"A23":3};
+      const closedLobbies = {"A23":3,"A1":4,"A9":4};
 const closedFromRace = closedLobbies[lobby];
 
 const isVisible =
@@ -3360,13 +3764,78 @@ const imagePath =
     const wrapper = document.createElement("div");
     wrapper.className = "union-provisional-image-view";
 
+    
+    const navigation = document.createElement("div");
+    navigation.className = "union-provisional-navigation";
+
     const backButton = document.createElement("button");
     backButton.type = "button";
     backButton.className = "union-provisional-back";
-    backButton.textContent = "← TORNA ALLE LOBBY";
+    backButton.textContent = "← CAMBIA GIORNO";
     backButton.addEventListener("click", function () {
       showProvisionalLobbies();
     });
+
+    const dayHeading = document.createElement("div");
+    dayHeading.className = "union-provisional-current-day";
+
+    const dayNames = {
+      lunedi: "LUNEDÌ",
+      martedi: "MARTEDÌ",
+      mercoledi: "MERCOLEDÌ",
+      giovedi: "GIOVEDÌ",
+      venerdi: "VENERDÌ"
+    };
+
+    const dayIndex = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+      .indexOf(unionSelectedProvisionalDay);
+
+    const selectedDate = new Date(unionMondayDate);
+    selectedDate.setDate(selectedDate.getDate() + Math.max(0, dayIndex));
+
+    const formattedDate = selectedDate.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "long"
+    }).toUpperCase();
+
+    dayHeading.innerHTML =
+      '<span>GARA ' + unionProvisionalRace + ' · CLASSIFICHE PROVVISORIE</span>' +
+      '<strong>' +
+      dayNames[unionSelectedProvisionalDay] + ' ' + formattedDate +
+      '</strong>';
+
+    const lobbyNavigation = document.createElement("div");
+    lobbyNavigation.className = "union-provisional-quick-lobbies";
+
+    lobbiesContainer
+      .querySelectorAll(".union-provisional-lobby")
+      .forEach(function (button) {
+        if (button.hidden || button.style.display === "none") return;
+
+        const lobbyId = button.getAttribute("data-lobby");
+        if (!lobbyId) return;
+
+        const quickButton = document.createElement("button");
+        quickButton.type = "button";
+        quickButton.className = "union-provisional-quick-lobby";
+        quickButton.textContent = lobbyId;
+
+        if (lobbyId === lobby) {
+          quickButton.classList.add("active");
+          quickButton.setAttribute("aria-current", "true");
+        }
+
+        quickButton.addEventListener("click", function () {
+          showProvisionalImage(lobbyId);
+        });
+
+        lobbyNavigation.appendChild(quickButton);
+      });
+
+    navigation.appendChild(backButton);
+    navigation.appendChild(dayHeading);
+    navigation.appendChild(lobbyNavigation);
+
 
     const image = document.createElement("img");
     image.className = "union-provisional-result-image";
@@ -3382,7 +3851,7 @@ const imagePath =
       );
     });
 
-    wrapper.appendChild(backButton);
+        wrapper.appendChild(navigation);
     wrapper.appendChild(image);
 
     viewerContainer.innerHTML = "";
@@ -3698,6 +4167,8 @@ border-radius:16px;
     inset 0 0 18px rgba(255,225,70,0.18) !important;
 
   color: #ffffff !important;
+}
+
 }
 
 }
