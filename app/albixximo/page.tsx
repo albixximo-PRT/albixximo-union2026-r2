@@ -9473,6 +9473,107 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
   background: linear-gradient(135deg, #1745a0, #2563d8);
 }
 
+
+/* UNION - Navigazione rapida classifiche provvisorie */
+.union-provisional-navigation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 24px;
+  width: 100%;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  text-align: center;
+  min-width: 0;
+}
+
+.union-provisional-current-day span {
+  color: #a9c4ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.union-provisional-current-day strong {
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.union-provisional-quick-lobbies {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.union-provisional-quick-lobby {
+  min-width: 54px;
+  padding: 11px 14px;
+  border: 1px solid #405171;
+  border-radius: 9px;
+  background: #1a2947;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.union-provisional-quick-lobby:hover {
+  background: #294577;
+  border-color: #82aaff;
+}
+
+.union-provisional-quick-lobby.active {
+  background: #2054b6;
+  border-color: #8cb0ff;
+  box-shadow: 0 0 0 1px #8cb0ff;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    justify-self: center;
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 16px;
+  }
+
+  .union-provisional-quick-lobbies {
+    grid-column: 1;
+    gap: 6px;
+  }
+
+  .union-provisional-quick-lobby {
+    min-width: 43px;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
+
+
 .union-provisional-result-image {
   display: block;
   width: 100%;
@@ -11099,10 +11200,11 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
   type="button"
   id="unionProvisionalClose"
   class="union-provisional-close"
-  aria-label="Chiudi classifiche provvisorie"
-  title="Chiudi"
+  aria-label="Torna alle classifiche definitive"
+  title="Torna alle classifiche definitive"
+  style="width: 168px; height: auto; min-height: 48px; padding: 9px 12px; font-size: 11px; font-weight: 800; line-height: 1.35; text-align: center; letter-spacing: 0.4px; white-space: normal; flex-shrink: 0;"
 >
-  &times;
+  TORNA ALLE<br/>CLASSIFICHE DEFINITIVE
 </button>
       
     </div>
@@ -12242,13 +12344,78 @@ const imagePath =
     const wrapper = document.createElement("div");
     wrapper.className = "union-provisional-image-view";
 
+    
+    const navigation = document.createElement("div");
+    navigation.className = "union-provisional-navigation";
+
     const backButton = document.createElement("button");
     backButton.type = "button";
     backButton.className = "union-provisional-back";
-    backButton.textContent = "← TORNA ALLE LOBBY";
+    backButton.textContent = "← CAMBIA GIORNO";
     backButton.addEventListener("click", function () {
       showProvisionalLobbies();
     });
+
+    const dayHeading = document.createElement("div");
+    dayHeading.className = "union-provisional-current-day";
+
+    const dayNames = {
+      lunedi: "LUNEDÌ",
+      martedi: "MARTEDÌ",
+      mercoledi: "MERCOLEDÌ",
+      giovedi: "GIOVEDÌ",
+      venerdi: "VENERDÌ"
+    };
+
+    const dayIndex = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+      .indexOf(unionSelectedProvisionalDay);
+
+    const selectedDate = new Date(unionMondayDate);
+    selectedDate.setDate(selectedDate.getDate() + Math.max(0, dayIndex));
+
+    const formattedDate = selectedDate.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "long"
+    }).toUpperCase();
+
+    dayHeading.innerHTML =
+      '<span>GARA ' + unionProvisionalRace + ' · PROVVISORIE</span>' +
+      '<strong>' +
+      dayNames[unionSelectedProvisionalDay] + ' ' + formattedDate +
+      '</strong>';
+
+    const lobbyNavigation = document.createElement("div");
+    lobbyNavigation.className = "union-provisional-quick-lobbies";
+
+    lobbiesContainer
+      .querySelectorAll(".union-provisional-lobby")
+      .forEach(function (button) {
+        if (button.hidden || button.style.display === "none") return;
+
+        const lobbyId = button.getAttribute("data-lobby");
+        if (!lobbyId) return;
+
+        const quickButton = document.createElement("button");
+        quickButton.type = "button";
+        quickButton.className = "union-provisional-quick-lobby";
+        quickButton.textContent = lobbyId;
+
+        if (lobbyId === lobby) {
+          quickButton.classList.add("active");
+          quickButton.setAttribute("aria-current", "true");
+        }
+
+        quickButton.addEventListener("click", function () {
+          showProvisionalImage(lobbyId);
+        });
+
+        lobbyNavigation.appendChild(quickButton);
+      });
+
+    navigation.appendChild(backButton);
+    navigation.appendChild(dayHeading);
+    navigation.appendChild(lobbyNavigation);
+
 
     const image = document.createElement("img");
     image.className = "union-provisional-result-image";
@@ -12264,7 +12431,7 @@ const imagePath =
       );
     });
 
-    wrapper.appendChild(backButton);
+        wrapper.appendChild(navigation);
     wrapper.appendChild(image);
 
     viewerContainer.innerHTML = "";
