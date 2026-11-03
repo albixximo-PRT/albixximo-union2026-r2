@@ -9633,9 +9633,9 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 /* UNION - Navigazione rapida classifiche provvisorie */
 .union-provisional-navigation {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 16px 24px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -9655,17 +9655,18 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 }
 
 .union-provisional-current-day span {
-  color: #a9c4ff;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
 }
 
 .union-provisional-current-day strong {
   color: #ffffff;
-  font-size: 19px;
+  font-size: clamp(15px, 1.4vw, 20px);
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .union-provisional-quick-lobbies {
