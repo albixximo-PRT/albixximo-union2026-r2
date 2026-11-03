@@ -11044,7 +11044,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
       aria-haspopup="dialog"
     >
       <span class="union-provisional-dot"></span>
-      <span>CLASSIFICHE PROVVISORIE · GARA 3</span>
+      <span>CLASSIFICHE PROVVISORIE · GARA ${currentRace}</span>
     </button>
   ` : ""}
 
@@ -20783,9 +20783,12 @@ const changed = currentValue !== originalValue
   exporting={true}
   penalties={provisionalRenderData.snapshot.penalties}
   dgMeasureTypes={provisionalRenderData.snapshot.dgMeasureTypes ?? {}}
-  dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
+    dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
   forceHideMeta={true}
-tableTitle="Classifica provvisoria"
+  unjustifiedAbsenceCounts={getDefinitiveAbsenceCounts(
+    provisionalRenderData.raceNumber
+  )}
+  tableTitle="Classifica provvisoria"
 />
     </div>
   )}
