@@ -9567,6 +9567,36 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
   order: 2;
 }
 
+/* UNION - FIX centratura intestazione classifiche provvisorie */
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  width: min(680px, 85%);
+  margin: 8px auto;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
 .union-provisional-quick-lobbies {
   grid-row: 3;
   grid-column: 1;
