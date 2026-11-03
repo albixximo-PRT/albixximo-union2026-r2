@@ -9242,15 +9242,24 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
   margin-right: 0;
 }
 
+
+
 .union-provisional-updated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   color: #e4c46e;
   font-size: 11px;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: 0.4px;
   text-align: center;
   white-space: nowrap;
   text-shadow: 0 0 10px rgba(220, 175, 55, 0.25);
 }
+
+
 
 @media (max-width: 1100px) and (orientation: portrait) {
   .hero-logo .union-provisional-button-wrap {
@@ -11393,9 +11402,25 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     <span class="union-provisional-dot"></span>
     <span>CLASSIFICHE PROVVISORIE · GARA ${currentRace}</span>
   </button>
-  <div class="union-provisional-updated">
-    Aggiornato il 03/11/2026 · ore 14:30
-  </div>
+  
+<div class="union-provisional-updated">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M12 7v5l3 2"></path>
+  </svg>
+  Aggiornato il 03/11/2026 · ore 14:30
+</div>
+
 </div>
 
   ` : ""}
