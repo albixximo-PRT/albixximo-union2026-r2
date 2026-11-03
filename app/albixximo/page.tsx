@@ -9228,7 +9228,55 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
       border-radius: 12px;
     }
 
-        /* UNION - Pulsante blu classifiche provvisorie */
+    
+/* UNION - Data aggiornamento classifiche provvisorie */
+.union-provisional-button-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-right: 20px;
+}
+
+.hero-logo .union-provisional-button-wrap .union-provisional-btn {
+  margin-right: 0;
+}
+
+.union-provisional-updated {
+  color: #e4c46e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(220, 175, 55, 0.25);
+}
+
+@media (max-width: 1100px) and (orientation: portrait) {
+  .hero-logo .union-provisional-button-wrap {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    margin: 0;
+    max-width: calc(100% - 32px);
+    gap: 7px;
+  }
+
+  .hero-logo .union-provisional-button-wrap .union-provisional-btn {
+    position: static;
+    max-width: 100%;
+    padding: 14px 16px;
+    min-height: 52px;
+    font-size: 12px;
+  }
+
+  .union-provisional-updated {
+    font-size: 10px;
+  }
+}
+    
+    
+    /* UNION - Pulsante blu classifiche provvisorie */
     .hero-logo .union-provisional-btn {
       display: inline-flex;
       align-items: center;
@@ -11333,16 +11381,23 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 
         <div class="hero-logo">
   ${showProvisionalInExport ? `
-    <button
-      class="union-provisional-btn"
-      type="button"
-      id="unionProvisionalOpen"
-      title="Apri le classifiche provvisorie"
-      aria-haspopup="dialog"
-    >
-      <span class="union-provisional-dot"></span>
-      <span>CLASSIFICHE PROVVISORIE · GARA ${currentRace}</span>
-    </button>
+    
+<div class="union-provisional-button-wrap">
+  <button
+    class="union-provisional-btn"
+    type="button"
+    id="unionProvisionalOpen"
+    title="Apri le classifiche provvisorie"
+    aria-haspopup="dialog"
+  >
+    <span class="union-provisional-dot"></span>
+    <span>CLASSIFICHE PROVVISORIE · GARA ${currentRace}</span>
+  </button>
+  <div class="union-provisional-updated">
+    Aggiornato il 03/11/2026 · ore 14:30
+  </div>
+</div>
+
   ` : ""}
 
     ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
@@ -12464,7 +12519,8 @@ unionProvisionalDayButtons.forEach(function (button) {
   button.addEventListener("click", function () {
     if (button.disabled) return;
 
-    unionSelectedProvisionalDay = button.getAttribute("data-day") || "lunedi";
+    unionSelectedProvisionalDay =
+      button.getAttribute("data-day") || "lunedi";
 
     unionProvisionalDayButtons.forEach(function (dayButton) {
       const active = dayButton === button;
@@ -12472,15 +12528,29 @@ unionProvisionalDayButtons.forEach(function (button) {
       dayButton.setAttribute("aria-pressed", String(active));
     });
 
+    // Aggiorna le lobby disponibili per la giornata
     showProvisionalLobbies();
+
+    // Apre direttamente la prima lobby disponibile
+    const firstLobby = Array.from(
+      lobbiesContainer.querySelectorAll(".union-provisional-lobby")
+    ).find(function (lobbyButton) {
+      return !lobbyButton.hidden &&
+        lobbyButton.style.display !== "none";
+    });
+
+    if (firstLobby) {
+      const lobbyId = firstLobby.getAttribute("data-lobby");
+      if (lobbyId) showProvisionalImage(lobbyId);
+    }
   });
 });
 
   function showProvisionalLobbies() {
   viewerContainer.hidden = true;
-  viewerContainer.innerHTML = "";
-  lobbiesContainer.hidden = false;
-  dialog.classList.remove("union-viewing-png");
+viewerContainer.innerHTML = "";
+lobbiesContainer.hidden = true;
+dialog.classList.remove("union-viewing-png");
 
   const dayRanges = {
     lunedi: [1, 7],
