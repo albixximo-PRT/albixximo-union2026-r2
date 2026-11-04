@@ -13636,6 +13636,76 @@ if (isA24Race3ProGold) {
   })
 }
 
+// FIX MIRATO — Gara 4 • PRO GOLD • Lobby A14
+// Ricostruzione verificata dai 4 screenshot GT7 originali.
+const isA14Race4ProGold =
+  currentRace === 4 &&
+  effectiveImportLeague === "PRO GOLD" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A14"
+
+if (isA14Race4ProGold) {
+  const datiA14 = [
+    ["GioBar73_@_PRT", "RS 5 Turbo DTM '19", "1:34.325", "48:22.889", "", "1:34.800"],
+    ["EVO_AleTDx", "RC F GT500 '16", "1:35.091", "", "+24.837", "1:34.555"],
+    ["Suka", "RC F GT500 '16", "1:33.973", "", "+26.468", "1:34.995"],
+    ["RCE_pirati", "RC F GT500 '16", "1:35.375", "", "+30.383", "1:34.984"],
+    ["shark929292", "RS 5 Turbo DTM '19", "1:45.081", "", "+32.766", "1:35.907"],
+    ["Mms_peppezip", "RS 5 Turbo DTM '19", "1:36.989", "", "+33.328", "1:35.181"],
+    ["Vale34", "RC F GT500 '16", "1:42.448", "", "+39.234", "1:35.309"],
+    ["Uburoi", "RS 5 Turbo DTM '19", "1:34.915", "", "+57.719", "1:34.118"],
+    ["DCT_Mercenario94", "RC F GT500 '16", "1:34.364", "", "+1:04.106", "1:35.003"],
+    ["Lok", "RS 5 Turbo DTM '19", "1:34.787", "", "+1:08.782", "1:37.296"],
+    ["TER-Car-melo74", "RS 5 Turbo DTM '19", "1:35.245", "", "+1:40.464", "1:34.925"],
+    ["RMT_PINOWAY", "RS 5 Turbo DTM '19", "1:41.933", "", "+1:43.704", "1:34.743"],
+    ["AMALA_ETNA", "RS 5 Turbo DTM '19", "1:35.819", "", "DNF", "1:35.377"],
+  ] as const
+
+  const ordineQualificaA14 = [
+    "Suka",
+    "GioBar73_@_PRT",
+    "DCT_Mercenario94",
+    "Lok",
+    "Uburoi",
+    "EVO_AleTDx",
+    "TER-Car-melo74",
+    "RCE_pirati",
+    "AMALA_ETNA",
+    "Mms_peppezip",
+    "RMT_PINOWAY",
+    "Vale34",
+    "shark929292",
+  ]
+
+  extractedRows.splice(
+    0,
+    extractedRows.length,
+    ...datiA14.map(([pilota, auto, qualifica, totale, distacco, giro], index) => ({
+      posGara: index + 1,
+      pilota,
+      auto,
+      tempoTotaleGara: totale,
+      distaccoDalPrimo: distacco,
+      migliorGiroGara: giro,
+      tempoQualifica: qualifica,
+      pole: pilota === "Suka" ? "POLE" : "",
+    }))
+  )
+
+  extractedQualiRows.splice(
+    0,
+    extractedQualiRows.length,
+    ...ordineQualificaA14.map((pilota, index) => {
+      const dato = datiA14.find((r) => r[0] === pilota)!
+      return {
+        pos: index + 1,
+        pilota,
+        auto: dato[1],
+        tempo: dato[2],
+        distacco: "",
+      }
+    })
+  )
+}
 
 let rowsWithAliases = extractedRows
 
