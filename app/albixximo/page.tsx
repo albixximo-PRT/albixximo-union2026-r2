@@ -676,7 +676,7 @@ function buildUnionDriverCarsFromRaces(
         if (!snapshot) continue
 
         for (const row of snapshot.finalRows || []) {
-          const pilot = String(row.pilota || "").trim()
+          const pilot = normalizeDriverLookupName(row.pilota)
           const car = String(row.auto || "").trim()
 
           const isOfficialUnionCar = UNION_GR2_CARS.some(
@@ -6734,7 +6734,11 @@ const driverCarMismatches = useMemo(() => {
   return finalRows.flatMap((row) => {
     const pilot = String(row.pilota || "").trim()
     const currentCar = String(row.auto || "").trim()
-    const lockedCar = String(championshipState.driverCars[pilot] || "").trim()
+    const lockedCar = String(
+  championshipState.driverCars[normalizeDriverLookupName(pilot)] ||
+  championshipState.driverCars[pilot] ||
+  ""
+).trim()
 
     if (!pilot || !currentCar || !lockedCar) {
       return []
