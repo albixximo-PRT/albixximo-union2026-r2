@@ -20951,6 +20951,32 @@ const unresolved =
 
       <textarea
         value={manualImportJson}
+        
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = "copy"
+        }}
+        onDrop={async (e) => {
+          e.preventDefault()
+
+          const file = e.dataTransfer.files?.[0]
+          if (!file) return
+
+          if (!file.name.toLowerCase().endsWith(".json")) {
+            setManualImportError("Trascina un file .json valido.")
+            return
+          }
+
+          try {
+            const content = await file.text()
+            setManualImportJson(content)
+            setManualImportError("")
+            setManualImportValidated(false)
+          } catch {
+            setManualImportError("Impossibile leggere il file JSON.")
+          }
+        }}
+
         onChange={(e) => {
   setManualImportJson(e.target.value)
   setManualImportError("")
@@ -21125,8 +21151,8 @@ const unresolved =
             background: "rgba(64,224,208,0.15)",
             border: "1px solid rgba(64,224,208,0.35)",
             color: "white",
-            opacity: 0.45,
-            cursor: "not-allowed",
+            opacity: 1,
+cursor: "pointer",
             fontWeight: 900,
           }}
         >
