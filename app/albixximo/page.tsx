@@ -3793,6 +3793,11 @@ const [manualAutoDraft, setManualAutoDraft] = useState<Record<number, string>>({
 const [showDistaccoModal, setShowDistaccoModal] = useState(false)
 const [manualDistaccoDraft, setManualDistaccoDraft] = useState<Record<number, string>>({})
 const [showQualiModal, setShowQualiModal] = useState(false)
+// UNION — Importazione manuale lobby (JSON v1)
+const [showManualImportModal, setShowManualImportModal] = useState(false)
+const [manualImportJson, setManualImportJson] = useState("")
+const [manualImportError, setManualImportError] = useState("")
+const [manualImportValidated, setManualImportValidated] = useState(false)
 const [manualQualiOverrides, setManualQualiOverrides] = useState<Record<number, string>>({})
 const [manualQualiDraft, setManualQualiDraft] = useState<Record<number, string>>({})
 const [showMovementCreatedModal, setShowMovementCreatedModal] = useState(false)
@@ -13184,6 +13189,116 @@ setExportTextsDraft({
   setPendingHeaderExportType(null)
 }
 
+
+function prepareManualLobbyImport() {
+  if (!manualImportValidated) {
+    setManualImportError("Devi prima verificare il JSON.")
+    return
+  }
+
+  if (savedLeagueInCurrentRace) {
+    setManualImportError(
+      "Questa lobby è già salvata. Non è possibile sovrascriverla tramite importazione manuale."
+    )
+    return
+  }
+
+  try {
+    const data = JSON.parse(manualImportJson) as {
+      schemaVersion: number
+      unionMeta: UnionMeta
+      rows: ExtractRow[]
+      qualiRows: QualiRow[]
+    }
+
+    if (data.schemaVersion !== 1) {
+      throw new Error("Versione dello schema non supportata.")
+    }
+
+    const normalizeLobby = (value: string) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/^A0+/, "A")
+
+    if (
+      Number(data.unionMeta.gara) !== currentRace ||
+      data.unionMeta.lega !== selectedLeague ||
+      normalizeLobby(data.unionMeta.lobby) !==
+        normalizeLobby(selectedLobby)
+    ) {
+      throw new Error(
+        "Gara, lega o lobby non corrispondono alla selezione attuale."
+      )
+    }
+
+    
+    const importedRows: ExtractRow[] = data.rows.map((row) => ({
+      posGara: row.posGara,
+      pilota: row.pilota,
+      auto: row.auto,
+      tempoTotaleGara: row.tempoTotaleGara,
+      distaccoDalPrimo: row.distaccoDalPrimo,
+      migliorGiroGara: row.migliorGiroGara,
+      tempoQualifica: row.tempoQualifica,
+      pole: row.pole || "",
+    }))
+
+    const importedQualiRows: QualiRow[] = data.qualiRows.map(
+      (row) => ({
+        pos: row.pos,
+        pilota: row.pilota,
+        auto: row.auto,
+        tempo: row.tempo,
+        distacco: row.distacco,
+      })
+    )
+
+    const importedMeta: UnionMeta = {
+      gara: String(data.unionMeta.gara),
+      lobby: selectedLobby,
+      lega: selectedLeague,
+    }
+
+    
+    // UNION JSON v1 — Ripristina i dati manuali come nell'OCR
+    setPenalties({})
+    setLapOverrides({})
+    setDnfOverrides({})
+    setAbsenceOverrides({})
+    setManualDsqOverrides({})
+
+    setManualPilotOverrides({})
+    setManualAutoOverrides({})
+    setManualDistaccoOverrides({})
+    setManualQualiOverrides({})
+
+    setManualPilotDraft({})
+    setManualAutoDraft({})
+    setManualDistaccoDraft({})
+    setManualQualiDraft({})
+
+    setRows(importedRows)
+    setQualiRows(importedQualiRows)
+    setUnionMeta(importedMeta)
+    setCsv(buildCsvFromRows(importedRows, importedMeta))
+
+    setManualGaraOverride(String(currentRace))
+    setManualLegaOverride(selectedLeague)
+
+    setManualImportError("")
+    setManualImportValidated(false)
+    setShowManualImportModal(false)
+  } catch (err) {
+    setManualImportError(
+      err instanceof Error
+        ? err.message
+        : "Errore durante la preparazione dell'importazione."
+    )
+  }
+}
+
+
 function handleGenerateExtractionClick() {
   if (loading || !canRun) return
 
@@ -16186,6 +16301,32 @@ try {
       {loading ? "Elaborazione..." : "Genera Estrazione tabella"}
     </button>
 
+    
+<button
+  onClick={() => {
+    setManualImportJson("")
+    setManualImportError("")
+    setShowManualImportModal(true)
+  }}
+  disabled={loading}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(64,224,208,0.45)",
+    background: "rgba(64,224,208,0.14)",
+    color: "white",
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    cursor: loading ? "not-allowed" : "pointer",
+    opacity: loading ? 0.5 : 1,
+    textTransform: "uppercase",
+    fontSize: 12,
+  }}
+>
+  IMPORTA LOBBY DA JSON
+</button>
+
+    
     <button
       onClick={resetAll}
       style={{
@@ -20766,6 +20907,259 @@ const unresolved =
     </div>
   </div>
 )}
+
+
+{showManualImportModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 10000,
+      background: "rgba(0,0,0,0.78)",
+      backdropFilter: "blur(6px)",
+      display: "grid",
+      placeItems: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 850,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        borderRadius: 20,
+        border: "1px solid rgba(64,224,208,0.35)",
+        background: "#10151f",
+        padding: 24,
+        display: "grid",
+        gap: 16,
+        boxShadow: "0 20px 70px rgba(0,0,0,0.6)",
+      }}
+    >
+      <div style={{ fontSize: 21, fontWeight: 900 }}>
+        IMPORTAZIONE MANUALE LOBBY
+      </div>
+
+      <div style={{ fontSize: 13, opacity: 0.75 }}>
+        Gara {currentRace} · {selectedLeague} · {selectedLobby}
+        <div style={{ marginTop: 6 }}>
+          Incolla il JSON standard UNION v1.
+          I dati non verranno applicati senza conferma.
+        </div>
+      </div>
+
+      <textarea
+        value={manualImportJson}
+        onChange={(e) => {
+  setManualImportJson(e.target.value)
+  setManualImportError("")
+  setManualImportValidated(false)
+}}
+        placeholder="Incolla qui il JSON della lobby..."
+        rows={16}
+        spellCheck={false}
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          resize: "vertical",
+          borderRadius: 12,
+          padding: 14,
+          background: "rgba(0,0,0,0.35)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          color: "white",
+          fontFamily: "monospace",
+          fontSize: 12,
+          lineHeight: 1.6,
+        }}
+      />
+
+      {manualImportError && (
+        <div style={{ color: "#ff8080", fontSize: 12 }}>
+          {manualImportError}
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => setShowManualImportModal(false)}
+          style={{
+            padding: "10px 18px",
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            color: "white",
+            cursor: "pointer",
+            fontWeight: 800,
+          }}
+        >
+          ANNULLA
+        </button>
+
+        
+<button
+  onClick={() => {
+    setManualImportValidated(false)
+
+    try {
+      const data: unknown = JSON.parse(manualImportJson)
+
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        throw new Error("Il JSON deve contenere un oggetto.")
+      }
+
+      const obj = data as Record<string, unknown>
+
+      if (obj.schemaVersion !== 1) {
+        throw new Error("Versione JSON non supportata. Richiesta: 1.")
+      }
+
+      const meta = obj.unionMeta as Record<string, unknown> | null
+
+      if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+        throw new Error("Mancano i dati di gara, lega e lobby.")
+      }
+
+      if (Number(meta.gara) !== currentRace) {
+        throw new Error("Il numero di gara non corrisponde alla selezione.")
+      }
+
+      if (String(meta.lega).trim().toUpperCase() !== selectedLeague) {
+        throw new Error("La lega non corrisponde alla selezione.")
+      }
+
+      const normalizeLobby = (value: unknown) =>
+        String(value ?? "").trim().toUpperCase().replace(/^A0+/, "A")
+
+      if (normalizeLobby(meta.lobby) !== normalizeLobby(selectedLobby)) {
+        throw new Error("La lobby non corrisponde alla selezione.")
+      }
+
+      if (!Array.isArray(obj.rows) || obj.rows.length === 0 || obj.rows.length > 14) {
+        throw new Error("La gara deve contenere da 1 a 14 piloti.")
+      }
+
+      if (!Array.isArray(obj.qualiRows)) {
+        throw new Error("Manca l'elenco delle qualifiche.")
+      }
+
+      const raceFields = [
+        "pilota", "auto", "tempoTotaleGara",
+        "distaccoDalPrimo", "migliorGiroGara", "tempoQualifica"
+      ]
+
+      const qualiFields = ["pilota", "auto", "tempo", "distacco"]
+
+      const validateRows = (
+        values: unknown[],
+        fields: string[],
+        positionField: string
+      ) => {
+        const positions = new Set<number>()
+        const pilots = new Set<string>()
+
+        values.forEach((value, index) => {
+          if (!value || typeof value !== "object" || Array.isArray(value)) {
+            throw new Error(`Riga ${index + 1} non valida.`)
+          }
+
+          const row = value as Record<string, unknown>
+          const position = row[positionField]
+
+          if (
+            typeof position !== "number" ||
+            !Number.isInteger(position) ||
+            position < 1 ||
+            position > 14 ||
+            positions.has(position)
+          ) {
+            throw new Error(`Posizione non valida o duplicata alla riga ${index + 1}.`)
+          }
+
+          positions.add(position)
+
+          for (const field of fields) {
+            if (typeof row[field] !== "string") {
+              throw new Error(`Campo "${field}" non valido alla riga ${index + 1}.`)
+            }
+          }
+
+          const pilot = String(row.pilota).trim().toLowerCase()
+
+          if (!pilot || pilots.has(pilot)) {
+            throw new Error(`Pilota mancante o duplicato alla riga ${index + 1}.`)
+          }
+
+          pilots.add(pilot)
+        })
+      }
+
+      validateRows(obj.rows, raceFields, "posGara")
+      validateRows(obj.qualiRows, qualiFields, "pos")
+
+      for (const row of obj.rows as Record<string, unknown>[]) {
+        if (row.pole !== undefined && typeof row.pole !== "string") {
+          throw new Error("Il campo pole deve essere una stringa.")
+        }
+      }
+
+      setManualImportError("")
+      setManualImportValidated(true)
+    } catch (err) {
+      setManualImportError(
+        err instanceof Error ? err.message : "JSON non valido."
+      )
+    }
+  }}
+
+          style={{
+            padding: "10px 18px",
+            borderRadius: 10,
+            background: "rgba(64,224,208,0.15)",
+            border: "1px solid rgba(64,224,208,0.35)",
+            color: "white",
+            opacity: 0.45,
+            cursor: "not-allowed",
+            fontWeight: 900,
+          }}
+        >
+          VERIFICA JSON
+        </button>
+        
+<button
+  type="button"
+  disabled={!manualImportValidated}
+  onClick={prepareManualLobbyImport}
+  style={{
+    padding: "10px 18px",
+    borderRadius: 10,
+    background: manualImportValidated
+      ? "rgba(34,197,94,0.22)"
+      : "rgba(255,255,255,0.06)",
+    border: manualImportValidated
+      ? "1px solid rgba(34,197,94,0.65)"
+      : "1px solid rgba(255,255,255,0.12)",
+    color: "white",
+    opacity: manualImportValidated ? 1 : 0.45,
+    cursor: manualImportValidated ? "pointer" : "not-allowed",
+    fontWeight: 900,
+  }}
+>
+  IMPORTA LOBBY
+</button>
+
+      </div>
+    </div>
+  </div>
+)}
+
 
 {showQualiModal && (
   <div

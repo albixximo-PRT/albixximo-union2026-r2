@@ -144,6 +144,8 @@ type ChampionshipState = {
   roundMovements: Partial<Record<number, RoundMovementState>>
   expectedDrivers: ExpectedDriversByLobby
   driverCars: Record<string, string>
+  closedLobbies?: Record<string, number>
+incompleteLobbies?: Record<string, number>
 }
 
 type ChampionshipCellStatus =
@@ -674,7 +676,7 @@ function buildUnionDriverCarsFromRaces(
         if (!snapshot) continue
 
         for (const row of snapshot.finalRows || []) {
-          const pilot = String(row.pilota || "").trim()
+          const pilot = normalizeDriverLookupName(row.pilota)
           const car = String(row.auto || "").trim()
 
           const isOfficialUnionCar = UNION_GR2_CARS.some(
@@ -3581,6 +3583,7 @@ const [dgSpecialMeasures, setDgSpecialMeasures] =
 } | null>(null)
 const [provisionalExportRace, setProvisionalExportRace] = useState<number>(2)
 const [provisionalExportDay, setProvisionalExportDay] = useState<string>("lunedi")
+const [provisionalExportLobby, setProvisionalExportLobby] = useState<string>("A1")
 const [showDefinitiveExportModal, setShowDefinitiveExportModal] = useState(false)
 
 const [definitiveExportRace, setDefinitiveExportRace] = useState<number>(2)
@@ -3618,6 +3621,8 @@ const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   roundMovements: {},
   expectedDrivers: {},
   driverCars: {},
+  closedLobbies: {},
+  incompleteLobbies: {},
 })
 const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -3920,7 +3925,19 @@ setChampionshipState({
     parsedState.expectedDrivers && typeof parsedState.expectedDrivers === "object"
       ? parsedState.expectedDrivers
       : {},
-  driverCars: buildUnionDriverCarsFromRaces(restoredRaces),
+    driverCars: buildUnionDriverCarsFromRaces(restoredRaces),
+  closedLobbies:
+    parsedState.closedLobbies &&
+    typeof parsedState.closedLobbies === "object" &&
+    !Array.isArray(parsedState.closedLobbies)
+      ? parsedState.closedLobbies
+      : {},
+        incompleteLobbies:
+    parsedState.incompleteLobbies &&
+    typeof parsedState.incompleteLobbies === "object" &&
+    !Array.isArray(parsedState.incompleteLobbies)
+      ? parsedState.incompleteLobbies
+      : {},
 })
 }
     }
@@ -6054,7 +6071,12 @@ console.log(
         ...r,
         sourcePosGara: r.posGara,
         posGara: merged.posGara || r.posGara,
-        pilota: merged.pilota || r.pilota,
+        pilota:
+  currentRace === 3 &&
+  selectedLeague === "PRO GOLD" &&
+  selectedLobby === "A24"
+    ? r.pilota || merged.pilota
+    : merged.pilota || r.pilota,
         auto: merged.auto || r.auto,
         tempoTotaleGara: merged.tempoTotaleGara || r.tempoTotaleGara,
         distaccoDalPrimo: merged.distaccoDalPrimo || r.distaccoDalPrimo,
@@ -6063,7 +6085,7 @@ console.log(
         pole: merged.pole || r.pole,
       }
     })
-  }, [rows, csv])
+  }, [rows, csv, currentRace, selectedLeague, selectedLobby])
 
   const hasExtractedRaceData = useMemo(() => {
   return previewRows.length > 0
@@ -6712,7 +6734,11 @@ const driverCarMismatches = useMemo(() => {
   return finalRows.flatMap((row) => {
     const pilot = String(row.pilota || "").trim()
     const currentCar = String(row.auto || "").trim()
-    const lockedCar = String(championshipState.driverCars[pilot] || "").trim()
+    const lockedCar = String(
+  championshipState.driverCars[normalizeDriverLookupName(pilot)] ||
+  championshipState.driverCars[pilot] ||
+  ""
+).trim()
 
     if (!pilot || !currentCar || !lockedCar) {
       return []
@@ -7449,11 +7475,115 @@ const hasCurrentRoundMovements = useMemo(() => {
   })
 }, [currentRoundMovements])
 
+function isLobbyClosedForRace(
+  lobby: string,
+  raceNumber: number
+): boolean {
+  const closedFromRace = championshipState.closedLobbies?.[lobby]
+
+  return (
+    typeof closedFromRace === "number" &&
+    raceNumber >= closedFromRace
+  )
+}
+
+function isLobbyVisibleInProvisional(
+  lobby: string,
+  raceNumber: number
+): boolean {
+  const closedFromRace = championshipState.closedLobbies?.[lobby]
+
+  return (
+    typeof closedFromRace !== "number" ||
+    raceNumber <= closedFromRace
+  )
+}
+
+function isLobbyIncomplete(lobby: string, raceNumber: number): boolean {
+  return championshipState.incompleteLobbies?.[`${raceNumber}:${lobby}`] === 1
+}
+
+function toggleIncompleteLobby() {
+  const key = `${currentRace}:${selectedLobby}`
+
+  setChampionshipState((prev) => {
+    const incompleteLobbies = { ...(prev.incompleteLobbies || {}) }
+
+    if (incompleteLobbies[key] === 1) {
+      delete incompleteLobbies[key]
+    } else {
+      incompleteLobbies[key] = 1
+    }
+
+    return {
+      ...prev,
+      incompleteLobbies,
+    }
+  })
+}
+
+function closeSelectedLobby() {
+  const existingClosure = championshipState.closedLobbies?.[selectedLobby]
+
+  if (typeof existingClosure === "number") {
+    window.alert(
+      `La lobby ${selectedLobby} è già chiusa dalla Gara ${existingClosure}.`
+    )
+    return
+  }
+
+  const confirmed = window.confirm(
+    `CHIUSURA LOBBY\n\n` +
+    `Lobby: ${selectedLobby}\n` +
+    `Lega: ${selectedLeague}\n` +
+    `Decorrenza: Gara ${currentRace}\n\n` +
+    `La lobby non sarà più operativa da questa gara fino alla fine del round.\n` +
+    `I risultati delle gare precedenti resteranno invariati.\n\n` +
+    `Confermi la chiusura?`
+  )
+
+  if (!confirmed) return
+
+  setChampionshipState((prev) => ({
+    ...prev,
+    closedLobbies: {
+      ...(prev.closedLobbies || {}),
+      [selectedLobby]: currentRace,
+    },
+  }))
+}
+
+function reopenSelectedLobby() {
+  const existingClosure = championshipState.closedLobbies?.[selectedLobby]
+
+  if (typeof existingClosure !== "number") return
+
+  const confirmed = window.confirm(
+    `Vuoi riaprire la lobby ${selectedLobby}?\n\n` +
+    `La chiusura dalla Gara ${existingClosure} sarà annullata.\n` +
+    `Nessun risultato storico verrà cancellato.`
+  )
+
+  if (!confirmed) return
+
+  setChampionshipState((prev) => {
+    const closedLobbies = { ...(prev.closedLobbies || {}) }
+    delete closedLobbies[selectedLobby]
+
+    return {
+      ...prev,
+      closedLobbies,
+    }
+  })
+}
+
 function getProvisionalSavedLobbies(
   raceNumber: number,
   day: keyof typeof UNION_PROVISIONAL_DAYS
 ) {
-  const dayLobbies = UNION_PROVISIONAL_DAYS[day]
+  const dayLobbies = UNION_PROVISIONAL_DAYS[day].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, raceNumber)
+)
   const raceSnapshots = championshipState.races[raceNumber]
 
   return dayLobbies.flatMap((lobby) => {
@@ -7476,7 +7606,9 @@ function getDefinitiveSavedLobbies(
   league: ChampionshipLeagueKey
 ) {
   const raceSnapshots = championshipState.races[raceNumber]
-  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, raceNumber)
+)
 
   return leagueLobbies.flatMap((lobby) => {
     const snapshot = raceSnapshots?.[league]?.[lobby]
@@ -7494,7 +7626,9 @@ const savedLeagueInCurrentRace = useMemo(() => {
 const savedLeagueStatus = useMemo(() => {
   return Object.fromEntries(
     CHAMPIONSHIP_LEAGUES.map((league) => {
-      const activeLobbies = UNION_LOBBIES_BY_RANK[league]
+      const activeLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, currentRace)
+)
 
       const isComplete =
         activeLobbies.length > 0 &&
@@ -7505,7 +7639,7 @@ const savedLeagueStatus = useMemo(() => {
       return [league, isComplete]
     })
   ) as Record<ChampionshipLeagueKey, boolean>
-}, [championshipState.expectedDrivers, currentRace, currentRaceSnapshot])
+}, [championshipState.expectedDrivers, championshipState.closedLobbies, currentRace, currentRaceSnapshot])
 
 const availableImportLeagues = useMemo(() => {
   return CHAMPIONSHIP_LEAGUES.filter((league) => !savedLeagueStatus[league])
@@ -8133,6 +8267,68 @@ async function generateDefinitiveZip() {
     )
   } finally {
     setDefinitiveRenderData(null)
+    setExporting(false)
+  }
+}
+
+async function downloadSingleProvisionalPng() {
+  if (exporting) return
+
+  const raceNumber = provisionalExportRace
+  const lobby = provisionalExportLobby
+
+  const league = UNION_RANKS.find((rank) =>
+    UNION_LOBBIES_BY_RANK[rank].some(
+      (l) => l === lobby
+    )
+  )
+
+  if (!league) {
+    setError(`Lega non trovata per ${lobby}.`)
+    return
+  }
+
+  const snapshot =
+    championshipState.races[raceNumber]?.[league]?.[lobby]
+
+  if (!snapshot || !snapshot.finalRows?.length) {
+    setError(
+      `Nessuna classifica salvata per Gara ${raceNumber}, ${lobby}.`
+    )
+    return
+  }
+
+  setExporting(true)
+  setError("")
+
+  try {
+    const pngBlob = await renderProvisionalLobby(
+      { lobby, league, snapshot },
+      raceNumber
+    )
+
+    const url = URL.createObjectURL(pngBlob)
+    const link = document.createElement("a")
+
+    link.href = url
+    link.download =
+      `${lobby}_${league.replace(/\s+/g, "_")}_PROVVISORIA.png`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setShowProvisionalExportModal(false)
+  } catch (error: unknown) {
+    setError(
+      `Errore esportazione lobby: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  } finally {
+    setProvisionalRenderData(null)
     setExporting(false)
   }
 }
@@ -9036,7 +9232,64 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
       border-radius: 12px;
     }
 
-        /* UNION - Pulsante blu classifiche provvisorie */
+    
+/* UNION - Data aggiornamento classifiche provvisorie */
+.union-provisional-button-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-right: 20px;
+}
+
+.hero-logo .union-provisional-button-wrap .union-provisional-btn {
+  margin-right: 0;
+}
+
+
+
+.union-provisional-updated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #e4c46e;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(220, 175, 55, 0.25);
+}
+
+
+
+@media (max-width: 1100px) and (orientation: portrait) {
+  .hero-logo .union-provisional-button-wrap {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    margin: 0;
+    max-width: calc(100% - 32px);
+    gap: 7px;
+  }
+
+  .hero-logo .union-provisional-button-wrap .union-provisional-btn {
+    position: static;
+    max-width: 100%;
+    padding: 14px 16px;
+    min-height: 52px;
+    font-size: 12px;
+  }
+
+  .union-provisional-updated {
+    font-size: 10px;
+  }
+}
+    
+    
+    /* UNION - Pulsante blu classifiche provvisorie */
     .hero-logo .union-provisional-btn {
       display: inline-flex;
       align-items: center;
@@ -9280,6 +9533,303 @@ const splashMobileDataUrl = "/union-splash-mobile.webp"
 .union-provisional-back:hover {
   background: linear-gradient(135deg, #1745a0, #2563d8);
 }
+
+
+/* UNION - Restyling oro e intestazione PNG */
+
+#unionProvisionalClose.union-provisional-close {
+  background: linear-gradient(135deg, #f5d778 0%, #c99a25 55%, #926515 100%);
+  color: #17120a;
+  border: 1px solid #f6df92;
+  border-radius: 12px;
+  box-shadow: 0 3px 18px rgba(218, 166, 36, 0.22),
+              inset 0 1px 0 rgba(255,255,255,0.35);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+#unionProvisionalClose.union-provisional-close:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 24px rgba(237, 184, 48, 0.42);
+}
+
+/* Nasconde i cinque giorni soltanto quando si visualizza un PNG */
+.union-provisional-modal.union-viewing-png #unionProvisionalDays {
+  display: none !important;
+}
+
+.union-provisional-modal.union-viewing-png .union-provisional-content {
+  padding-top: 16px;
+}
+
+.union-provisional-navigation {
+  grid-template-columns: 1fr;
+  position: relative;
+  gap: 12px;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: start;
+  z-index: 1;
+}
+
+.union-provisional-current-day {
+  grid-row: 2;
+  grid-column: 1;
+  width: 100%;
+  gap: 10px;
+  padding: 4px 0 10px;
+}
+
+.union-provisional-current-day span {
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 950;
+  letter-spacing: 1.4px;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
+}
+
+.union-provisional-current-day strong {
+  color: #ffffff;
+  font-size: clamp(15px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.union-provisional-current-day::after {
+  content: "";
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  margin: 6px auto 0;
+  background: linear-gradient(90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(255, 202, 65, 0.65),
+              0 0 22px rgba(255, 185, 35, 0.22);
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  margin-top: 0;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+}
+
+/* UNION - FIX centratura intestazione classifiche provvisorie */
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-current-day::after {
+  order: 1;
+  width: min(680px, 85%);
+  margin: 8px auto;
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.union-provisional-quick-lobbies {
+  grid-row: 3;
+  grid-column: 1;
+  margin-top: 2px;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    gap: 12px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    justify-self: center;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 14px;
+  }
+
+  #unionProvisionalClose.union-provisional-close {
+    font-size: 9px;
+    padding: 7px 9px;
+    max-width: 125px;
+  }
+}
+
+
+
+
+/* UNION - Navigazione rapida classifiche provvisorie */
+.union-provisional-navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.union-provisional-navigation .union-provisional-back {
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.union-provisional-current-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.union-provisional-current-day span {
+  order: 0;
+  display: block;
+  width: 100%;
+  color: #f3d478;
+  font-size: clamp(17px, 2vw, 26px);
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-align: center;
+  text-shadow: 0 0 18px rgba(227, 174, 35, 0.22);
+}
+
+.union-provisional-current-day::after {
+  content: "";
+  order: 1;
+  display: block;
+  width: min(680px, 85%);
+  height: 2px;
+  flex-shrink: 0;
+  margin: 4px auto;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #b88622 18%,
+    #ffe18b 50%,
+    #b88622 82%,
+    transparent
+  );
+  box-shadow:
+    0 0 10px rgba(255, 202, 65, 0.65),
+    0 0 22px rgba(255, 185, 35, 0.22);
+}
+
+.union-provisional-current-day strong {
+  order: 2;
+  display: block;
+  width: 100%;
+  color: #ffffff;
+  font-size: clamp(15px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.union-provisional-quick-lobbies {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 9px;
+}
+
+.union-provisional-quick-lobby {
+  min-width: 54px;
+  padding: 11px 14px;
+  border: 1px solid #405171;
+  border-radius: 9px;
+  background: #1a2947;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.union-provisional-quick-lobby:hover {
+  background: #294577;
+  border-color: #82aaff;
+}
+
+.union-provisional-quick-lobby.active {
+  background: #2054b6;
+  border-color: #8cb0ff;
+  box-shadow: 0 0 0 1px #8cb0ff;
+}
+
+@media (max-width: 700px) {
+  .union-provisional-navigation {
+    gap: 14px;
+  }
+
+  .union-provisional-navigation .union-provisional-back {
+    align-self: center;
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+
+  .union-provisional-current-day span {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+
+  .union-provisional-current-day strong {
+    font-size: 16px;
+  }
+
+  .union-provisional-current-day::after {
+    width: 85%;
+  }
+
+  .union-provisional-quick-lobbies {
+    gap: 6px;
+  }
+
+  .union-provisional-quick-lobby {
+    min-width: 43px;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
+
+
 
 .union-provisional-result-image {
   display: block;
@@ -10844,16 +11394,39 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 
         <div class="hero-logo">
   ${showProvisionalInExport ? `
-    <button
-      class="union-provisional-btn"
-      type="button"
-      id="unionProvisionalOpen"
-      title="Apri le classifiche provvisorie"
-      aria-haspopup="dialog"
-    >
-      <span class="union-provisional-dot"></span>
-      <span>CLASSIFICHE PROVVISORIE · GARA 3</span>
-    </button>
+    
+<div class="union-provisional-button-wrap">
+  <button
+    class="union-provisional-btn"
+    type="button"
+    id="unionProvisionalOpen"
+    title="Apri le classifiche provvisorie"
+    aria-haspopup="dialog"
+  >
+    <span class="union-provisional-dot"></span>
+    <span>CLASSIFICHE PROVVISORIE · GARA ${currentRace}</span>
+  </button>
+  
+<div class="union-provisional-updated">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M12 7v5l3 2"></path>
+  </svg>
+  Aggiornato il 03/11/2026 · ore 14:30
+</div>
+
+</div>
+
   ` : ""}
 
     ${logoDataUrl ? `<img src="${logoDataUrl}" alt="UNION 2026 Logo" />` : ""}
@@ -10907,10 +11480,11 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
   type="button"
   id="unionProvisionalClose"
   class="union-provisional-close"
-  aria-label="Chiudi classifiche provvisorie"
-  title="Chiudi"
+  aria-label="Torna alle classifiche definitive"
+  title="Torna alle classifiche definitive"
+  style="width: 168px; height: auto; min-height: 48px; padding: 9px 12px; font-size: 11px; font-weight: 800; line-height: 1.35; text-align: center; letter-spacing: 0.4px; white-space: normal; flex-shrink: 0;"
 >
-  &times;
+  TORNA ALLE<br/>CLASSIFICHE DEFINITIVE
 </button>
       
     </div>
@@ -11867,12 +12441,20 @@ renderLeagueMovements(league);
 
 // UNION - Apertura e chiusura classifiche provvisorie
 (function () {
-  // UNION - Calendario provvisorie
-  // Modificare soltanto la data del lunedì (AAAA-MM-GG)
-  const unionProvisionalMonday = "2026-10-19";
-
   // Gara attualmente in corso
-  const unionProvisionalRace = 3;
+  const unionProvisionalRace = ${currentRace};
+
+  // UNION - Calendario provvisorie
+  const unionProvisionalMondays = {
+    1: "2026-09-21",
+    2: "2026-10-05",
+    3: "2026-10-19",
+    4: "2026-11-02",
+    5: "2026-11-16"
+  };
+
+  const unionProvisionalMonday =
+    unionProvisionalMondays[unionProvisionalRace] || "2026-10-19";
 
   const unionMondayParts = unionProvisionalMonday
     .split("-")
@@ -11966,7 +12548,8 @@ unionProvisionalDayButtons.forEach(function (button) {
   button.addEventListener("click", function () {
     if (button.disabled) return;
 
-    unionSelectedProvisionalDay = button.getAttribute("data-day") || "lunedi";
+    unionSelectedProvisionalDay =
+      button.getAttribute("data-day") || "lunedi";
 
     unionProvisionalDayButtons.forEach(function (dayButton) {
       const active = dayButton === button;
@@ -11974,15 +12557,29 @@ unionProvisionalDayButtons.forEach(function (button) {
       dayButton.setAttribute("aria-pressed", String(active));
     });
 
+    // Aggiorna le lobby disponibili per la giornata
     showProvisionalLobbies();
+
+    // Apre direttamente la prima lobby disponibile
+    const firstLobby = Array.from(
+      lobbiesContainer.querySelectorAll(".union-provisional-lobby")
+    ).find(function (lobbyButton) {
+      return !lobbyButton.hidden &&
+        lobbyButton.style.display !== "none";
+    });
+
+    if (firstLobby) {
+      const lobbyId = firstLobby.getAttribute("data-lobby");
+      if (lobbyId) showProvisionalImage(lobbyId);
+    }
   });
 });
 
   function showProvisionalLobbies() {
   viewerContainer.hidden = true;
-  viewerContainer.innerHTML = "";
-  lobbiesContainer.hidden = false;
-  dialog.classList.remove("union-viewing-png");
+viewerContainer.innerHTML = "";
+lobbiesContainer.hidden = true;
+dialog.classList.remove("union-viewing-png");
 
   const dayRanges = {
     lunedi: [1, 7],
@@ -12001,8 +12598,16 @@ unionProvisionalDayButtons.forEach(function (button) {
       const lobby = button.getAttribute("data-lobby") || "";
       const number = Number(lobby.replace("A", ""));
 
-      const isVisible =
-  number >= range[0] && number <= range[1];
+      const closedLobbies = ${JSON.stringify(championshipState.closedLobbies || {})};
+const closedFromRace = closedLobbies[lobby];
+
+const isVisible =
+  number >= range[0] &&
+  number <= range[1] &&
+  (
+    typeof closedFromRace !== "number" ||
+    unionProvisionalRace <= closedFromRace
+  );
 
 button.hidden = !isVisible;
 button.style.display = isVisible ? "" : "none";
@@ -12034,13 +12639,78 @@ const imagePath =
     const wrapper = document.createElement("div");
     wrapper.className = "union-provisional-image-view";
 
+    
+    const navigation = document.createElement("div");
+    navigation.className = "union-provisional-navigation";
+
     const backButton = document.createElement("button");
     backButton.type = "button";
     backButton.className = "union-provisional-back";
-    backButton.textContent = "← TORNA ALLE LOBBY";
+    backButton.textContent = "← CAMBIA GIORNO";
     backButton.addEventListener("click", function () {
       showProvisionalLobbies();
     });
+
+    const dayHeading = document.createElement("div");
+    dayHeading.className = "union-provisional-current-day";
+
+    const dayNames = {
+      lunedi: "LUNEDÌ",
+      martedi: "MARTEDÌ",
+      mercoledi: "MERCOLEDÌ",
+      giovedi: "GIOVEDÌ",
+      venerdi: "VENERDÌ"
+    };
+
+    const dayIndex = ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+      .indexOf(unionSelectedProvisionalDay);
+
+    const selectedDate = new Date(unionMondayDate);
+    selectedDate.setDate(selectedDate.getDate() + Math.max(0, dayIndex));
+
+    const formattedDate = selectedDate.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "long"
+    }).toUpperCase();
+
+    dayHeading.innerHTML =
+      '<span>GARA ' + unionProvisionalRace + ' · CLASSIFICHE PROVVISORIE</span>' +
+      '<strong>' +
+      dayNames[unionSelectedProvisionalDay] + ' ' + formattedDate +
+      '</strong>';
+
+    const lobbyNavigation = document.createElement("div");
+    lobbyNavigation.className = "union-provisional-quick-lobbies";
+
+    lobbiesContainer
+      .querySelectorAll(".union-provisional-lobby")
+      .forEach(function (button) {
+        if (button.hidden || button.style.display === "none") return;
+
+        const lobbyId = button.getAttribute("data-lobby");
+        if (!lobbyId) return;
+
+        const quickButton = document.createElement("button");
+        quickButton.type = "button";
+        quickButton.className = "union-provisional-quick-lobby";
+        quickButton.textContent = lobbyId;
+
+        if (lobbyId === lobby) {
+          quickButton.classList.add("active");
+          quickButton.setAttribute("aria-current", "true");
+        }
+
+        quickButton.addEventListener("click", function () {
+          showProvisionalImage(lobbyId);
+        });
+
+        lobbyNavigation.appendChild(quickButton);
+      });
+
+    navigation.appendChild(backButton);
+    navigation.appendChild(dayHeading);
+    navigation.appendChild(lobbyNavigation);
+
 
     const image = document.createElement("img");
     image.className = "union-provisional-result-image";
@@ -12056,7 +12726,7 @@ const imagePath =
       );
     });
 
-    wrapper.appendChild(backButton);
+        wrapper.appendChild(navigation);
     wrapper.appendChild(image);
 
     viewerContainer.innerHTML = "";
@@ -12847,6 +13517,200 @@ if (isA09Race3RedFlag) {
 }
 
 
+
+// FIX MIRATO — Gara 3 • PRO SILVER • Lobby A22
+const isA22Race3ProSilver =
+  currentRace === 3 &&
+  effectiveImportLeague === "PRO SILVER" &&
+  /^A0?22$/.test(
+    String(selectedLobby || "").trim().toUpperCase()
+  )
+
+if (isA22Race3ProSilver) {
+  const qualificheA22 = [
+    ["SMI_Gas89", "RS 5 Turbo DTM '19", "1:45.402"],
+    ["Zabo", "GT-R NISMO GT500 '16", "1:45.536"],
+    ["Pete", "RS 5 Turbo DTM '19", "1:45.733"],
+    ["ScarsFess", "RS 5 Turbo DTM '19", "1:46.159"],
+    ["Sun)own", "RC F GT500 '16", "1:46.450"],
+    ["M.Gatti", "RS 5 Turbo DTM '19", "1:47.100"],
+    ["SMI_Maureddu77", "RS 5 Turbo DTM '19", "1:47.425"],
+    ["Rekkiaspeed", "RS 5 Turbo DTM '19", "1:48.115"],
+  ]
+
+  const ordineGaraA22 = [
+    "SMI_Gas89",
+    "Pete",
+    "ScarsFess",
+    "Sun)own",
+    "M.Gatti",
+    "Rekkiaspeed",
+    "SMI_Maureddu77",
+    "Zabo",
+  ]
+
+  const distacchiA22 = [
+    "",
+    "+10.330",
+    "+15.326",
+    "+17.735",
+    "+36.305",
+    "+48.149",
+    "+1:00.451",
+    "+1:07.883",
+  ]
+
+  const miglioriGiriA22 = [
+    "1:48.054",
+    "1:47.881",
+    "1:49.060",
+    "1:49.165",
+    "1:49.583",
+    "1:48.797",
+    "1:48.225",
+    "1:46.724",
+  ]
+
+  extractedQualiRows.splice(
+    0,
+    extractedQualiRows.length,
+    ...qualificheA22.map(([pilota, auto, tempo], index) => ({
+      pos: index + 1,
+      pilota,
+      auto,
+      tempo,
+      distacco: [
+  "",
+  "+00.134",
+  "+00.331",
+  "+00.757",
+  "+01.048",
+  "+01.698",
+  "+02.023",
+  "+02.713",
+][index],
+    }))
+  )
+
+  extractedRows.splice(
+    0,
+    extractedRows.length,
+    ...ordineGaraA22.map((pilota, index) => {
+      const quali = extractedQualiRows.find(
+        (q) => q.pilota === pilota
+      )
+
+      return {
+        posGara: index + 1,
+        pilota,
+        auto: quali?.auto || "",
+        tempoTotaleGara:
+          index === 0 ? "50:00.484" : "",
+        distaccoDalPrimo: distacchiA22[index],
+        migliorGiroGara: miglioriGiriA22[index],
+        tempoQualifica: quali?.tempo || "",
+        pole: pilota === "SMI_Gas89" ? "POLE" : "",
+      }
+    })
+  )
+}
+
+
+
+ // FIX MIRATO — Gara 3 • PRO GOLD • Lobby A24
+const isA24Race3ProGold =
+  currentRace === 3 &&
+  effectiveImportLeague === "PRO GOLD" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A24"
+
+const correctPilotA24 = (name: string) =>
+  ["M.Ruggieri", "M._Ruggeri", "M. Ruggeri"].includes(
+    String(name || "").trim()
+  )
+    ? "M. Ruggeri"
+    : name
+
+if (isA24Race3ProGold) {
+  extractedRows.forEach((row) => {
+    row.pilota = correctPilotA24(row.pilota)
+  })
+
+  extractedQualiRows.forEach((row) => {
+    row.pilota = correctPilotA24(row.pilota)
+  })
+}
+
+// FIX MIRATO — Gara 4 • PRO GOLD • Lobby A14
+// Ricostruzione verificata dai 4 screenshot GT7 originali.
+const isA14Race4ProGold =
+  currentRace === 4 &&
+  effectiveImportLeague === "PRO GOLD" &&
+  String(selectedLobby || "").trim().toUpperCase() === "A14"
+
+if (isA14Race4ProGold) {
+  const datiA14 = [
+    ["GioBar73_@_PRT", "RS 5 Turbo DTM '19", "1:34.325", "48:22.889", "", "1:34.800"],
+    ["EVO_AleTDx", "RC F GT500 '16", "1:35.091", "", "+24.837", "1:34.555"],
+    ["Suka", "RC F GT500 '16", "1:33.973", "", "+26.468", "1:34.995"],
+    ["RCE_pirati", "RC F GT500 '16", "1:35.375", "", "+30.383", "1:34.984"],
+    ["shark929292", "RS 5 Turbo DTM '19", "1:45.081", "", "+32.766", "1:35.907"],
+    ["Mms_peppezip", "RS 5 Turbo DTM '19", "1:36.989", "", "+33.328", "1:35.181"],
+    ["Vale34", "RC F GT500 '16", "1:42.448", "", "+39.234", "1:35.309"],
+    ["Uburoi", "RS 5 Turbo DTM '19", "1:34.915", "", "+57.719", "1:34.118"],
+    ["DCT_Mercenario94", "RC F GT500 '16", "1:34.364", "", "+1:04.106", "1:35.003"],
+    ["Lok", "RS 5 Turbo DTM '19", "1:34.787", "", "+1:08.782", "1:37.296"],
+    ["TER-Car-melo74", "RS 5 Turbo DTM '19", "1:35.245", "", "+1:40.464", "1:34.925"],
+    ["RMT_PINOWAY", "RS 5 Turbo DTM '19", "1:41.933", "", "+1:43.704", "1:34.743"],
+    ["AMALA_ETNA", "RS 5 Turbo DTM '19", "1:35.819", "", "DNF", "1:35.377"],
+  ] as const
+
+  const ordineQualificaA14 = [
+    "Suka",
+    "GioBar73_@_PRT",
+    "DCT_Mercenario94",
+    "Lok",
+    "Uburoi",
+    "EVO_AleTDx",
+    "TER-Car-melo74",
+    "RCE_pirati",
+    "AMALA_ETNA",
+    "Mms_peppezip",
+    "RMT_PINOWAY",
+    "Vale34",
+    "shark929292",
+  ]
+
+  extractedRows.splice(
+    0,
+    extractedRows.length,
+    ...datiA14.map(([pilota, auto, qualifica, totale, distacco, giro], index) => ({
+      posGara: index + 1,
+      pilota,
+      auto,
+      tempoTotaleGara: totale,
+      distaccoDalPrimo: distacco,
+      migliorGiroGara: giro,
+      tempoQualifica: qualifica,
+      pole: pilota === "Suka" ? "POLE" : "",
+    }))
+  )
+
+  extractedQualiRows.splice(
+    0,
+    extractedQualiRows.length,
+    ...ordineQualificaA14.map((pilota, index) => {
+      const dato = datiA14.find((r) => r[0] === pilota)!
+      return {
+        pos: index + 1,
+        pilota,
+        auto: dato[1],
+        tempo: dato[2],
+        distacco: "",
+      }
+    })
+  )
+}
+
 let rowsWithAliases = extractedRows
 
 const aliasMapForLeague =
@@ -12880,7 +13744,14 @@ for (const [rawAliasKey, officialName] of Object.entries(aliasMapForLeague)) {
   })
 }
 
-setRows(rowsWithAliases)
+setRows(
+  isA24Race3ProGold
+    ? rowsWithAliases.map((row) => ({
+        ...row,
+        pilota: correctPilotA24(row.pilota),
+      }))
+    : rowsWithAliases
+)
 setQualiRows(extractedQualiRows)
 
       if (effectiveImportLeague) {
@@ -13080,7 +13951,19 @@ setChampionshipState({
     typeof importedChampionshipState.expectedDrivers === "object"
       ? importedChampionshipState.expectedDrivers
       : {},
-  driverCars: buildUnionDriverCarsFromRaces(importedRaces),
+    driverCars: buildUnionDriverCarsFromRaces(importedRaces),
+  closedLobbies:
+    importedChampionshipState?.closedLobbies &&
+    typeof importedChampionshipState.closedLobbies === "object" &&
+    !Array.isArray(importedChampionshipState.closedLobbies)
+      ? importedChampionshipState.closedLobbies
+      : {},
+      incompleteLobbies:
+  importedChampionshipState?.incompleteLobbies &&
+  typeof importedChampionshipState.incompleteLobbies === "object" &&
+  !Array.isArray(importedChampionshipState.incompleteLobbies)
+    ? importedChampionshipState.incompleteLobbies
+    : {},
 })
 setCurrentRace(race)
 setSelectedLeague(league)
@@ -13206,27 +14089,65 @@ setUploadedLeagueHtmls(
   }
 }
 
+function hasUnsavedLobbyChanges() {
+  if (finalRows.length === 0) return false
+
+  const saved = currentRaceSnapshot[selectedLeague]?.[selectedLobby]
+
+  if (!saved) return true
+
+  return (
+    JSON.stringify(finalRows) !== JSON.stringify(saved.finalRows) ||
+    JSON.stringify(penalties) !== JSON.stringify(saved.penalties) ||
+    JSON.stringify(dgMeasureTypes) !== JSON.stringify(saved.dgMeasureTypes || {}) ||
+    JSON.stringify(dgSpecialMeasures) !== JSON.stringify(saved.dgSpecialMeasures || {}) ||
+    JSON.stringify(lapOverrides) !== JSON.stringify(saved.lapOverrides) ||
+    JSON.stringify(dnfOverrides) !== JSON.stringify(saved.dnfOverrides) ||
+    JSON.stringify(absenceOverrides) !== JSON.stringify(saved.absenceOverrides) ||
+    JSON.stringify(verifiedAbsences) !== JSON.stringify(saved.verifiedAbsences || {}) ||
+    JSON.stringify(manualDsqOverrides) !== JSON.stringify(saved.manualDsqOverrides)
+  )
+}
+
+
 function handleSelectLeague(league: ChampionshipLeagueKey) {
+  if (league === selectedLeague) return
+
+  if (
+    hasUnsavedLobbyChanges() &&
+    !window.confirm(
+      "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+      "Sei sicuro di voler cambiare lega?\n" +
+      "Le modifiche non salvate andranno perse.\n\n" +
+      "OK = ESCI SENZA SALVARE\n" +
+      "ANNULLA = RIMANI NELLA LOBBY"
+    )
+  ) {
+    return
+  }
+
   setUnknownDriverSelections({})
   const defaultLobby = UNION_LOBBIES_BY_RANK[league][0]
-setSelectedLobby(defaultLobby)
-setUnionMeta((prev) => ({
-  ...prev,
-  lobby: defaultLobby,
-  lega: league,
-}))
+  setSelectedLobby(defaultLobby)
+  setUnionMeta((prev) => ({
+    ...prev,
+    lobby: defaultLobby,
+    lega: league,
+  }))
+
   const lobbyState = currentRaceSnapshot[league]
 
-if (lobbyState?.[defaultLobby]) {
-  reopenSavedLeague(league, defaultLobby)
-  return
-}
+  if (lobbyState?.[defaultLobby]) {
+    reopenSavedLeague(league, defaultLobby)
+    return
+  }
 
   clearCurrentWorkbench(false)
 
   setSelectedLeague(league)
   setManualLegaOverride(league)
 }
+
 
 function applyBulkPilotsToLeagueDrawer(league: ChampionshipLeagueKey) {
   const raw = String(drawerBulkDrafts[league] || "").trim()
@@ -13602,6 +14523,13 @@ function openConfirmSaveLeagueModal() {
     )
   }
 
+  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+  window.alert(
+    `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
+  )
+  return
+}
+  
   const hasUnresolvedAuto = finalRows.some((row) => {
     const raceValue = tempoLikeGt7(row).trim().toUpperCase()
 
@@ -13636,6 +14564,14 @@ function openConfirmSaveLeagueModal() {
 }
 
 function confirmSaveCurrentLeague() {
+  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+    window.alert(
+      `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
+    )
+    setShowConfirmSaveLeagueModal(false)
+    return
+  }
+
   if (finalRows.length === 0) return
 
   const saveLeagueKey =
@@ -15319,11 +16255,19 @@ try {
   const isActive = selectedLeague === league
   const isSaved = savedLeagueStatus[league]
 
-  const leagueLobbies = UNION_LOBBIES_BY_RANK[league]
+  const leagueLobbies = UNION_LOBBIES_BY_RANK[league].filter(
+  (lobby) => !isLobbyClosedForRace(lobby, currentRace)
+)
 
-  const savedLobbyCount = leagueLobbies.filter(
-    (lobby) => !!currentRaceSnapshot[league]?.[lobby]
-  ).length
+  const incompleteLobbyCount = leagueLobbies.filter(
+  (lobby) => isLobbyIncomplete(lobby, currentRace)
+).length
+
+const savedLobbyCount = leagueLobbies.filter(
+  (lobby) =>
+    !!currentRaceSnapshot[league]?.[lobby] &&
+    !isLobbyIncomplete(lobby, currentRace)
+).length
 
   return (
     <button
@@ -15391,13 +16335,17 @@ try {
           height: 12,
           borderRadius: 1,
           background:
-  index < savedLobbyCount
-    ? "#39ff88"
-    : "rgba(255,255,255,0.20)",
+  isLobbyIncomplete(lobby, currentRace)
+    ? "#f97316"
+    : currentRaceSnapshot[league]?.[lobby]
+      ? "#39ff88"
+      : "rgba(255,255,255,0.20)",
 boxShadow:
-  index < savedLobbyCount
-    ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
-    : "none",
+  isLobbyIncomplete(lobby, currentRace)
+    ? "0 0 6px rgba(249,115,22,0.95), 0 0 10px rgba(249,115,22,0.45)"
+    : currentRaceSnapshot[league]?.[lobby]
+      ? "0 0 6px rgba(57,255,136,0.95), 0 0 10px rgba(57,255,136,0.45)"
+      : "none",
         }}
       />
     ))}
@@ -15421,69 +16369,160 @@ boxShadow:
       </div>
 
       <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+    gap: 10,
+  }}
+>
+  {UNION_LOBBIES_BY_RANK[selectedLeague].map((lobby) => {
+    const isActiveLobby = selectedLobby === lobby
+    const isClosedLobby = isLobbyClosedForRace(lobby, currentRace)
+    const lobbyState = currentRaceSnapshot[selectedLeague]
+    const isSavedLobby = !!lobbyState?.[lobby]
+    const isIncompleteLobby = isLobbyIncomplete(lobby, currentRace)
+
+    return (
+      <button
+        key={lobby}
+        onClick={() => {
+  if (lobby === selectedLobby) return
+
+  if (isLobbyClosedForRace(lobby, currentRace)) {
+    return
+  }
+
+  if (
+    hasUnsavedLobbyChanges() &&
+    !window.confirm(
+  "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+  "Sei sicuro di voler uscire da questa lobby?\n" +
+  "Le modifiche non salvate andranno perse.\n\n" +
+  "OK = ESCI SENZA SALVARE\n" +
+  "ANNULLA = RIMANI NELLA LOBBY"
+)
+  ) {
+    return
+  }
+
+  setSelectedLobby(lobby)
+
+          if (isSavedLobby) {
+            reopenSavedLeague(selectedLeague, lobby)
+            return
+          }
+
+          clearCurrentWorkbench(false)
+
+          setUnionMeta((prev) => ({
+            ...prev,
+            lobby,
+            lega: selectedLeague,
+          }))
+
+          setManualLegaOverride(selectedLeague)
+        }}
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-          gap: 10,
+          padding: "10px 8px",
+          borderRadius: 10,
+          border: isIncompleteLobby
+  ? "1px solid rgba(249,115,22,0.85)"
+  : isSavedLobby
+    ? isActiveLobby
+      ? "1px solid rgba(255,215,0,0.45)"
+      : "1px solid rgba(34,197,94,0.35)"
+    : isActiveLobby
+      ? "1px solid rgba(255,215,0,0.35)"
+      : "1px solid rgba(255,255,255,0.08)",
+
+background: isIncompleteLobby
+  ? "rgba(249,115,22,0.25)"
+  : isSavedLobby
+    ? isActiveLobby
+      ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
+      : "rgba(34,197,94,0.14)"
+    : isActiveLobby
+      ? "rgba(255,215,0,0.12)"
+      : "rgba(255,255,255,0.03)",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: 900,
+          fontSize: 11,
+          letterSpacing: 0.35,
+          textTransform: "uppercase",
         }}
       >
-        {UNION_LOBBIES_BY_RANK[selectedLeague].map((lobby) => {
-          const isActiveLobby = selectedLobby === lobby
-          const lobbyState = currentRaceSnapshot[selectedLeague]
-          const isSavedLobby = !!lobbyState?.[lobby]
+        {lobby} {isIncompleteLobby ? "⚠️" : isClosedLobby ? "🔒" : isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
+      </button>
+    )
+  })}
+</div>
 
-          return (
-            <button
-              key={lobby}
-              onClick={() => {
-                setSelectedLobby(lobby)
-
-                if (isSavedLobby) {
-                  reopenSavedLeague(selectedLeague, lobby)
-                  return
-                }
-
-                clearCurrentWorkbench(false)
-
-                setUnionMeta((prev) => ({
-                  ...prev,
-                  lobby,
-                  lega: selectedLeague,
-                }))
-
-                setManualLegaOverride(selectedLeague)
-              }}
-              style={{
-                padding: "10px 8px",
-                borderRadius: 10,
-                border: isSavedLobby
-                  ? isActiveLobby
-                    ? "1px solid rgba(255,215,0,0.45)"
-                    : "1px solid rgba(34,197,94,0.35)"
-                  : isActiveLobby
-                    ? "1px solid rgba(255,215,0,0.35)"
-                    : "1px solid rgba(255,255,255,0.08)",
-                background: isSavedLobby
-                  ? isActiveLobby
-                    ? "linear-gradient(180deg, rgba(255,215,0,0.16), rgba(34,197,94,0.10))"
-                    : "rgba(34,197,94,0.14)"
-                  : isActiveLobby
-                    ? "rgba(255,215,0,0.12)"
-                    : "rgba(255,255,255,0.03)",
-                color: "white",
-                cursor: "pointer",
-                fontWeight: 900,
-                fontSize: 11,
-                letterSpacing: 0.35,
-                textTransform: "uppercase",
-              }}
-            >
-              {lobby} {isSavedLobby ? "✅" : isActiveLobby ? "•" : ""}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+<div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 10 }}>
+  <button
+    type="button"
+    onClick={toggleIncompleteLobby}
+    style={{
+      padding: "9px 16px",
+      borderRadius: 10,
+      border: "1px solid #f59e0b",
+      background: isLobbyIncomplete(selectedLobby, currentRace)
+        ? "rgba(245,158,11,0.28)"
+        : "rgba(245,158,11,0.08)",
+      color: "#fbbf24",
+      fontSize: 12,
+      fontWeight: 800,
+      letterSpacing: 0.4,
+      cursor: "pointer",
+    }}
+  >
+    ⚠️ {isLobbyIncomplete(selectedLobby, currentRace)
+      ? "RIMUOVI SEGNALAZIONE"
+      : "LOBBY INCOMPLETA"}
+  </button>
+  {isLobbyClosedForRace(selectedLobby, currentRace) ? (
+    <button
+      type="button"
+      onClick={reopenSelectedLobby}
+      style={{
+        padding: "9px 16px",
+        borderRadius: 10,
+        border: "1px solid #15803d",
+        background: "#052e16",
+        color: "#86efac",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 0.4,
+        boxShadow: "none",
+        textShadow: "none",
+        cursor: "pointer",
+      }}
+    >
+      🔓 RIAPRI LOBBY {selectedLobby}
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={closeSelectedLobby}
+      style={{
+        padding: "9px 16px",
+        borderRadius: 10,
+        border: "1px solid #7f1d1d",
+        background: "#2a1014",
+        color: "#fca5a5",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 0.4,
+        boxShadow: "none",
+        textShadow: "none",
+        cursor: "pointer",
+      }}
+    >
+      🔒 CHIUDI LOBBY {selectedLobby}
+    </button>
+  )}
+</div>
+</div>
         <div
       style={{
         display: "grid",
@@ -18455,6 +19494,32 @@ setDrawerOpen(true)
   Correggi ID GT7
 </button>
 
+
+<button
+  onClick={() => {
+    setDismissedUnknownDriverIds((prev) =>
+      prev.includes(activeUnknownDriver.id)
+        ? prev
+        : [...prev, activeUnknownDriver.id]
+    )
+  }}
+  style={{
+    gridColumn: "1 / -1",
+    padding: "12px 16px",
+    borderRadius: 14,
+    border: "1px solid rgba(245,158,11,0.40)",
+    background: "rgba(245,158,11,0.15)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  }}
+>
+  Prosegui senza associare
+</button>
+
+
       </div>
 
       <div style={{ fontSize: 12, opacity: 0.7, lineHeight: 1.45 }}>
@@ -18588,6 +19653,72 @@ setDrawerOpen(true)
 </button>
 
       </div>
+
+      {/* ESPORTAZIONE SINGOLA LOBBY */}
+      <div
+        style={{
+          marginTop: 24,
+          paddingTop: 20,
+          borderTop: "1px solid rgba(255,255,255,0.15)",
+        }}
+      >
+        <strong style={{ color: "#ffdf80" }}>
+          OPPURE SCARICA UNA SINGOLA LOBBY
+        </strong>
+
+        <label
+          style={{
+            display: "grid",
+            gap: 8,
+            marginTop: 16,
+          }}
+        >
+          <strong>LOBBY</strong>
+
+          <select
+            value={provisionalExportLobby}
+            onChange={(e) => setProvisionalExportLobby(e.target.value)}
+            disabled={exporting}
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: "#20212c",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            {Array.from({ length: 36 }, (_, i) => `A${i + 1}`).map(
+              (lobby) => (
+                <option key={lobby} value={lobby}>
+                  {`A${String(Number(lobby.slice(1))).padStart(2, "0")}`}
+                </option>
+              )
+            )}
+          </select>
+        </label>
+
+        <button
+          type="button"
+          onClick={downloadSingleProvisionalPng}
+          disabled={exporting}
+          style={{
+            display: "block",
+            marginTop: 16,
+            marginLeft: "auto",
+            padding: "12px 18px",
+            borderRadius: 12,
+            background: "rgba(255,215,0,0.15)",
+            color: "#ffdf80",
+            border: "1px solid rgba(255,215,0,0.35)",
+            opacity: exporting ? 0.55 : 1,
+            cursor: exporting ? "not-allowed" : "pointer",
+            fontWeight: 900,
+          }}
+        >
+          {exporting ? "GENERAZIONE IN CORSO..." : "SCARICA PNG"}
+        </button>
+      </div>
+
     </div>
   </div>
 )}
@@ -20184,9 +21315,12 @@ const changed = currentValue !== originalValue
   exporting={true}
   penalties={provisionalRenderData.snapshot.penalties}
   dgMeasureTypes={provisionalRenderData.snapshot.dgMeasureTypes ?? {}}
-  dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
+    dgSpecialMeasures={provisionalRenderData.snapshot.dgSpecialMeasures ?? {}}
   forceHideMeta={true}
-tableTitle="Classifica provvisoria"
+  unjustifiedAbsenceCounts={getDefinitiveAbsenceCounts(
+    provisionalRenderData.raceNumber
+  )}
+  tableTitle="Classifica provvisoria"
 />
     </div>
   )}
