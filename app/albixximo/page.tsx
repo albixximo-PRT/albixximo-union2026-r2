@@ -3546,6 +3546,12 @@ const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
   useState<number | null>(null)
   const [unionPublishedProvisionalDays, setUnionPublishedProvisionalDays] =
   useState<string[]>(["lunedi"])
+  // UNION - Data e ora aggiornamento provvisorie
+const [unionProvisionalUpdateDate, setUnionProvisionalUpdateDate] =
+  useState("")
+
+const [unionProvisionalUpdateTime, setUnionProvisionalUpdateTime] =
+  useState("")
   const [files, setFiles] = useState<File[]>([])
   const [shortLobbyMode, setShortLobbyMode] = useState(false)
   const [csv, setCsv] = useState("")
@@ -11427,7 +11433,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     <circle cx="12" cy="12" r="9"></circle>
     <path d="M12 7v5l3 2"></path>
   </svg>
-  Aggiornato il 03/11/2026 · ore 14:30
+  Aggiornato il ${unionProvisionalUpdateDate} · ore ${unionProvisionalUpdateTime}
 </div>
 
 </div>
@@ -15469,8 +15475,22 @@ const lastCreatedMovementText = useMemo(() => {
           type="button"
           onClick={() => {
   const mode = unionProvisionalExportDialog
-  setUnionProvisionalExportDialog(null)
-  setUnionOfficialRaceDialog(mode)
+
+// UNION - Data e ora correnti per le classifiche provvisorie
+const now = new Date()
+
+const giorno = String(now.getDate()).padStart(2, "0")
+const mese = String(now.getMonth() + 1).padStart(2, "0")
+const anno = now.getFullYear()
+
+const ore = String(now.getHours()).padStart(2, "0")
+const minuti = String(now.getMinutes()).padStart(2, "0")
+
+setUnionProvisionalUpdateDate(`${giorno}/${mese}/${anno}`)
+setUnionProvisionalUpdateTime(`${ore}:${minuti}`)
+
+setUnionProvisionalExportDialog(null)
+setUnionOfficialRaceDialog(mode)
 }}
           style={{
             padding: "16px 10px",
@@ -15818,6 +15838,79 @@ try {
       </span>
     </label>
   ))}
+</div>
+      
+      {/* UNION - Data e ora aggiornamento classifiche provvisorie */}
+<div
+  style={{
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 14,
+    border: "1px solid #334155",
+    background: "#1e293b",
+  }}
+>
+  <div
+    style={{
+      fontWeight: 900,
+      color: "#93c5fd",
+      marginBottom: 12,
+    }}
+  >
+    DATA E ORA AGGIORNAMENTO PROVVISORIE
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 12,
+    }}
+  >
+    <label style={{ fontSize: 13, color: "#cbd5e1" }}>
+      DATA
+      <input
+        type="text"
+        value={unionProvisionalUpdateDate}
+        onChange={(e) =>
+          setUnionProvisionalUpdateDate(e.target.value)
+        }
+        placeholder="GG/MM/AAAA"
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: 10,
+          borderRadius: 8,
+          border: "1px solid #475569",
+          background: "#0f172a",
+          color: "#ffffff",
+          boxSizing: "border-box",
+        }}
+      />
+    </label>
+
+    <label style={{ fontSize: 13, color: "#cbd5e1" }}>
+      ORA
+      <input
+        type="text"
+        value={unionProvisionalUpdateTime}
+        onChange={(e) =>
+          setUnionProvisionalUpdateTime(e.target.value)
+        }
+        placeholder="HH:MM"
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: 10,
+          borderRadius: 8,
+          border: "1px solid #475569",
+          background: "#0f172a",
+          color: "#ffffff",
+          boxSizing: "border-box",
+        }}
+      />
+    </label>
+  </div>
 </div>
       
       <div style={{ display: "flex", gap: 12 }}>
