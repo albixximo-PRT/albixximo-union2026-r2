@@ -11719,6 +11719,7 @@ const lobbiesByLeague = {
   "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
   AMA: ["A7", "A11", "A19", "A23", "A27", "A33"]
 };
+const closedLobbiesForDefinitive = ${JSON.stringify(championshipState.closedLobbies || {})};
 
     const tabs = document.getElementById("tabs");
     const frame = document.getElementById("leagueFrame");
@@ -11785,7 +11786,14 @@ function renderRaceLobbyTabs(league) {
 
   raceLobbyTabs.innerHTML = "";
 
-  const lobbies = lobbiesByLeague[league] || [];
+  const lobbies = (lobbiesByLeague[league] || []).filter(function(lobby) {
+  const closedFromRace = closedLobbiesForDefinitive[lobby];
+
+  return (
+    typeof closedFromRace !== "number" ||
+    Number(selectedRacePng) < closedFromRace
+  );
+});
 
   lobbies.forEach(function(lobby) {
     const btn = document.createElement("button");
