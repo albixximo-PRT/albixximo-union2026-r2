@@ -2503,7 +2503,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     <circle cx="12" cy="12" r="9"></circle>
     <path d="M12 7v5l3 2"></path>
   </svg>
-  Aggiornato il 06/11/2026 · ore 18:52
+  Aggiornato il 07/11/2026 · ore 12:58
 </div>
 
 </div>
@@ -2615,7 +2615,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="venerdi"
-    disabled
+    
     title="Classifiche non ancora pubblicate"
   >
     VENERDÌ
@@ -2833,6 +2833,7 @@ const lobbiesByLeague = {
   "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
   AMA: ["A7", "A11", "A19", "A23", "A27", "A33"]
 };
+const closedLobbiesForDefinitive = {"A23":3,"A1":4,"A9":4};
 
     const tabs = document.getElementById("tabs");
     const frame = document.getElementById("leagueFrame");
@@ -2899,7 +2900,14 @@ function renderRaceLobbyTabs(league) {
 
   raceLobbyTabs.innerHTML = "";
 
-  const lobbies = lobbiesByLeague[league] || [];
+  const lobbies = (lobbiesByLeague[league] || []).filter(function(lobby) {
+  const closedFromRace = closedLobbiesForDefinitive[lobby];
+
+  return (
+    typeof closedFromRace !== "number" ||
+    Number(selectedRacePng) < closedFromRace
+  );
+});
 
   lobbies.forEach(function(lobby) {
     const btn = document.createElement("button");
@@ -3731,7 +3739,7 @@ const isVisible =
   number <= range[1] &&
   (
     typeof closedFromRace !== "number" ||
-    unionProvisionalRace <= closedFromRace
+    unionProvisionalRace < closedFromRace
   );
 
 button.hidden = !isVisible;
