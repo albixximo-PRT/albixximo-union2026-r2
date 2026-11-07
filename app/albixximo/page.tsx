@@ -7506,7 +7506,7 @@ function isLobbyVisibleInProvisional(
 
   return (
     typeof closedFromRace !== "number" ||
-    raceNumber <= closedFromRace
+    raceNumber < closedFromRace
   )
 }
 
@@ -12617,7 +12617,7 @@ const isVisible =
   number <= range[1] &&
   (
     typeof closedFromRace !== "number" ||
-    unionProvisionalRace <= closedFromRace
+    unionProvisionalRace < closedFromRace
   );
 
 button.hidden = !isVisible;
