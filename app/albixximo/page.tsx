@@ -15165,7 +15165,19 @@ const isDsqWithoutCar =
   String(row.auto || "").trim() === "---"
 )
 
-    if (isAbsence || isDsqWithoutCar) {
+    if (isDsqWithoutCar) {
+  continue
+}
+
+if (isAbsence) {
+  const draftCar = String(
+    manualAutoDraft[row.sourcePosGara] ?? ""
+  ).trim()
+
+  if (UNION_GR2_CARS.some((car) => car === draftCar)) {
+    cleaned[row.sourcePosGara] = draftCar
+  }
+
   continue
 }
 
