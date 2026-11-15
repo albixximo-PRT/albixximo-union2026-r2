@@ -2782,29 +2782,18 @@ function renderPrtPenaltyCell({
   
   if (hasPenalty && hasSpecialMeasure && !doubleAbsenceWarning) {
   return (
-        <div
+    <div
       style={{
         position: "relative",
-        width: "100%",
-        height: 32,
         display: "grid",
         gridTemplateColumns: "88px 1fr 88px",
         alignItems: "center",
+        width: "100%",
+        height: 32,
       }}
     >
-            <span
-        style={{
-          position: "absolute",
-          left: "calc(50% + 27px)",
-          ...exportPenaltyTimeTextStyle,
-          color: "rgba(220,53,69,0.98)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {formatPenaltyDisplay(penaltySeconds)}
-      </span>
-
-            <span
+      {/* P allineata alle altre penalità */}
+      <span
         style={{
           gridColumn: 2,
           justifySelf: "center",
@@ -2826,67 +2815,89 @@ function renderPrtPenaltyCell({
         P
       </span>
 
+      {/* Secondi a destra della P */}
       <span
         style={{
           position: "absolute",
-          left: "calc(50% + 112px)",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 38,
-          height: 26,
-          borderRadius: 999,
-          background: "rgba(105,105,255,0.98)",
-          border: "1px solid rgba(155,165,255,0.90)",
-          boxShadow: "0 0 14px rgba(105,120,255,0.38)",
-          color: "#ffffff",
-          fontSize: 13,
-          fontWeight: 950,
-          lineHeight: 1,
-        }}
-      >
-        S
-      </span>
-
-      <span
-        style={{
-          position: "absolute",
-          left: "calc(50% + 155px)",
-          right: 0,
-          color: "rgba(105,105,255,0.98)",
-          fontSize: exporting ? 12 : 10,
-          fontWeight: 950,
-          lineHeight: 1.2,
-          textAlign: "left",
+          left: "calc(50% + 27px)",
+          ...exportPenaltyTimeTextStyle,
+          color: "rgba(220,53,69,0.98)",
           whiteSpace: "nowrap",
         }}
       >
-        {specialMeasure === "NEXT_RACE_DSQ" ? (
-          <>
-            SQUALIFICA
-            <br />
-            PROSSIMA GARA
-          </>
-        ) : specialMeasure === "NEXT_QUALIFYING_DSQ" ? (
-          <>
-            SQUALIFICA
-            <br />
-            PROSSIMA QUALIFICA
-          </>
-        ) : specialMeasure === "CURRENT_RACE_DSQ" ? (
-          <>
-            SQUALIFICA
-            <br />
-            DALLA GARA
-          </>
-        ) : (
-          <>
-            -5 POSIZIONI IN GRIGLIA
-            <br />
-            PROSSIMA GARA
-          </>
-        )}
+        {formatPenaltyDisplay(penaltySeconds)}
       </span>
+
+      {/* S e descrizione più a destra */}
+      <div
+        style={{
+          position: "absolute",
+          left: "calc(50% + 112px)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 38,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(105,105,255,0.98)",
+            border: "1px solid rgba(155,165,255,0.90)",
+            boxShadow: "0 0 14px rgba(105,120,255,0.38)",
+            color: "#ffffff",
+            fontSize: 13,
+            fontWeight: 950,
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          S
+        </span>
+
+        <span
+          style={{
+            color: "rgba(105,105,255,0.98)",
+            fontSize: exporting ? 14 : 11,
+            fontWeight: 950,
+            letterSpacing: 0.2,
+            lineHeight: 1.2,
+            textAlign: "center",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {specialMeasure === "NEXT_RACE_DSQ" ? (
+            <>
+              SQUALIFICA
+              <br />
+              PROSSIMA GARA
+            </>
+          ) : specialMeasure === "NEXT_QUALIFYING_DSQ" ? (
+            <>
+              SQUALIFICA
+              <br />
+              PROSSIMA QUALIFICA
+            </>
+          ) : specialMeasure === "CURRENT_RACE_DSQ" ? (
+            <>
+              SQUALIFICA
+              <br />
+              DALLA GARA
+            </>
+          ) : (
+            <>
+              -5 POSIZIONI IN GRIGLIA
+              <br />
+              PROSSIMA GARA
+            </>
+          )}
+        </span>
+      </div>
     </div>
   )
 }
