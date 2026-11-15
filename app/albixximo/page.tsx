@@ -2863,12 +2863,12 @@ function renderPrtPenaltyCell({
         <span
           style={{
             color: "rgba(105,105,255,0.98)",
-            fontSize: exporting ? 14 : 11,
-            fontWeight: 950,
-            letterSpacing: 0.2,
-            lineHeight: 1.2,
-            textAlign: "center",
-            whiteSpace: "nowrap",
+            fontSize: 11,
+fontWeight: 950,
+letterSpacing: 0.2,
+lineHeight: 1.2,
+textAlign: "center",
+whiteSpace: "nowrap",
           }}
         >
           {specialMeasure === "NEXT_RACE_DSQ" ? (
