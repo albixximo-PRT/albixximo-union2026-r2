@@ -2783,9 +2783,15 @@ function renderPrtPenaltyCell({
   return (
   <div
     style={{
-      display: "grid",
+      display:
+        hasPenalty && hasSpecialMeasure && !doubleAbsenceWarning
+          ? "flex"
+          : "grid",
+      alignItems: "center",
+      justifyContent: "center",
       gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
       width: "100%",
+      flexWrap: "nowrap",
     }}
   >
     {doubleAbsenceWarning ? (
