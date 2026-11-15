@@ -2780,18 +2780,117 @@ function renderPrtPenaltyCell({
   </div>
 ) : null
   
+  if (hasPenalty && hasSpecialMeasure && !doubleAbsenceWarning) {
   return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: exporting ? 10 : 8,
+        width: "100%",
+      }}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+          background: "rgba(220,53,69,0.98)",
+          border: "1px solid rgba(255,90,105,0.85)",
+          boxShadow: "0 0 13px rgba(220,53,69,0.30)",
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        P
+      </span>
+
+      <span
+        style={{
+          ...exportPenaltyTimeTextStyle,
+          color: "rgba(220,53,69,0.98)",
+          flexShrink: 0,
+        }}
+      >
+        {formatPenaltyDisplay(penaltySeconds)}
+      </span>
+
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 38,
+          height: 26,
+          borderRadius: 999,
+          background: "rgba(105,105,255,0.98)",
+          border: "1px solid rgba(155,165,255,0.90)",
+          boxShadow: "0 0 14px rgba(105,120,255,0.38)",
+          color: "#ffffff",
+          fontSize: 13,
+          fontWeight: 950,
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        S
+      </span>
+
+      <span
+        style={{
+          color: "rgba(105,105,255,0.98)",
+          fontSize: exporting ? 14 : 11,
+          fontWeight: 950,
+          letterSpacing: 0.2,
+          lineHeight: 1.2,
+          textAlign: "left",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+      >
+        {specialMeasure === "NEXT_RACE_DSQ" ? (
+          <>
+            SQUALIFICA
+            <br />
+            PROSSIMA GARA
+          </>
+        ) : specialMeasure === "NEXT_QUALIFYING_DSQ" ? (
+          <>
+            SQUALIFICA
+            <br />
+            PROSSIMA QUALIFICA
+          </>
+        ) : specialMeasure === "CURRENT_RACE_DSQ" ? (
+          <>
+            SQUALIFICA
+            <br />
+            DALLA GARA
+          </>
+        ) : (
+          <>
+            -5 POSIZIONI IN GRIGLIA
+            <br />
+            PROSSIMA GARA
+          </>
+        )}
+      </span>
+    </div>
+  )
+}
+
+return (
   <div
     style={{
-      display:
-        hasPenalty && hasSpecialMeasure && !doubleAbsenceWarning
-          ? "flex"
-          : "grid",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: hasPenalty && hasSpecialMeasure ? 8 : 0,
+      display: "grid",
+      gap: 0,
       width: "100%",
-      flexWrap: "nowrap",
     }}
   >
     {doubleAbsenceWarning ? (
