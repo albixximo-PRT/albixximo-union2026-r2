@@ -2786,7 +2786,7 @@ function renderPrtPenaltyCell({
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-end",
         gap: exporting ? 10 : 8,
         width: "100%",
       }}
