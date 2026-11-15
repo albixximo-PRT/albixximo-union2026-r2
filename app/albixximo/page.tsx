@@ -2784,16 +2784,29 @@ function renderPrtPenaltyCell({
   return (
     <div
       style={{
+        position: "relative",
+        width: "100%",
+        height: 32,
         display: "flex",
         alignItems: "center",
-                justifyContent: "flex-end",
-        gap: exporting ? 10 : 8,
-        width: "100%",
-        transform: exporting ? "translateX(65px)" : undefined,
       }}
     >
       <span
         style={{
+          position: "absolute",
+          right: "calc(50% + 27px)",
+          ...exportPenaltyTimeTextStyle,
+          color: "rgba(220,53,69,0.98)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {formatPenaltyDisplay(penaltySeconds)}
+      </span>
+
+      <span
+        style={{
+          position: "absolute",
+          left: "calc(50% - 19px)",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -2807,7 +2820,6 @@ function renderPrtPenaltyCell({
           fontSize: 13,
           fontWeight: 950,
           lineHeight: 1,
-          flexShrink: 0,
         }}
       >
         P
@@ -2815,16 +2827,8 @@ function renderPrtPenaltyCell({
 
       <span
         style={{
-          ...exportPenaltyTimeTextStyle,
-          color: "rgba(220,53,69,0.98)",
-          flexShrink: 0,
-        }}
-      >
-        {formatPenaltyDisplay(penaltySeconds)}
-      </span>
-
-      <span
-        style={{
+          position: "absolute",
+          left: "calc(50% + 29px)",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -2838,7 +2842,6 @@ function renderPrtPenaltyCell({
           fontSize: 13,
           fontWeight: 950,
           lineHeight: 1,
-          flexShrink: 0,
         }}
       >
         S
@@ -2846,14 +2849,15 @@ function renderPrtPenaltyCell({
 
       <span
         style={{
+          position: "absolute",
+          left: "calc(50% + 72px)",
+          right: 0,
           color: "rgba(105,105,255,0.98)",
-          fontSize: exporting ? 14 : 11,
+          fontSize: exporting ? 12 : 10,
           fontWeight: 950,
-          letterSpacing: 0.2,
           lineHeight: 1.2,
           textAlign: "left",
           whiteSpace: "nowrap",
-          flexShrink: 0,
         }}
       >
         {specialMeasure === "NEXT_RACE_DSQ" ? (
