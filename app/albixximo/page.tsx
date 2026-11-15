@@ -2832,7 +2832,7 @@ function renderPrtPenaltyCell({
       <div
         style={{
           position: "absolute",
-          left: "calc(50% + 112px)",
+          left: "calc(50% + 132px)",
           display: "flex",
           alignItems: "center",
           gap: 8,
@@ -2863,10 +2863,10 @@ function renderPrtPenaltyCell({
         <span
           style={{
             color: "rgba(105,105,255,0.98)",
-            fontSize: 11,
+fontSize: exporting ? 16 : 12,
 fontWeight: 950,
-letterSpacing: 0.2,
-lineHeight: 1.2,
+letterSpacing: 0.3,
+lineHeight: 1.4,
 textAlign: "center",
 whiteSpace: "nowrap",
           }}
