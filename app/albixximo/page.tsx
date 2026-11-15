@@ -2786,9 +2786,10 @@ function renderPrtPenaltyCell({
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-end",
+                justifyContent: "flex-end",
         gap: exporting ? 10 : 8,
         width: "100%",
+        transform: exporting ? "translateX(65px)" : undefined,
       }}
     >
       <span
