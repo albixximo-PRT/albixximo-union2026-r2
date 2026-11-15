@@ -2782,12 +2782,13 @@ function renderPrtPenaltyCell({
   
   if (hasPenalty && hasSpecialMeasure && !doubleAbsenceWarning) {
   return (
-    <div
+        <div
       style={{
         position: "relative",
         width: "100%",
         height: 32,
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "88px 1fr 88px",
         alignItems: "center",
       }}
     >
@@ -2803,10 +2804,10 @@ function renderPrtPenaltyCell({
         {formatPenaltyDisplay(penaltySeconds)}
       </span>
 
-      <span
+            <span
         style={{
-          position: "absolute",
-          left: "calc(50% - 19px)",
+          gridColumn: 2,
+          justifySelf: "center",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
