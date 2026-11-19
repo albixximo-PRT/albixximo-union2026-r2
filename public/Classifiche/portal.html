@@ -2475,6 +2475,40 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 
         <div class="hero-logo">
   
+    
+<div class="union-provisional-button-wrap">
+  <button
+    class="union-provisional-btn"
+    type="button"
+    id="unionProvisionalOpen"
+    title="Apri le classifiche provvisorie"
+    aria-haspopup="dialog"
+  >
+    <span class="union-provisional-dot"></span>
+    <span>CLASSIFICHE PROVVISORIE · GARA 5</span>
+  </button>
+  
+<div class="union-provisional-updated">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M12 7v5l3 2"></path>
+  </svg>
+  Aggiornato il 19/11/2026 · ore 11:52
+</div>
+
+</div>
+
+  
 
     <img src="/union-logo.png" alt="UNION 2026 Logo" />
 </div>
@@ -2551,7 +2585,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="martedi"
-        disabled
+        
     title="Classifiche non ancora pubblicate"
   >
     MARTEDÌ
@@ -2561,7 +2595,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     type="button"
     class="union-provisional-day"
     data-day="mercoledi"
-    disabled
+    
     title="Classifiche non ancora pubblicate"
   >
     MERCOLEDÌ
@@ -2708,7 +2742,7 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 </div>
 
 <select class="race-png-select" id="racePngSelect">
-  <option value="1">Gara 1</option><option value="2">Gara 2</option><option value="3">Gara 3</option><option value="4">Gara 4</option><option value="5">Gara 5</option>
+  <option value="1">Gara 1</option><option value="2">Gara 2</option><option value="3">Gara 3</option><option value="4">Gara 4</option>
 </select>
     </div>
   </div>
@@ -2799,7 +2833,7 @@ const lobbiesByLeague = {
   "PRO AMA": ["A6", "A15", "A16", "A20", "A26", "A32"],
   AMA: ["A7", "A11", "A19", "A23", "A27", "A33"]
 };
-const closedLobbiesForDefinitive = {"A23":3,"A1":4,"A9":4};
+const closedLobbiesForDefinitive = {"A23":3,"A1":4,"A9":4,"A20":5};
 
     const tabs = document.getElementById("tabs");
     const frame = document.getElementById("leagueFrame");
@@ -3541,7 +3575,7 @@ renderLeagueMovements(league);
 // UNION - Apertura e chiusura classifiche provvisorie
 (function () {
   // Gara attualmente in corso
-  const unionProvisionalRace = 4;
+  const unionProvisionalRace = 5;
 
   // UNION - Calendario provvisorie
   const unionProvisionalMondays = {
@@ -3697,7 +3731,7 @@ dialog.classList.remove("union-viewing-png");
       const lobby = button.getAttribute("data-lobby") || "";
       const number = Number(lobby.replace("A", ""));
 
-      const closedLobbies = {"A23":3,"A1":4,"A9":4};
+      const closedLobbies = {"A23":3,"A1":4,"A9":4,"A20":5};
 const closedFromRace = closedLobbies[lobby];
 
 const isVisible =
