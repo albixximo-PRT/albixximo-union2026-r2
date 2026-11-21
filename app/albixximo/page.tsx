@@ -3640,6 +3640,8 @@ const CHAMPIONSHIP_LEAGUES: ChampionshipLeagueKey[] = [
 
 const RACE_OPTIONS = UNION_RACE_OPTIONS
 const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v1"
+const UNION_FINALISTS_EXCLUDED_STORAGE_KEY =
+  "albixximo_union2026_finalists_excluded_v1"
 const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
 const UNION_SELECTED_RANK_STORAGE_KEY = "albixximo_union2026_selected_rank_v1"
 const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v1"
@@ -3666,6 +3668,65 @@ const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
   useState<"preview" | "export" | null>(null)
   const [unionOfficialRaceForExport, setUnionOfficialRaceForExport] =
   useState<number | null>(null)
+  // UNION FINALI - Sorgente dati per l'anteprima
+const [unionFinalistsSource, setUnionFinalistsSource] =
+  useState<"provisional" | "definitive">("provisional")
+  const [unionShowFinalists, setUnionShowFinalists] = useState(false)
+  const [unionFinalistsManagerOpen, setUnionFinalistsManagerOpen] =
+  useState(false)
+
+
+const [unionFinalistsExcluded, setUnionFinalistsExcluded] =
+  useState<Partial<Record<ChampionshipLeagueKey, string[]>>>({})
+
+const [unionFinalistsExcludedHydrated, setUnionFinalistsExcludedHydrated] =
+  useState(false)
+
+useEffect(() => {
+  try {
+    const raw = window.localStorage.getItem(
+      UNION_FINALISTS_EXCLUDED_STORAGE_KEY
+    )
+
+    if (raw) {
+      const parsed = JSON.parse(raw)
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const restored: Partial<
+          Record<ChampionshipLeagueKey, string[]>
+        > = {}
+
+        for (const league of UNION_RANKS) {
+          if (Array.isArray(parsed[league])) {
+            restored[league] = parsed[league].filter(
+              (name: unknown): name is string =>
+                typeof name === "string"
+            )
+          }
+        }
+
+        setUnionFinalistsExcluded(restored)
+      }
+    }
+  } catch {
+    // Nessuna esclusione salvata
+  } finally {
+    setUnionFinalistsExcludedHydrated(true)
+  }
+}, [])
+
+useEffect(() => {
+  if (!unionFinalistsExcludedHydrated) return
+
+  window.localStorage.setItem(
+    UNION_FINALISTS_EXCLUDED_STORAGE_KEY,
+    JSON.stringify(unionFinalistsExcluded)
+  )
+}, [unionFinalistsExcluded, unionFinalistsExcludedHydrated])
+
+
+  const [unionShowProvisionalForExport, setUnionShowProvisionalForExport] =
+  useState(false)
   const [unionPublishedProvisionalDays, setUnionPublishedProvisionalDays] =
   useState<string[]>(["lunedi"])
   // UNION - Data e ora aggiornamento provvisorie
@@ -5554,6 +5615,66 @@ function renderExactRaceResultBadge({
   )
 }
 
+
+
+function ChampionshipMovementPill({
+  type,
+}: {
+  type: "promote" | "relegate"
+}) {
+  const isPromotion = type === "promote"
+  const color = isPromotion ? "#39ff88" : "#ff4d60"
+  const rgb = isPromotion ? "57,255,136" : "255,77,96"
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 5,
+        minWidth: 116,
+        height: 27,
+        boxSizing: "border-box",
+        padding: "0 9px",
+        borderRadius: 999,
+        border: "2px solid rgba(245,250,255,0.95)",
+        background: `linear-gradient(180deg, rgba(${rgb},0.23) 0%, rgba(${rgb},0.07) 100%)`,
+        boxShadow: `
+          0 0 8px rgba(${rgb},0.50),
+          0 0 18px rgba(${rgb},0.28),
+          inset 0 0 9px rgba(${rgb},0.15)
+        `,
+        color,
+        fontSize: 10,
+        fontWeight: 900,
+        letterSpacing: 0.3,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+        textShadow: `0 0 7px rgba(${rgb},0.65)`,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 15,
+          fontWeight: 900,
+          lineHeight: 1,
+          color,
+          textShadow: `
+            0 0 5px rgba(${rgb},0.95),
+            0 0 12px rgba(${rgb},0.70)
+          `,
+        }}
+      >
+        {isPromotion ? "▲" : "▼"}
+      </span>
+      {isPromotion ? "PROMOSSO" : "RETROCESSO"}
+    </span>
+  )
+}
+
+
+
 function ChampionshipTableBlock({
   selectedLeague,
   currentRace,
@@ -5577,15 +5698,46 @@ const hasChampionshipResults = leagueRows.some(
 
 const s = PRT_CHAMPIONSHIP_TABLE_STYLES
 
+
+const sameChampionshipPosition = (
+  a: DriverChampionshipRow,
+  b: DriverChampionshipRow
+) => {
+  if (a.totalPoints !== b.totalPoints) return false
+  if (currentRace !== 5) return true
+
+  for (let position = 1; position <= 14; position++) {
+    let aCount = 0
+    let bCount = 0
+
+    for (let race = 1; race <= 5; race++) {
+      if (a.raceResults[race]?.position === position) aCount++
+      if (b.raceResults[race]?.position === position) bCount++
+    }
+
+    if (aCount !== bCount) return false
+  }
+
+  const bonusTotal = (driver: DriverChampionshipRow) =>
+    Array.from({ length: 5 }, (_, i) => driver.raceResults[i + 1])
+      .reduce(
+        (total, result) =>
+          total + (result?.pp ? 1 : 0) + (result?.gv ? 1 : 0),
+        0
+      )
+
+  return bonusTotal(a) === bonusTotal(b)
+}
+
 const tieGroups = leagueRows.map((driver, index) => {
   const previous = leagueRows[index - 1]
   const next = leagueRows[index + 1]
 
   const tiedWithPrevious =
-    !!previous && previous.totalPoints === driver.totalPoints
+    !!previous && sameChampionshipPosition(previous, driver)
 
   const tiedWithNext =
-    !!next && next.totalPoints === driver.totalPoints
+    !!next && sameChampionshipPosition(driver, next)
 
   return {
     isTied: tiedWithPrevious || tiedWithNext,
@@ -5593,6 +5745,7 @@ const tieGroups = leagueRows.map((driver, index) => {
     isLast: tiedWithPrevious && !tiedWithNext,
   }
 })
+
 
   const championshipCircuits: Record<
   number,
@@ -5755,6 +5908,24 @@ const tieGroups = leagueRows.map((driver, index) => {
                 Pilota
               </th>
 
+              
+{currentRace === 5 && (
+  <th
+    style={{
+      ...(exporting ? s.thBaseExport : s.thBase),
+      width: 112,
+      minWidth: 112,
+      maxWidth: 112,
+      textAlign: "center",
+      whiteSpace: "nowrap",
+      fontSize: 10,
+    }}
+  >
+    PROMO / RETRO UNION 2027
+  </th>
+)}
+
+              
               <th
                 style={{
                   ...(exporting ? s.thBaseExport : s.thBase),
@@ -5812,14 +5983,17 @@ const tieGroups = leagueRows.map((driver, index) => {
           >
             {leagueRows.map((driver, index) => {
   const tie = tieGroups[index]
-  const tieStartIndex = tie.isTied
-  ? leagueRows.findIndex((row, i) =>
-      i <= index &&
-      row.totalPoints === driver.totalPoints &&
-      (i === 0 ||
-        leagueRows[i - 1].totalPoints !== driver.totalPoints)
+  
+const tieStartIndex = tie.isTied
+  ? leagueRows.findIndex(
+      (row, i) =>
+        i <= index &&
+        sameChampionshipPosition(row, driver) &&
+        (i === 0 ||
+          !sameChampionshipPosition(leagueRows[i - 1], driver))
     )
   : index
+
 
 const tieColor =
   tieStartIndex === 0 ? "#FFD700" :
@@ -6037,6 +6211,30 @@ boxShadow: "0 0 6px rgba(255,215,0,0.22)",
                   >
                     {driver.pilota}
                   </TableCell>
+
+
+{currentRace === 5 && (
+  <TableCell
+    align="center"
+    style={{
+      width: 112,
+      minWidth: 112,
+      maxWidth: 112,
+      padding: "2px 3px",
+      textAlign: "center",
+      verticalAlign: "middle",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {selectedLeague !== "STAR" && index < 10 ? (
+      <ChampionshipMovementPill type="promote" />
+    ) : selectedLeague !== "AMA" &&
+      index >= leagueRows.length - 10 ? (
+      <ChampionshipMovementPill type="relegate" />
+    ) : null}
+  </TableCell>
+)}
+
 
                   <TableCell
                     align="center"
@@ -8205,6 +8403,26 @@ if (
       }
     }
 
+    
+    // GARA 5: ulteriore spareggio sul totale PP + GV
+    // di tutte le gare disputate.
+    if (currentRace === 5) {
+      const countBonuses = (driver: DriverChampionshipRow) =>
+        Object.values(driver.raceResults).reduce(
+          (total, result) =>
+            total + (result?.pp ? 1 : 0) + (result?.gv ? 1 : 0),
+          0
+        )
+
+      const aBonuses = countBonuses(a)
+      const bBonuses = countBonuses(b)
+
+      if (aBonuses !== bBonuses) {
+        return bBonuses - aBonuses
+      }
+    }
+
+    
     // 3. G1-G4: criterio neutro.
     //    Dopo G5 resta anche come ultimo fallback in caso di storico identico.
     return a.pilota.localeCompare(b.pilota, "it", { sensitivity: "base" })
@@ -8913,10 +9131,12 @@ body {
 async function downloadChampionshipGeneralHtmlExport(
   preview = false,
   showProvisionalInExport = true,
-  officialRaceForExport: number | null = null
+  officialRaceForExport: number | null = null,
+  showFinalistsInExport = false,
+  finalistsSource: "provisional" | "definitive" = "provisional"
 ) {
   const latestSavedRace =
-  showProvisionalInExport && officialRaceForExport !== null
+  officialRaceForExport !== null
     ? officialRaceForExport
     : [1, 2, 3, 4, 5]
         .filter((raceNumber) => {
@@ -8931,14 +9151,51 @@ async function downloadChampionshipGeneralHtmlExport(
           })
         })
         .pop() ?? 1
-  const savedPages: Partial<Record<ChampionshipLeagueKey, string>> = {}
+  
+  // UNION FINALI - Classifiche Gara 5 per i 14 finalisti
+  // Non utilizza la gara ufficiale scelta per il portale.
+  const unionFinalistsByLeague: Partial<
+    Record<ChampionshipLeagueKey, DriverChampionshipRow[]>
+  > = {}
+
+  
+
+if (showFinalistsInExport && currentRace === 5) {
+  for (const league of CHAMPIONSHIP_LEAGUES) {
+    const excluded = new Set(
+      (unionFinalistsExcluded[league] || []).map(
+        normalizeDriverLookupName
+      )
+    )
+
+    unionFinalistsByLeague[league] = (
+      driverChampionshipByLeague[league] || []
+    )
+      .map((driver, index) => ({
+        ...driver,
+        originalPosition: index + 1,
+        team:
+          driverTeamOverrides[driver.pilota] ||
+          getUnionDriverTeamCode(driver.pilota) ||
+          "—",
+      }))
+      .filter(
+        (driver) =>
+          !excluded.has(normalizeDriverLookupName(driver.pilota))
+      )
+      .slice(0, 14)
+  }
+}
+
+
+        const savedPages: Partial<Record<ChampionshipLeagueKey, string>> = {}
 
   for (const league of CHAMPIONSHIP_LEAGUES) {
     const html = String(
   (
-    showProvisionalInExport && officialRaceForExport !== null
-      ? unionOfficialLeagueHtmls[league]
-      : uploadedLeagueHtmls[league]
+    officialRaceForExport !== null
+  ? unionOfficialLeagueHtmls[league]
+  : uploadedLeagueHtmls[league]
   ) || ""
 ).trim()
     if (html) {
@@ -9023,6 +9280,15 @@ const splashDataUrl = "/union-splash.webp"
 const splashMobileDataUrl = "/union-splash-mobile.webp"
 
   const pagesJson = JSON.stringify(savedPages).replace(/<\/script/gi, "<\\/script")
+  // UNION FINALI - Dati dei finalisti per il portale
+const unionFinalistsJson = JSON.stringify(
+  unionFinalistsByLeague
+).replace(/<\/script/gi, "<\\/script")
+
+const unionFinalistCarsJson = JSON.stringify(
+  championshipState.driverCars
+).replace(/<\/script/gi, "<\\/script")
+
   const movementSummaryJson = JSON.stringify(movementSummaryByLeague).replace(
     /<\/script/gi,
     "<\\/script"
@@ -11526,6 +11792,20 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
     </div>
 
         <div class="hero-logo">
+
+${showFinalistsInExport && currentRace === 5 ? `
+<button
+  type="button"
+  id="unionFinalistsOpen"
+  class="union-provisional-btn"
+  
+style="font-size:19px;font-weight:1000;letter-spacing:1.3px;padding:21px 38px;margin-right:38px;color:#fff8d6;background:linear-gradient(135deg,#493000 0%,#a36b00 35%,#e5b83d 55%,#805000 100%);border:2px solid #ffdb63;border-radius:16px;text-shadow:0 2px 8px #503000;box-shadow:0 0 15px rgba(255,208,55,.65),0 0 35px rgba(255,190,20,.38),inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer;transition:all .25s ease;"
+
+>
+  PILOTI FINALISTI
+</button>
+` : ""}
+
   ${showProvisionalInExport ? `
     
 <div class="union-provisional-button-wrap">
@@ -11724,10 +12004,63 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 </div>
   </div>
 
-  <div class="tabs" id="tabs">
+    <div class="tabs" id="tabs">
     ${tabsHtml}
   </div>
 </div>
+
+${showFinalistsInExport && currentRace === 5 ? `
+
+  <div class="race-png-panel" id="unionFinalistsPanel" style="display:none;">
+  
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:24px 28px;margin-bottom:24px;border:1px solid rgba(255,215,0,.32);border-radius:20px;background:linear-gradient(105deg,rgba(104,78,13,.35),rgba(15,20,37,.96) 55%,rgba(53,28,77,.45));box-shadow:0 0 30px rgba(255,215,0,.10);">
+
+  <div class="union-provisional-brand">
+    
+<img
+  src="/union-logo.png"
+  alt="Logo UNION"
+  class="union-provisional-logo"
+  
+style="width:120px;height:135px;max-width:none;flex-shrink:0;filter:drop-shadow(0 0 9px rgba(255,215,0,.48)) drop-shadow(0 0 20px rgba(255,190,40,.22));"
+
+/>
+
+
+    <div class="union-provisional-heading">
+      <div class="union-provisional-kicker">
+        UNION 2026 • ROUND 2
+      </div>
+
+      
+<h2 style="margin:8px 0 12px;font-size:clamp(34px,3.5vw,48px);font-weight:1000;font-style:italic;letter-spacing:2px;line-height:1.2;background:linear-gradient(180deg,#ffffff 0%,#fff5ac 24%,#ffd700 48%,#e49a00 75%,#fff0a0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 7px rgba(255,215,0,.85)) drop-shadow(0 0 22px rgba(255,175,0,.55));">
+  PILOTI FINALISTI
+</h2>
+
+
+      <div style="font-size:14px;font-weight:800;color:#e9c966;letter-spacing:.6px;">
+        GARA 5 • ${finalistsSource === "provisional"
+          ? "CLASSIFICA PROVVISORIA"
+          : "CLASSIFICA DEFINITIVA"}
+      </div>
+    </div>
+  </div>
+
+  
+<img
+  src="/logoapex.png"
+  alt="Logo APEX"
+  class="union-provisional-apex"
+  style="filter:drop-shadow(0 0 9px rgba(255,215,0,.38)) drop-shadow(0 0 20px rgba(255,190,40,.18));"
+/>
+
+</div>
+
+
+  <div class="race-png-tabs" id="unionFinalistsTabs"></div>
+  <div id="unionFinalistsViewer"></div>
+</div>
+` : ""}
 
 <div class="race-png-panel">
   <div class="race-png-head">
@@ -11829,6 +12162,10 @@ animation: unionSplashTrackIn 0.25s ease 1s forwards;
 
   <script>
     const pages = ${pagesJson};
+    const unionFinalists = ${unionFinalistsJson};
+
+const unionFinalistCars = ${unionFinalistCarsJson};
+
     const movementSummaryByLeague = ${movementSummaryJson};
     const isMovementRoundForHtml = ${isMovementRoundForHtml ? "true" : "false"};
     const orderedLeagues = ["STAR", "ELITE", "PRO GOLD", "PRO SILVER", "PRO AMA", "AMA"];
@@ -11858,6 +12195,427 @@ const raceDgPanel = document.getElementById("raceDgPanel");
 
 
 let selectedRacePng = "${latestSavedRace}";
+
+// UNION FINALI - Visualizzazione dei 14 finalisti per lega
+
+function renderUnionFinalists() {
+  const tabsContainer = document.getElementById("unionFinalistsTabs");
+  const viewer = document.getElementById("unionFinalistsViewer");
+
+  if (!tabsContainer || !viewer) return;
+
+  tabsContainer.innerHTML = "";
+  viewer.innerHTML = "";
+
+  const normalizePilot = function(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  };
+
+  const carMap = {};
+  Object.keys(unionFinalistCars || {}).forEach(function(key) {
+    carMap[normalizePilot(key)] = unionFinalistCars[key];
+  });
+
+  function positionBadge(position, large) {
+    const badge = document.createElement("span");
+    badge.textContent = String(position) + "°";
+
+    const gold = position === 1;
+    const silver = position === 2;
+    const bronze = position === 3;
+
+    const background = gold
+      ? "linear-gradient(180deg,#ffe680,#d8a400)"
+      : silver
+        ? "linear-gradient(180deg,#f4f6fa,#9da5b4)"
+        : bronze
+          ? "linear-gradient(180deg,#e9b17b,#a96832)"
+          : "rgba(255,255,255,.045)";
+
+    badge.style.cssText =
+      "display:inline-flex;align-items:center;justify-content:center;" +
+      "min-width:" + (large ? "43px;" : "30px;") +
+      "height:" + (large ? "33px;" : "25px;") +
+      "padding:0 5px;box-sizing:border-box;border-radius:9px;" +
+      "font-weight:900;font-size:" + (large ? "16px;" : "12px;") +
+      "font-family:ui-monospace,Consolas,monospace;" +
+      "white-space:nowrap;" +
+      "background:" + background + ";" +
+      "color:" + (position <= 3 ? "#171717;" : "#f4f6ff;") +
+      "border:1px solid " +
+      (position <= 3 ? "rgba(255,220,130,.65);" : "rgba(255,255,255,.22);") +
+      "box-shadow:" +
+      (gold ? "0 0 15px rgba(255,215,0,.35);" : "none;");
+
+    return badge;
+  }
+
+  function raceBadge(result) {
+    const wrap = document.createElement("span");
+    wrap.style.cssText =
+      "display:inline-flex;position:relative;align-items:center;" +
+      "justify-content:center;min-width:34px;";
+
+    if (!result) {
+      wrap.textContent = "—";
+      wrap.style.color = "#7c8597";
+      return wrap;
+    }
+
+    if (result.status) {
+      const status = document.createElement("span");
+      const label = result.status === "ASS-I" ||
+        result.status === "ASS-G" ||
+        result.status === "DNP" ? "A" :
+        result.status === "DNF" ||
+        result.status === "DNF-I" ||
+        result.status === "DNFV" ? "NC" : result.status;
+
+      status.textContent = label;
+      status.style.cssText =
+        "font-size:10px;font-weight:900;padding:5px 7px;" +
+        "border-radius:8px;white-space:nowrap;" +
+        "background:rgba(120,125,145,.18);" +
+        "border:1px solid rgba(255,255,255,.16);" +
+        "color:#e5e7eb;";
+
+      wrap.appendChild(status);
+      return wrap;
+    }
+
+    if (result.position != null && result.position > 0) {
+      wrap.appendChild(positionBadge(result.position, false));
+
+      if (result.pp || result.gv) {
+        const stars = document.createElement("span");
+        stars.style.cssText =
+          "position:absolute;top:-8px;right:-5px;" +
+          "font-size:10px;white-space:nowrap;";
+
+        if (result.pp) {
+          const pp = document.createElement("span");
+          pp.textContent = "★";
+          pp.style.color = "#ffd700";
+          stars.appendChild(pp);
+        }
+
+        if (result.gv) {
+          const gv = document.createElement("span");
+          gv.textContent = "★";
+          gv.style.color = "#b67cff";
+          stars.appendChild(gv);
+        }
+
+        wrap.appendChild(stars);
+      }
+    } else {
+      wrap.textContent = "—";
+    }
+
+    return wrap;
+  }
+
+  function showFinalistsLeague(league) {
+    tabsContainer.querySelectorAll("button").forEach(function(btn) {
+      btn.classList.toggle("active", btn.dataset.league === league);
+    });
+
+    viewer.innerHTML = "";
+
+    const drivers = unionFinalists[league] || [];
+
+    const heading = document.createElement("div");
+    heading.style.cssText =
+      "display:flex;justify-content:space-between;align-items:center;" +
+      "gap:12px;flex-wrap:wrap;margin:22px 0 14px;";
+
+    const title = document.createElement("div");
+    title.textContent = league + "  •  FINALISTI";
+    title.style.cssText =
+      "font-size:20px;font-weight:1000;letter-spacing:1px;" +
+      "color:#ffe8a0;text-shadow:0 0 15px rgba(255,215,0,.28);";
+
+    const count = document.createElement("div");
+    count.textContent = drivers.length + " PILOTI QUALIFICATI";
+    count.style.cssText =
+      "font-size:12px;font-weight:900;letter-spacing:1px;" +
+      "color:#f5d77b;border:1px solid rgba(255,215,0,.4);" +
+      "border-radius:999px;padding:8px 14px;" +
+      "background:rgba(255,215,0,.07);";
+
+    heading.appendChild(title);
+    heading.appendChild(count);
+    viewer.appendChild(heading);
+
+    const table = document.createElement("table");
+    table.style.cssText =
+      "width:100%;table-layout:fixed;border-collapse:collapse;" +
+      "color:white;font-size:13px;";
+
+    const thead = document.createElement("thead");
+    const header = document.createElement("tr");
+
+    
+const labels = ["POS", "TEAM", "PILOTA", "AUTO", "", "PUNTI"];
+const widths = ["7%", "9%", "19%", "23%", "33%", "9%"];
+
+
+    labels.forEach(function(label, index) {
+      const th = document.createElement("th");
+      th.textContent = label;
+      th.style.cssText =
+        "width:" + widths[index] + ";" +
+        "padding:14px 7px;border-bottom:2px solid #d4af37;" +
+        "text-align:" + (index === 5 ? "right;" : "left;") +
+        "font-size:12px;letter-spacing:.7px;color:#ffe4a0;";
+
+      header.appendChild(th);
+
+if (index === 4) {
+  const flags = [
+    "/flags/at.png",
+    "/flags/us.png",
+    "/flags/jp.png",
+    "/flags/jp.png",
+    "/flags/de.png"
+  ];
+
+  const circuits = [
+    "Red Bull Ring",
+    "Watkins Glen",
+    "Suzuka Circuit",
+    "Autopolis",
+    "Nürburgring GP"
+  ];
+
+  const flagsRow = document.createElement("div");
+  
+flagsRow.style.cssText =
+  "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));" +
+  "align-items:center;gap:0;width:100%;";
+
+
+  flags.forEach(function(src, raceIndex) {
+    const slot = document.createElement("div");
+    slot.style.cssText =
+  "min-width:0;display:flex;justify-content:center;align-items:center;";
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = circuits[raceIndex];
+    img.title = "Gara " + (raceIndex + 1) + " • " + circuits[raceIndex];
+    img.style.cssText =
+  "width:38px;height:24px;object-fit:cover;" +
+      "border-radius:2px;border:1px solid rgba(255,255,255,.25);";
+
+    slot.appendChild(img);
+    flagsRow.appendChild(slot);
+  });
+
+  th.appendChild(flagsRow);
+}
+
+    });
+
+    thead.appendChild(header);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    drivers.forEach(function(driver, index) {
+      const tr = document.createElement("tr");
+
+      tr.style.cssText =
+        "background:" +
+        (index % 2 === 0
+          ? "rgba(255,255,255,.035);"
+          : "rgba(255,255,255,.012);");
+
+      const makeCell = function() {
+        const td = document.createElement("td");
+        td.style.cssText =
+          "padding:13px 7px;border-bottom:1px solid " +
+          "rgba(255,255,255,.10);vertical-align:middle;" +
+          "overflow-wrap:anywhere;";
+        return td;
+      };
+
+      const posCell = makeCell();
+      posCell.appendChild(positionBadge(index + 1, true));
+
+      
+const teamCell = makeCell();
+
+const teamPill = document.createElement("span");
+teamPill.textContent = driver.team || "—";
+
+teamPill.style.cssText =
+  "display:inline-flex;align-items:center;justify-content:center;" +
+  "min-width:48px;max-width:100%;padding:6px 10px;" +
+  "border-radius:8px;box-sizing:border-box;" +
+  "background:linear-gradient(135deg,#101d35,#172947);" +
+  "border:1px solid rgba(255,215,0,.45);" +
+  "box-shadow:0 0 10px rgba(255,215,0,.10);" +
+  "color:#ffe7a0;font-size:12px;font-weight:900;" +
+  "letter-spacing:.5px;white-space:nowrap;";
+
+teamCell.appendChild(teamPill);
+
+      const pilotCell = makeCell();
+      pilotCell.textContent = driver.pilota;
+      pilotCell.style.fontWeight = "900";
+      pilotCell.style.fontSize = "14px";
+
+      const carCell = makeCell();
+      carCell.textContent =
+        carMap[normalizePilot(driver.pilota)] || "—";
+      carCell.style.color = "#dce3ee";
+      carCell.style.fontSize = "12px";
+
+      const racesCell = makeCell();
+      const racesWrap = document.createElement("div");
+      
+racesWrap.style.cssText =
+  "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));" +
+  "align-items:center;gap:0;width:100%;";
+
+
+      [1, 2, 3, 4, 5].forEach(function(race) {
+        const result = driver.raceResults &&
+          driver.raceResults[race];
+
+        const slot = document.createElement("div");
+        
+
+slot.style.cssText =
+  "display:flex;flex-direction:column;align-items:center;" +
+  "justify-content:center;gap:5px;min-width:0;" +
+  "min-height:58px;box-sizing:border-box;" +
+  (race > 1
+    ? "border-left:1px solid rgba(255,215,0,.38);"
+    : "");
+
+
+
+        
+const circuitFlags = {
+  1: { src: "/flags/at.png", name: "Red Bull Ring" },
+  2: { src: "/flags/us.png", name: "Watkins Glen" },
+  3: { src: "/flags/jp.png", name: "Suzuka Circuit" },
+  4: { src: "/flags/jp.png", name: "Autopolis" },
+  5: { src: "/flags/de.png", name: "Nürburgring GP" }
+};
+
+const raceLabel = document.createElement("img");
+raceLabel.src = circuitFlags[race].src;
+raceLabel.alt = circuitFlags[race].name;
+raceLabel.title = "Gara " + race + " • " + circuitFlags[race].name;
+raceLabel.style.cssText =
+  "width:23px;height:15px;object-fit:cover;" +
+  "border-radius:2px;border:1px solid rgba(255,255,255,.25);" +
+  "box-shadow:0 2px 7px rgba(0,0,0,.4);";
+
+
+        slot.appendChild(raceBadge(result));
+        racesWrap.appendChild(slot);
+      });
+
+      racesCell.appendChild(racesWrap);
+
+      const pointsCell = makeCell();
+      pointsCell.textContent = String(driver.totalPoints);
+      pointsCell.style.cssText +=
+        "text-align:right;font-size:19px;font-weight:1000;" +
+        "color:#ffd700;text-shadow:0 0 12px rgba(255,215,0,.28);";
+
+      tr.appendChild(posCell);
+tr.appendChild(teamCell);
+tr.appendChild(pilotCell);
+      tr.appendChild(carCell);
+      tr.appendChild(racesCell);
+      tr.appendChild(pointsCell);
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+
+    if (drivers.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent =
+        "Nessun finalista disponibile per questa lega.";
+      viewer.appendChild(empty);
+    } else {
+      viewer.appendChild(table);
+    }
+  }
+
+  orderedLeagues.forEach(function(league) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn saved preloaded";
+    btn.dataset.league = league;
+    btn.textContent = league;
+
+    btn.addEventListener("click", function() {
+      showFinalistsLeague(league);
+    });
+
+    tabsContainer.appendChild(btn);
+  });
+
+  showFinalistsLeague(orderedLeagues[0]);
+}
+
+
+renderUnionFinalists();
+
+
+const unionOpenFinalists = document.getElementById("unionFinalistsOpen");
+const unionFinalistsPanel = document.getElementById("unionFinalistsPanel");
+
+if (unionOpenFinalists && unionFinalistsPanel) {
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.textContent = "TORNA AL PORTALE";
+  backButton.className = "union-provisional-close";
+  
+backButton.style.cssText =
+  "display:block;width:max-content;max-width:100%;" +
+  "margin:0 0 28px auto;padding:13px 28px;" +
+  "background:#092b1c;color:#fff;border:1px solid #16834d;" +
+  "border-radius:12px;font-size:15px;font-weight:900;" +
+  "white-space:nowrap;cursor:pointer;";
+
+
+  unionFinalistsPanel.insertBefore(
+    backButton,
+    unionFinalistsPanel.firstChild
+  );
+
+  function closeFinalists() {
+    unionFinalistsPanel.style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  unionOpenFinalists.addEventListener("click", function() {
+    
+unionFinalistsPanel.style.cssText =
+  "display:block;position:fixed;inset:0;z-index:99999;" +
+  "width:100%;height:100vh;max-width:100vw;" +
+  "overflow-x:hidden;overflow-y:auto;box-sizing:border-box;" +
+  "margin:0;padding:32px 38px;background:#080b12;";
+
+    document.body.style.overflow = "hidden";
+  });
+
+  backButton.addEventListener("click", closeFinalists);
+}
+
 
 
 function renderRacePngTabs() {
@@ -15606,77 +16364,193 @@ const lastCreatedMovementText = useMemo(() => {
         nel portale UNION?
       </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => {
-  const mode = unionProvisionalExportDialog
+      
+{/* UNION FINALI - Scelte indipendenti per il portale */}
+<div style={{ textAlign: "left", marginBottom: 20 }}>
+  <div
+    style={{
+      color: "#93c5fd",
+      fontWeight: 900,
+      fontSize: 14,
+      marginBottom: 12,
+    }}
+  >
+    1. CLASSIFICHE PROVVISORIE
+  </div>
 
-// UNION - Data e ora correnti per le classifiche provvisorie
-const now = new Date()
+  <div
+    style={{
+      padding: 16,
+      borderRadius: 14,
+      background: "#0f172a",
+      border: "1px solid #475569",
+    }}
+  >
+    <label
+      style={{
+        display: "block",
+        marginBottom: 14,
+        cursor: "pointer",
+      }}
+    >
+      <input
+        type="radio"
+        name="union-provisional-visibility"
+        checked={unionShowProvisionalForExport}
+        onChange={() => setUnionShowProvisionalForExport(true)}
+        style={{ marginRight: 10 }}
+      />
+      Mostra nel portale
+    </label>
 
-const giorno = String(now.getDate()).padStart(2, "0")
-const mese = String(now.getMonth() + 1).padStart(2, "0")
-const anno = now.getFullYear()
+    <label style={{ display: "block", cursor: "pointer" }}>
+      <input
+        type="radio"
+        name="union-provisional-visibility"
+        checked={!unionShowProvisionalForExport}
+        onChange={() => setUnionShowProvisionalForExport(false)}
+        style={{ marginRight: 10 }}
+      />
+      Non mostrare nel portale
+    </label>
+  </div>
+</div>
 
-const ore = String(now.getHours()).padStart(2, "0")
-const minuti = String(now.getMinutes()).padStart(2, "0")
+<div style={{ textAlign: "left", marginBottom: 24 }}>
+  <div
+    style={{
+      color: "#facc15",
+      fontWeight: 900,
+      fontSize: 14,
+      marginBottom: 12,
+    }}
+  >
+    2. PILOTI FINALISTI
+  </div>
 
-setUnionProvisionalUpdateDate(`${giorno}/${mese}/${anno}`)
-setUnionProvisionalUpdateTime(`${ore}:${minuti}`)
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderRadius: 12,
+      background: "#172554",
+      border: "1px solid #3b82f6",
+      color: "#ffffff",
+      fontWeight: 800,
+      cursor: "pointer",
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={unionShowFinalists}
+      onChange={(e) => setUnionShowFinalists(e.target.checked)}
+      style={{
+        width: 19,
+        height: 19,
+        accentColor: "#facc15",
+      }}
+    />
+    Mostra Piloti Finalisti
+  </label>
 
-setUnionProvisionalExportDialog(null)
-setUnionOfficialRaceDialog(mode)
-}}
-          style={{
-            padding: "16px 10px",
-            borderRadius: 14,
-            border: "1px solid #60a5fa",
-            background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-            color: "#ffffff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
-          SÌ, MOSTRA
-        </button>
+  <div
+    style={{
+      padding: 16,
+      borderRadius: 14,
+      background: "#0f172a",
+      border: "1px solid #475569",
+      opacity: unionShowFinalists ? 1 : 0.4,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 800,
+        color: "#facc15",
+        marginBottom: 14,
+      }}
+    >
+      SORGENTE DATI GARA 5
+    </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            const preview = unionProvisionalExportDialog === "preview"
-            setUnionProvisionalExportDialog(null)
-            void downloadChampionshipGeneralHtmlExport(preview, false)
-          }}
-          style={{
-            padding: "16px 10px",
-            borderRadius: 14,
-            border: "1px solid #64748b",
-            background: "#1e293b",
-            color: "#ffffff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
-          NO, NASCONDI
-        </button>
-      </div>
+    <label
+      style={{
+        display: "block",
+        marginBottom: 14,
+        cursor: unionShowFinalists ? "pointer" : "not-allowed",
+      }}
+    >
+      <input
+        type="radio"
+        name="union-finalists-source"
+        checked={unionFinalistsSource === "provisional"}
+        disabled={!unionShowFinalists}
+        onChange={() => setUnionFinalistsSource("provisional")}
+        style={{ marginRight: 10 }}
+      />
+      Gara 5 – Provvisoria
+    </label>
 
-      <p
-        style={{
-          marginTop: 20,
-          fontSize: 12,
-          color: "#94a3b8",
-        }}
-      >
-        La scelta sarà applicata al portale generato.
-      </p>
+    <label
+      style={{
+        display: "block",
+        cursor: unionShowFinalists ? "pointer" : "not-allowed",
+      }}
+    >
+      <input
+        type="radio"
+        name="union-finalists-source"
+        checked={unionFinalistsSource === "definitive"}
+        disabled={!unionShowFinalists}
+        onChange={() => setUnionFinalistsSource("definitive")}
+        style={{ marginRight: 10 }}
+      />
+      
+      Gara 5 – Definitiva
+    </label>
+  </div>
+</div>
+
+
+<button
+  type="button"
+  onClick={() => {
+    const mode = unionProvisionalExportDialog
+    if (mode === null) return
+
+    if (unionShowProvisionalForExport) {
+      const now = new Date()
+      const giorno = String(now.getDate()).padStart(2, "0")
+      const mese = String(now.getMonth() + 1).padStart(2, "0")
+      const anno = now.getFullYear()
+      const ore = String(now.getHours()).padStart(2, "0")
+      const minuti = String(now.getMinutes()).padStart(2, "0")
+
+      setUnionProvisionalUpdateDate(`${giorno}/${mese}/${anno}`)
+      setUnionProvisionalUpdateTime(`${ore}:${minuti}`)
+    }
+
+    setUnionProvisionalExportDialog(null)
+    setUnionOfficialRaceDialog(mode)
+  }}
+  style={{
+    width: "100%",
+    padding: "16px 12px",
+    borderRadius: 14,
+    border: "1px solid #60a5fa",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+    color: "#ffffff",
+    fontWeight: 900,
+    fontSize: 15,
+    cursor: "pointer",
+  }}
+>
+  CONFERMA E PROSEGUI
+</button>
+
     </div>
   </div>
 )}
@@ -15933,7 +16807,9 @@ try {
         </div>
       </div>
       
-      <div
+      {unionShowProvisionalForExport && (
+  <>
+    <div
   style={{
     marginBottom: 24,
     padding: 16,
@@ -16052,10 +16928,12 @@ try {
         }}
       />
     </label>
-  </div>
+    </div>
 </div>
-      
-      <div style={{ display: "flex", gap: 12 }}>
+  </>
+)}
+
+<div style={{ display: "flex", gap: 12 }}>
         <button
           type="button"
           onClick={() => {
@@ -16094,10 +16972,12 @@ try {
   setUnionOfficialRaceForExport(null)
 
   void downloadChampionshipGeneralHtmlExport(
-    preview,
-    true,
-    officialRace
-  )
+  preview,
+  unionShowProvisionalForExport,
+  officialRace,
+  unionShowFinalists,
+  unionFinalistsSource
+)
 }}
           style={{
             flex: 1,
@@ -16120,10 +17000,281 @@ try {
     </div>
   </div>
 )}
+      
+{unionFinalistsManagerOpen && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 99999,
+      background: "rgba(0,0,0,0.88)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 1050,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        padding: 24,
+        borderRadius: 18,
+        background: "#0f172a",
+        border: "1px solid rgba(250,204,21,0.45)",
+        color: "#ffffff",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <h2 style={{ color: "#facc15", fontWeight: 900 }}>
+          🏁 GESTIONE FINALISTI
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => setUnionFinalistsManagerOpen(false)}
+          style={{
+            padding: "9px 15px",
+            borderRadius: 10,
+            background: "#334155",
+            color: "#ffffff",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 800,
+          }}
+        >
+          CHIUDI ✕
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 20,
+        }}
+      >
+        {UNION_RANKS.map((league) => (
+          <button
+            key={league}
+            type="button"
+            onClick={() => setSelectedLeague(league)}
+            style={{
+              padding: "9px 14px",
+              borderRadius: 10,
+              background:
+                selectedLeague === league ? "#facc15" : "#1e293b",
+              color:
+                selectedLeague === league ? "#111827" : "#ffffff",
+              border: "1px solid rgba(250,204,21,0.35)",
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            {league}
+          </button>
+        ))}
+      </div>
+
+      
+<div
+  style={{
+    padding: 16,
+    borderRadius: 12,
+    background: "#111827",
+    border: "1px solid rgba(250,204,21,0.25)",
+  }}
+>
+  <div
+    style={{
+      color: "#facc15",
+      fontWeight: 900,
+      fontSize: 14,
+      marginBottom: 12,
+    }}
+  >
+    FINALISTI — {selectedLeague}
+  </div>
+
+  {(driverChampionshipByLeague[selectedLeague] || [])
+    .filter(
+      (driver) =>
+        !(unionFinalistsExcluded[selectedLeague] || []).some(
+          (name) =>
+            normalizeDriverLookupName(name) ===
+            normalizeDriverLookupName(driver.pilota)
+        )
+    )
+    .slice(0, 14)
+    .map((driver, index) => (
+      <div
+        key={driver.pilota}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "9px 12px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          fontSize: 13,
+        }}
+      >
+        <span
+          style={{
+            width: 34,
+            color: "#facc15",
+            fontWeight: 900,
+          }}
+        >
+          {index + 1}°
+        </span>
+
+        <span style={{ flex: 1, fontWeight: 700 }}>
+          {driver.pilota}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUnionFinalistsExcluded((previous) => ({
+              ...previous,
+              [selectedLeague]: [
+                ...(previous[selectedLeague] || []),
+                driver.pilota,
+              ],
+            }))
+          }}
+          style={{
+            padding: "7px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(239,68,68,0.55)",
+            background: "rgba(239,68,68,0.12)",
+            color: "#f87171",
+            fontSize: 11,
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          ESCLUDI
+        </button>
+      </div>
+    ))}
+
+  {(unionFinalistsExcluded[selectedLeague] || []).length > 0 && (
+    <div
+      style={{
+        marginTop: 20,
+        paddingTop: 14,
+        borderTop: "1px solid rgba(239,68,68,0.35)",
+      }}
+    >
+      <div
+        style={{
+          color: "#f87171",
+          fontWeight: 900,
+          fontSize: 13,
+          marginBottom: 10,
+        }}
+      >
+        PILOTI ESCLUSI
+      </div>
+
+      {(unionFinalistsExcluded[selectedLeague] || []).map((pilot) => (
+        <div
+          key={pilot}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "9px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            fontSize: 13,
+          }}
+        >
+          <span style={{ flex: 1, color: "#fca5a5", fontWeight: 700 }}>
+            {pilot}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => {
+              setUnionFinalistsExcluded((previous) => ({
+                ...previous,
+                [selectedLeague]: (
+                  previous[selectedLeague] || []
+                ).filter(
+                  (name) =>
+                    normalizeDriverLookupName(name) !==
+                    normalizeDriverLookupName(pilot)
+                ),
+              }))
+            }}
+            style={{
+              padding: "7px 12px",
+              borderRadius: 8,
+              border: "1px solid rgba(34,197,94,0.55)",
+              background: "rgba(34,197,94,0.12)",
+              color: "#4ade80",
+              fontSize: 11,
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            RIPRISTINA
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+    </div>
+  </div>
+)}
+
+      
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
   <div ref={appHeaderExportRef}>
     <AppHeader />
   </div>
+
+
+<div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: 12,
+    marginBottom: 4,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => setUnionFinalistsManagerOpen(true)}
+    style={{
+      padding: "11px 18px",
+      borderRadius: 12,
+      border: "1px solid rgba(250,204,21,0.6)",
+      background: "rgba(250,204,21,0.12)",
+      color: "#facc15",
+      fontSize: 13,
+      fontWeight: 900,
+      letterSpacing: 0.5,
+      cursor: "pointer",
+    }}
+  >
+    🏁 GESTIONE FINALISTI
+  </button>
+</div>
+
 
         <div
           style={{
