@@ -4386,11 +4386,11 @@ useEffect(() => {
   setExpectedLobbyDrivers(savedFinalDrivers)
   setExpectedLobbyDriversDraft(savedFinalDrivers.join("\n"))
     setUnionMeta({
-      gara: "FINALI",
+      gara: "FINALE",
       lobby: "",
       lega: selectedLeague,
     })
-    setManualGaraOverride("FINALI")
+    setManualGaraOverride("FINALE")
     setManualLegaOverride(selectedLeague)
     return
   }
@@ -14200,7 +14200,9 @@ function prepareManualLobbyImport() {
             if (
       data.unionMeta.lega !== selectedLeague ||
       (unionFinalsMode
-        ? String(data.unionMeta.gara).trim().toUpperCase() !== "FINALI"
+        ? !["FINALE"].includes(
+    String(data.unionMeta.gara).trim().toUpperCase()
+  )
         : Number(data.unionMeta.gara) !== currentRace ||
           normalizeLobby(data.unionMeta.lobby) !==
             normalizeLobby(selectedLobby))
@@ -15531,7 +15533,7 @@ function saveExpectedLobbyDrivers() {
 
     if (new Set(normalizedDrivers).size !== parsedDrivers.length) {
       window.alert(
-        "⚠️ FINALI — PILOTI DUPLICATI\n\n" +
+        "⚠️ FINALE — PILOTI DUPLICATI\n\n" +
         "Controlla l'elenco dei 14 finalisti: uno o più piloti sono presenti più volte."
       )
       return
@@ -15580,7 +15582,7 @@ function saveExpectedLobbyDrivers() {
     if (unionFinalsMode) {
     if (uniqueDrivers.length !== 14) {
       window.alert(
-        `⚠️ FINALI: devi inserire esattamente 14 piloti.\n\nAttualmente: ${uniqueDrivers.length}`
+        `⚠️ FINALE: devi inserire esattamente 14 piloti.\n\nAttualmente: ${uniqueDrivers.length}`
       )
       return
     }
@@ -15704,7 +15706,7 @@ function openConfirmSaveLeagueModal() {
 
     if (unexpected.length > 0) {
       window.alert(
-        "⚠️ FINALI — PILOTI NON PREVISTI\n\n" +
+        "⚠️ FINALE — PILOTI NON PREVISTI\n\n" +
         unexpected.map((row) => row.pilota).join("\n") +
         "\n\nCorreggere i nominativi prima del salvataggio."
       )
@@ -15800,7 +15802,7 @@ const expelledDrivers = (unionFinalsMode ? [] : finalRows).filter((row) => {
 
     if (driverCarMismatches.length > 0 || missingCars.length > 0) {
       window.alert(
-        "⚠️ CONTROLLO VETTURE FINALI\n\n" +
+        "⚠️ CONTROLLO VETTURE FINALE\n\n" +
         driverCarMismatches
           .map((item) =>
             item.pilot +
@@ -15868,7 +15870,7 @@ function confirmSaveCurrentLeague() {
 
     if (unexpected.length > 0) {
       window.alert(
-        "⚠️ SALVATAGGIO FINALI BLOCCATO\n\nPiloti non previsti:\n" +
+        "⚠️ SALVATAGGIO FINALE BLOCCATO\n\nPiloti non previsti:\n" +
         unexpected.map((row) => row.pilota).join("\n")
       )
       setShowConfirmSaveLeagueModal(false)
@@ -15890,7 +15892,7 @@ function confirmSaveCurrentLeague() {
 
     if (invalidCars.length > 0) {
       window.alert(
-        "⚠️ SALVATAGGIO FINALI BLOCCATO\n\n" +
+        "⚠️ SALVATAGGIO FINALE BLOCCATO\n\n" +
         invalidCars.map((row) => row.pilota || "Pilota sconosciuto").join("\n") +
         "\n\nVerificare le vetture rispetto al Round."
       )
@@ -15927,7 +15929,7 @@ raceNumber: unionFinalsMode ? 0 : currentRace,
   finalRows,
   unionMeta: unionFinalsMode
     ? {
-        gara: "FINALI",
+        gara: "FINALE",
         lobby: "",
         lega: saveLeagueKey,
       }
@@ -15949,7 +15951,7 @@ absenceOverrides,
 verifiedAbsences,
 
 manualDsqOverrides,
-manualGaraOverride: unionFinalsMode ? "FINALI" : manualGaraOverride,
+manualGaraOverride: unionFinalsMode ? "FINALE" : manualGaraOverride,
 manualLegaOverride,
 
     manualPilotOverrides,
@@ -16050,7 +16052,7 @@ setManualLegaOverride(
 
   setManualGaraOverride(
     finalsSnapshot
-      ? "FINALI"
+      ? "FINALE"
       : snapshot.manualGaraOverride || String(snapshot.raceNumber || currentRace)
   )
 
@@ -16080,7 +16082,7 @@ setQualiRows(
 
     setUnionMeta(
     finalsSnapshot
-      ? { gara: "FINALI", lobby: "", lega: league }
+      ? { gara: "FINALE", lobby: "", lega: league }
       : snapshot.unionMeta && typeof snapshot.unionMeta === "object"
         ? {
             gara: snapshot.unionMeta.gara || "",
@@ -17843,7 +17845,7 @@ try {
       </option>
         ))}
     <option value="finals" style={{ background: "#11151d", color: "white" }}>
-      FINALI
+      FINALE
     </option>
   </select>
 </div>
@@ -22932,8 +22934,8 @@ const unresolved =
       }
 
       if (unionFinalsMode) {
-        if (String(meta.gara).trim().toUpperCase() !== "FINALI") {
-          throw new Error("Il JSON deve essere relativo alle FINALI.")
+        if (String(meta.gara).trim().toUpperCase() !== "FINALE") {
+          throw new Error("Il JSON deve essere relativo alla FINALE.")
         }
       } else if (Number(meta.gara) !== currentRace) {
         throw new Error("Il numero di gara non corrisponde alla selezione.")
