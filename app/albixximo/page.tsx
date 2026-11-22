@@ -11957,8 +11957,8 @@ style="font-size:19px;font-weight:1000;letter-spacing:1.3px;padding:21px 38px;ma
           </h2>
 
           <div class="union-provisional-circuit">
-            GARA 3 • SUZUKA CIRCUIT
-          </div>
+  GARA ${currentRace} • ${(UNION_PROVISIONAL_CIRCUITS[currentRace] || "").toUpperCase()}
+</div>
         </div>
       </div>
 <img
