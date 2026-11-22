@@ -99,8 +99,9 @@ type SavedLeagueSnapshot = {
   league: ChampionshipLeagueKey
   raceNumber: number
   expectedDrivers: string[]
-  csv: string
+    csv: string
   rows: ExtractRow[]
+  qualiRows?: QualiRow[]
   finalRows: DisplayRow[]
   unionMeta: UnionMeta
 penalties: PenaltyMap
@@ -127,6 +128,12 @@ type SavedLobbyState = Partial<Record<string, SavedLeagueSnapshot>>
 
 type SavedRaceState = Partial<Record<ChampionshipLeagueKey, SavedLobbyState>>
 
+// FINALI: archivio indipendente dalle Gare 1–5.
+// Una sola lobby per ciascuna delle sei leghe.
+type UnionFinalsState = Partial<
+  Record<ChampionshipLeagueKey, SavedLeagueSnapshot>
+>
+
 type ExpectedDriversByLobby = Partial<
   Record<
     number,
@@ -139,8 +146,12 @@ type ExpectedDriversByLobby = Partial<
   >
 >
 
+
 type ChampionshipState = {
   races: Partial<Record<number, SavedRaceState>>
+  finals?: UnionFinalsState
+  finalsExpectedDrivers?: Partial<Record<ChampionshipLeagueKey, string[]>>
+
   roundMovements: Partial<Record<number, RoundMovementState>>
   expectedDrivers: ExpectedDriversByLobby
   driverCars: Record<string, string>
@@ -3137,7 +3148,8 @@ function ResultsTable({
   unionMeta,
   prtMode,
   unionMode,
-  exporting = false,
+    exporting = false,
+  hidePoints = false,
   penalties,
     unjustifiedAbsenceCounts = {},
 dgMeasureTypes,
@@ -3152,7 +3164,8 @@ forceHideMeta = false,
   unionMeta: UnionMeta
   prtMode: boolean
   unionMode: boolean
-  exporting?: boolean
+    exporting?: boolean
+  hidePoints?: boolean
   penalties: PenaltyMap
     unjustifiedAbsenceCounts?: Record<string, number>
 dgMeasureTypes: Record<string, DgMeasureType>
@@ -3340,17 +3353,19 @@ const compactStatusPills =
                 Miglior giro
               </th>
 
-              <th
-                style={{
-                  ...styles.thBase,
-                  padding: thPad.normal,
-                  textAlign: "center",
-                  fontSize: thFont.normal,
-                  ...currentPointsColumn,
-                }}
-              >
-                Punti
-              </th>
+                            {!hidePoints && (
+                <th
+                  style={{
+                    ...styles.thBase,
+                    padding: thPad.normal,
+                    textAlign: "center",
+                    fontSize: thFont.normal,
+                    ...currentPointsColumn,
+                  }}
+                >
+                  Punti
+                </th>
+              )}
 
               {showMeta && (
                 <th
@@ -3577,18 +3592,20 @@ return penaltySeconds === 0 && !isDsqRow
                     })}
                   </TableCell>
 
-                  <TableCell
-                    exporting={exporting}
-                    align="center"
-                    mono
-                    style={exporting ? PRT_ROW_STYLES.pointsExport : PRT_ROW_STYLES.pointsLive}
-                  >
-                    {renderPrtPointsCell({
-                      row: r,
-                      bestRaceLap,
-                      exporting,
-                    })}
-                  </TableCell>
+                                    {!hidePoints && (
+                    <TableCell
+                      exporting={exporting}
+                      align="center"
+                      mono
+                      style={exporting ? PRT_ROW_STYLES.pointsExport : PRT_ROW_STYLES.pointsLive}
+                    >
+                      {renderPrtPointsCell({
+                        row: r,
+                        bestRaceLap,
+                        exporting,
+                      })}
+                    </TableCell>
+                  )}
 
                   {showMeta && (
                     <TableCell exporting={exporting} align="center" mono dim={!unionMeta.gara}>
@@ -3643,6 +3660,7 @@ const UNION_CHAMPIONSHIP_STORAGE_KEY = "albixximo_union2026_championship_state_v
 const UNION_FINALISTS_EXCLUDED_STORAGE_KEY =
   "albixximo_union2026_finalists_excluded_v1"
 const UNION_CURRENT_RACE_STORAGE_KEY = "albixximo_union2026_current_race_v1"
+const UNION_FINALS_MODE_STORAGE_KEY = "albixximo_union2026_finals_mode_v1"
 const UNION_SELECTED_RANK_STORAGE_KEY = "albixximo_union2026_selected_rank_v1"
 const UNION_DRIVER_RANK_MAP_STORAGE_KEY = "albixximo_union2026_driver_rank_map_v1"
 const UNION_DRIVER_TEAM_OVERRIDE_STORAGE_KEY =
@@ -3672,6 +3690,8 @@ const [unionProvisionalExportDialog, setUnionProvisionalExportDialog] =
 const [unionFinalistsSource, setUnionFinalistsSource] =
   useState<"provisional" | "definitive">("provisional")
   const [unionShowFinalists, setUnionShowFinalists] = useState(false)
+  const [unionShowFinalResults, setUnionShowFinalResults] = useState(false)
+  const [unionShowStatistics, setUnionShowStatistics] = useState(false)
   const [unionFinalistsManagerOpen, setUnionFinalistsManagerOpen] =
   useState(false)
 
@@ -3794,7 +3814,10 @@ const [definitiveRenderData, setDefinitiveRenderData] = useState<{
   const [manualPilotOverrides, setManualPilotOverrides] = useState<Record<number, string>>({})
   const [manualAutoOverrides, setManualAutoOverrides] = useState<Record<number, string>>({})
   const [manualDistaccoOverrides, setManualDistaccoOverrides] = useState<Record<number, string>>({})
-  const [currentRace, setCurrentRace] = useState<number>(1)
+  
+const [currentRace, setCurrentRace] = useState<number>(1)
+const [unionFinalsMode, setUnionFinalsMode] = useState(false)
+
 
 
 const [selectedLeague, setSelectedLeague] = useState<ChampionshipLeagueKey>("ELITE")
@@ -3807,6 +3830,7 @@ const [expectedLobbyDriversDraft, setExpectedLobbyDriversDraft] = useState("")
 
 const [championshipState, setChampionshipState] = useState<ChampionshipState>({
   races: {},
+  finals: {},
   roundMovements: {},
   expectedDrivers: {},
   driverCars: {},
@@ -4088,6 +4112,8 @@ useEffect(() => {
   if (typeof window === "undefined") return
 
   try {
+    const savedFinalsMode = window.localStorage.getItem(UNION_FINALS_MODE_STORAGE_KEY)
+setUnionFinalsMode(savedFinalsMode === "true")
     const rawRace = window.localStorage.getItem(UNION_CURRENT_RACE_STORAGE_KEY)
     const parsedRace = Number(rawRace)
     if (Number.isFinite(parsedRace) && parsedRace >= 1 && parsedRace <= 5) {
@@ -4111,7 +4137,19 @@ if (CHAMPIONSHIP_LEAGUES.includes(rawLeague as ChampionshipLeagueKey)) {
 
 setChampionshipState({
   races: restoredRaces,
-  roundMovements:
+  finals:
+    parsedState.finals &&
+    typeof parsedState.finals === "object" &&
+    !Array.isArray(parsedState.finals)
+      ? parsedState.finals
+      : {},
+    finalsExpectedDrivers:
+    parsedState.finalsExpectedDrivers &&
+    typeof parsedState.finalsExpectedDrivers === "object" &&
+    !Array.isArray(parsedState.finalsExpectedDrivers)
+      ? parsedState.finalsExpectedDrivers
+      : {},
+      roundMovements:
     parsedState.roundMovements && typeof parsedState.roundMovements === "object"
       ? parsedState.roundMovements
       : {},
@@ -4242,6 +4280,14 @@ useEffect(() => {
 
 useEffect(() => {
   if (typeof window === "undefined") return
+  window.localStorage.setItem(
+    UNION_FINALS_MODE_STORAGE_KEY,
+    String(unionFinalsMode)
+  )
+}, [unionFinalsMode])
+
+useEffect(() => {
+  if (typeof window === "undefined") return
   window.localStorage.setItem(UNION_SELECTED_RANK_STORAGE_KEY, selectedLeague)
 }, [selectedLeague])
 
@@ -4319,6 +4365,36 @@ useEffect(() => {
 }, [uploadedLeagueHtmls])
 
 useEffect(() => {
+  // FINALI: area di lavoro indipendente dalle Gare 1–5.
+  if (unionFinalsMode) {
+  const savedFinal = championshipState.finals?.[selectedLeague]
+
+  if (savedFinal) {
+    reopenSavedLeague(
+      selectedLeague,
+      savedFinal.unionMeta?.lobby || selectedLobby,
+      savedFinal
+    )
+    return
+  }
+
+    clearCurrentWorkbench(false)
+
+  const savedFinalDrivers =
+    championshipState.finalsExpectedDrivers?.[selectedLeague] || []
+
+  setExpectedLobbyDrivers(savedFinalDrivers)
+  setExpectedLobbyDriversDraft(savedFinalDrivers.join("\n"))
+    setUnionMeta({
+      gara: "FINALI",
+      lobby: "",
+      lega: selectedLeague,
+    })
+    setManualGaraOverride("FINALI")
+    setManualLegaOverride(selectedLeague)
+    return
+  }
+
   const lobbyState = championshipState.races[currentRace]?.[selectedLeague]
 
   if (lobbyState?.[selectedLobby]) {
@@ -4344,7 +4420,7 @@ setExpectedLobbyDriversDraft(savedExpectedDrivers.join("\n"))
   setWorkbenchDriverLeagueMap(cloneDriverLeagueMap(driverLeagueMap))
 }
   setUnknownDriverSelections({})
-}, [currentRace, selectedLeague, selectedLobby])
+}, [currentRace, selectedLeague, selectedLobby, unionFinalsMode])
 
 function normalizeDriverNameForChampionship(value: string) {
   return String(value || "")
@@ -9133,7 +9209,9 @@ async function downloadChampionshipGeneralHtmlExport(
   showProvisionalInExport = true,
   officialRaceForExport: number | null = null,
   showFinalistsInExport = false,
-  finalistsSource: "provisional" | "definitive" = "provisional"
+  finalistsSource: "provisional" | "definitive" = "provisional",
+  showFinalResultsInExport = false,
+  showStatisticsInExport = false
 ) {
   const latestSavedRace =
   officialRaceForExport !== null
@@ -14049,13 +14127,17 @@ setExportTextsDraft({
   mainTitle:
     type === "championship-html"
       ? `UNION 2026 - ROUND 2 | ${selectedLeague}`
-      : `UNION 2026 - ROUND 2 | LEGA ${selectedLeague}`,
+      : unionFinalsMode
+        ? `UNION 2026 - ROUND 2 | FINALE ${selectedLeague}`
+        : `UNION 2026 - ROUND 2 | LEGA ${selectedLeague}`,
   sideLabel:
     type === "championship-html"
       ? latestRaceWithResults
         ? `STANDINGS • GARA ${latestRaceWithResults}`
         : "ELENCO PILOTI"
-      : circuitByRace[currentRace] || exportTexts.sideLabel,
+      : unionFinalsMode
+        ? "Barcelona GP"
+        : circuitByRace[currentRace] || exportTexts.sideLabel,
 })
 
   setPendingHeaderExportType(type)
@@ -14115,11 +14197,13 @@ function prepareManualLobbyImport() {
         .toUpperCase()
         .replace(/^A0+/, "A")
 
-    if (
-      Number(data.unionMeta.gara) !== currentRace ||
+            if (
       data.unionMeta.lega !== selectedLeague ||
-      normalizeLobby(data.unionMeta.lobby) !==
-        normalizeLobby(selectedLobby)
+      (unionFinalsMode
+        ? String(data.unionMeta.gara).trim().toUpperCase() !== "FINALI"
+        : Number(data.unionMeta.gara) !== currentRace ||
+          normalizeLobby(data.unionMeta.lobby) !==
+            normalizeLobby(selectedLobby))
     ) {
       throw new Error(
         "Gara, lega o lobby non corrispondono alla selezione attuale."
@@ -14950,6 +15034,18 @@ const importedRaces =
 
 setChampionshipState({
   races: importedRaces,
+  finals:
+    importedChampionshipState?.finals &&
+    typeof importedChampionshipState.finals === "object" &&
+    !Array.isArray(importedChampionshipState.finals)
+      ? importedChampionshipState.finals
+      : {},
+  finalsExpectedDrivers:
+    importedChampionshipState?.finalsExpectedDrivers &&
+    typeof importedChampionshipState.finalsExpectedDrivers === "object" &&
+    !Array.isArray(importedChampionshipState.finalsExpectedDrivers)
+      ? importedChampionshipState.finalsExpectedDrivers
+      : {},
   roundMovements:
     importedChampionshipState?.roundMovements &&
     typeof importedChampionshipState.roundMovements === "object"
@@ -15099,13 +15195,29 @@ setUploadedLeagueHtmls(
 }
 
 function hasUnsavedLobbyChanges() {
+  // FINALI: proteggi anche qualifiche ed estrazioni parziali.
+  if (unionFinalsMode && finalRows.length === 0) {
+    return (
+      qualiRows.length > 0 ||
+      rows.length > 0 ||
+      csv.trim().length > 0 ||
+      files.length > 0
+    )
+  }
+
   if (finalRows.length === 0) return false
 
-  const saved = currentRaceSnapshot[selectedLeague]?.[selectedLobby]
+  // FINALI: confronta esclusivamente l'archivio dedicato.
+const saved = unionFinalsMode
+  ? championshipState.finals?.[selectedLeague]
+  : currentRaceSnapshot[selectedLeague]?.[selectedLobby]
 
-  if (!saved) return true
+if (!saved) return true
 
-  return (
+    return (
+    (unionFinalsMode &&
+      JSON.stringify(qualiRows) !==
+        JSON.stringify(saved.qualiRows || [])) ||
     JSON.stringify(finalRows) !== JSON.stringify(saved.finalRows) ||
     JSON.stringify(penalties) !== JSON.stringify(saved.penalties) ||
     JSON.stringify(dgMeasureTypes) !== JSON.stringify(saved.dgMeasureTypes || {}) ||
@@ -15132,6 +15244,13 @@ function handleSelectLeague(league: ChampionshipLeagueKey) {
       "ANNULLA = RIMANI NELLA LOBBY"
     )
   ) {
+    return
+  }
+
+    // FINALI: cambia soltanto lega, senza aprire lobby del campionato.
+  if (unionFinalsMode) {
+    setUnknownDriverSelections({})
+    setSelectedLeague(league)
     return
   }
 
@@ -15407,6 +15526,17 @@ function saveExpectedLobbyDrivers() {
     .filter(Boolean)
 
   const uniqueDrivers = Array.from(new Set(parsedDrivers))
+    if (unionFinalsMode) {
+    const normalizedDrivers = parsedDrivers.map(normalizeDriverLookupName)
+
+    if (new Set(normalizedDrivers).size !== parsedDrivers.length) {
+      window.alert(
+        "⚠️ FINALI — PILOTI DUPLICATI\n\n" +
+        "Controlla l'elenco dei 14 finalisti: uno o più piloti sono presenti più volte."
+      )
+      return
+    }
+  }
 
   const allowedDrivers = new Set(
     (workbenchDriverLeagueMap[selectedLeague] || []).map((driver) =>
@@ -15438,10 +15568,32 @@ function saveExpectedLobbyDrivers() {
       !allowedDrivers.has(normalizeDriverNameForChampionship(driver))
   )
 
-  if (invalidDrivers.length > 0) {
+  
+  if (!unionFinalsMode && invalidDrivers.length > 0) {
+
     window.alert(
       `⚠️ Alcuni piloti non appartengono al Rank ${selectedLeague}:\n\n${invalidDrivers.join("\n")}`
     )
+    return
+  }
+
+    if (unionFinalsMode) {
+    if (uniqueDrivers.length !== 14) {
+      window.alert(
+        `⚠️ FINALI: devi inserire esattamente 14 piloti.\n\nAttualmente: ${uniqueDrivers.length}`
+      )
+      return
+    }
+
+    setExpectedLobbyDrivers(uniqueDrivers)
+
+    setChampionshipState((prev) => ({
+      ...prev,
+      finalsExpectedDrivers: {
+        ...prev.finalsExpectedDrivers,
+        [selectedLeague]: uniqueDrivers,
+      },
+    }))
     return
   }
 
@@ -15463,6 +15615,32 @@ function saveExpectedLobbyDrivers() {
 }
 
 function resetExpectedLobbyDrivers() {
+    if (unionFinalsMode) {
+    const confirmed = window.confirm(
+      `Vuoi resettare i 14 piloti previsti della FINALE ${selectedLeague}?`
+    )
+
+    if (!confirmed) return
+
+    setChampionshipState((prev) => {
+      const nextFinalsExpectedDrivers = {
+        ...prev.finalsExpectedDrivers,
+      }
+
+      delete nextFinalsExpectedDrivers[selectedLeague]
+
+      return {
+        ...prev,
+        finalsExpectedDrivers: nextFinalsExpectedDrivers,
+      }
+    })
+
+    setExpectedLobbyDrivers([])
+    setExpectedLobbyDriversDraft("")
+    return
+  }
+
+
   const confirmed = window.confirm(
     `Vuoi resettare i piloti previsti di Gara ${currentRace} · ${selectedLeague} · ${selectedLobby}?`
   )
@@ -15500,9 +15678,43 @@ function resetExpectedLobbyDrivers() {
 }
 
 function openConfirmSaveLeagueModal() {
-  if (finalRows.length === 0) return
 
-  const expelledDrivers = finalRows.filter((row) => {
+  if (finalRows.length === 0) return
+    if (unionFinalsMode && finalRows.length !== 14) {
+    window.alert(
+      `⚠️ FINALE ${selectedLeague}\n\nSono richiesti 14 risultati di gara.\nAttualmente: ${finalRows.length}`
+    )
+    return
+  }
+
+  if (unionFinalsMode && expectedLobbyDrivers.length !== 14) {
+    window.alert(
+      `⚠️ FINALE ${selectedLeague}\n\nDevi prima salvare esattamente 14 piloti previsti.\nAttualmente: ${expectedLobbyDrivers.length}`
+    )
+    return
+  }
+  if (unionFinalsMode) {
+    const expected = new Set(
+      expectedLobbyDrivers.map(normalizeDriverLookupName)
+    )
+
+    const unexpected = finalRows.filter(
+      (row) => !expected.has(normalizeDriverLookupName(row.pilota))
+    )
+
+    if (unexpected.length > 0) {
+      window.alert(
+        "⚠️ FINALI — PILOTI NON PREVISTI\n\n" +
+        unexpected.map((row) => row.pilota).join("\n") +
+        "\n\nCorreggere i nominativi prima del salvataggio."
+      )
+      return
+    }
+  }
+
+  
+const expelledDrivers = (unionFinalsMode ? [] : finalRows).filter((row) => {
+
     const status = tempoLikeGt7(row).trim().toUpperCase()
 
     if (status !== "ASS-I") return false
@@ -15532,7 +15744,7 @@ function openConfirmSaveLeagueModal() {
     )
   }
 
-  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+  if (!unionFinalsMode && isLobbyClosedForRace(selectedLobby, currentRace)) {
   window.alert(
     `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
   )
@@ -15566,14 +15778,60 @@ function openConfirmSaveLeagueModal() {
     openAutoCorrectionModal()
     return
   }
+    if (unionFinalsMode) {
+    const missingCars: string[] = []
 
-  const mode = savedLeagueInCurrentRace ? "overwrite" : "save"
+    for (const row of finalRows) {
+      const pilot = String(row.pilota || "").trim()
+      const currentCar = String(row.auto || "").trim()
+
+      if (!pilot) continue
+
+      const lockedCar = String(
+        championshipState.driverCars[normalizeDriverLookupName(pilot)] ||
+        championshipState.driverCars[pilot] ||
+        ""
+      ).trim()
+
+      if (!lockedCar) {
+        missingCars.push(pilot)
+      }
+    }
+
+    if (driverCarMismatches.length > 0 || missingCars.length > 0) {
+      window.alert(
+        "⚠️ CONTROLLO VETTURE FINALI\n\n" +
+        driverCarMismatches
+          .map((item) =>
+            item.pilot +
+            "\nVettura Round: " + item.lockedCar +
+            "\nVettura Finale: " + item.currentCar
+          )
+          .join("\n\n") +
+        (missingCars.length > 0
+          ? "\n\nVETTURA ROUND NON REGISTRATA:\n" +
+            missingCars.join("\n")
+          : "") +
+        "\n\nSalvataggio bloccato: verificare le vetture."
+      )
+      return
+    }
+  }
+
+  const mode = unionFinalsMode
+  ? championshipState.finals?.[selectedLeague]
+    ? "overwrite"
+    : "save"
+  : savedLeagueInCurrentRace
+    ? "overwrite"
+    : "save"
   setPendingSaveLeagueMode(mode)
   setShowConfirmSaveLeagueModal(true)
 }
 
 function confirmSaveCurrentLeague() {
-  if (isLobbyClosedForRace(selectedLobby, currentRace)) {
+
+  if (!unionFinalsMode && isLobbyClosedForRace(selectedLobby, currentRace)) {
     window.alert(
       `La lobby ${selectedLobby} è chiusa per Gara ${currentRace}. Riaprila prima di salvare.`
     )
@@ -15582,9 +15840,67 @@ function confirmSaveCurrentLeague() {
   }
 
   if (finalRows.length === 0) return
+    if (unionFinalsMode && finalRows.length !== 14) {
+    window.alert(
+      `⚠️ FINALE ${selectedLeague}\n\nSalvataggio bloccato: sono richiesti esattamente 14 risultati di gara.\nAttualmente: ${finalRows.length}`
+    )
+    setShowConfirmSaveLeagueModal(false)
+    return
+  }
 
-  const saveLeagueKey =
-    normalizeLeagueKey(effectiveLega) || selectedLeague
+    if (unionFinalsMode && expectedLobbyDrivers.length !== 14) {
+    window.alert(
+      `⚠️ FINALE ${selectedLeague}\n\nSalvataggio bloccato: sono richiesti esattamente 14 piloti previsti.\nAttualmente: ${expectedLobbyDrivers.length}`
+    )
+    setShowConfirmSaveLeagueModal(false)
+    return
+  }
+
+    if (unionFinalsMode) {
+      if (unionFinalsMode) {
+    const expected = new Set(
+      expectedLobbyDrivers.map(normalizeDriverLookupName)
+    )
+
+    const unexpected = finalRows.filter(
+      (row) => !expected.has(normalizeDriverLookupName(row.pilota))
+    )
+
+    if (unexpected.length > 0) {
+      window.alert(
+        "⚠️ SALVATAGGIO FINALI BLOCCATO\n\nPiloti non previsti:\n" +
+        unexpected.map((row) => row.pilota).join("\n")
+      )
+      setShowConfirmSaveLeagueModal(false)
+      return
+    }
+  }
+
+    const invalidCars = finalRows.filter((row) => {
+      const pilot = String(row.pilota || "").trim()
+      const currentCar = String(row.auto || "").trim()
+      const lockedCar = String(
+        championshipState.driverCars[normalizeDriverLookupName(pilot)] ||
+        championshipState.driverCars[pilot] ||
+        ""
+      ).trim()
+
+      return !pilot || !lockedCar || currentCar !== lockedCar
+    })
+
+    if (invalidCars.length > 0) {
+      window.alert(
+        "⚠️ SALVATAGGIO FINALI BLOCCATO\n\n" +
+        invalidCars.map((row) => row.pilota || "Pilota sconosciuto").join("\n") +
+        "\n\nVerificare le vetture rispetto al Round."
+      )
+      return
+    }
+  }
+
+  const saveLeagueKey = unionFinalsMode
+  ? selectedLeague
+  : normalizeLeagueKey(effectiveLega) || selectedLeague
 
   const saveLobbyKey = String(
     selectedLobby || unionMeta.lobby || ""
@@ -15592,17 +15908,32 @@ function confirmSaveCurrentLeague() {
     .trim()
     .toUpperCase()
 
-  if (!saveLobbyKey) return
+  
+  if (!unionFinalsMode && !saveLobbyKey) return
 
   const snapshot: SavedLeagueSnapshot = {
+
   savedAt: new Date().toISOString(),
   league: saveLeagueKey,
-  raceNumber: currentRace,
+  
+raceNumber: unionFinalsMode ? 0 : currentRace,
+
+  
   expectedDrivers: expectedLobbyDrivers,
   csv: finalCsv,
   rows,
+  
+  qualiRows: unionFinalsMode ? [...qualiRows] : undefined,
   finalRows,
-    unionMeta,
+  unionMeta: unionFinalsMode
+    ? {
+        gara: "FINALI",
+        lobby: "",
+        lega: saveLeagueKey,
+      }
+    : unionMeta,
+
+
 penalties,
 dgMeasureTypes,
 dgSpecialMeasures,
@@ -15616,9 +15947,11 @@ lapOverrides,
 dnfOverrides,
 absenceOverrides,
 verifiedAbsences,
+
 manualDsqOverrides,
-manualGaraOverride,
+manualGaraOverride: unionFinalsMode ? "FINALI" : manualGaraOverride,
 manualLegaOverride,
+
     manualPilotOverrides,
     manualAutoOverrides,
     manualDistaccoOverrides,
@@ -15626,6 +15959,27 @@ manualLegaOverride,
     bestQuali,
     bestRaceLap,
     winner,
+  }
+
+    // FINALI: archivio separato, senza modificare le Gare 1–5.
+  if (unionFinalsMode) {
+    setChampionshipState((prev) => ({
+      ...prev,
+      finals: {
+        ...(prev.finals || {}),
+        [saveLeagueKey]: snapshot,
+      },
+    }))
+
+    setLastSaveLeagueMode(pendingSaveLeagueMode)
+    setLastSavedLeagueName(saveLeagueKey)
+    setShowConfirmSaveLeagueModal(false)
+    setShowSaveLeagueSuccessModal(true)
+
+    setManualPilotDraft({})
+    setManualAutoDraft({})
+    setManualDistaccoDraft({})
+    return
   }
 
   setChampionshipState((prev) => {
@@ -15661,17 +16015,21 @@ manualLegaOverride,
 
 function reopenSavedLeague(
   league: ChampionshipLeagueKey,
-  lobby: string
+  lobby: string,
+  finalsSnapshot?: SavedLeagueSnapshot
 ) {
-  const lobbyState = currentRaceSnapshot[league]
-  if (!lobbyState) return
+  const snapshot = finalsSnapshot
+    ? finalsSnapshot
+    : currentRaceSnapshot[league]?.[lobby]
 
-  const snapshot = lobbyState[lobby]
-if (!snapshot) return
+    if (!snapshot) return
 
-setSelectedLobby(lobby)
+  // FINALI: non modificare la lobby selezionata del campionato.
+  if (!finalsSnapshot) {
+    setSelectedLobby(lobby)
+  }
 
-clearCurrentWorkbench(false)
+  clearCurrentWorkbench(false)
   setUnknownDriverSelections({})
 
   setWorkbenchDriverLeagueMap((prev) => {
@@ -15684,13 +16042,20 @@ clearCurrentWorkbench(false)
       : cloneDriverLeagueMap(driverLeagueMap)
   })
 
-  setSelectedLeague(league)
-  setManualLegaOverride(snapshot.manualLegaOverride || league)
+    setSelectedLeague(league)
+  
+setManualLegaOverride(
+  finalsSnapshot ? league : snapshot.manualLegaOverride || league
+)
+
   setManualGaraOverride(
-    snapshot.manualGaraOverride || String(snapshot.raceNumber || currentRace)
+    finalsSnapshot
+      ? "FINALI"
+      : snapshot.manualGaraOverride || String(snapshot.raceNumber || currentRace)
   )
 
   const isA27VicconegtException =
+  !finalsSnapshot &&
   currentRace === 1 &&
   league === "AMA" &&
   lobby === "A27"
@@ -15704,16 +16069,25 @@ const reopenedRows = Array.isArray(snapshot.rows)
     )
   : []
 
+
 setCsv(snapshot.csv || "")
 setRows(reopenedRows)
-  setUnionMeta(
-    snapshot.unionMeta && typeof snapshot.unionMeta === "object"
-      ? {
-          gara: snapshot.unionMeta.gara || "",
-          lobby: snapshot.unionMeta.lobby || "",
-          lega: snapshot.unionMeta.lega || "",
-        }
-      : { gara: "", lobby: "", lega: "" }
+setQualiRows(
+  finalsSnapshot && Array.isArray(snapshot.qualiRows)
+    ? snapshot.qualiRows
+    : []
+)
+
+    setUnionMeta(
+    finalsSnapshot
+      ? { gara: "FINALI", lobby: "", lega: league }
+      : snapshot.unionMeta && typeof snapshot.unionMeta === "object"
+        ? {
+            gara: snapshot.unionMeta.gara || "",
+            lobby: snapshot.unionMeta.lobby || "",
+            lega: snapshot.unionMeta.lega || "",
+          }
+        : { gara: "", lobby: "", lega: "" }
   )
 
   setPenalties(
@@ -15736,15 +16110,16 @@ setManualDsqOverrides(snapshot.manualDsqOverrides || {})
   setManualDistaccoOverrides(snapshot.manualDistaccoOverrides || {})
   setManualQualiOverrides(snapshot.manualQualiOverrides || {})
 
-  setExpectedLobbyDrivers(
-  Array.isArray(snapshot.expectedDrivers) ? snapshot.expectedDrivers : []
-)
+    const restoredExpectedDrivers =
+    finalsSnapshot
+      ? championshipState.finalsExpectedDrivers?.[league] ??
+        (Array.isArray(snapshot.expectedDrivers) ? snapshot.expectedDrivers : [])
+      : Array.isArray(snapshot.expectedDrivers)
+        ? snapshot.expectedDrivers
+        : []
 
-setExpectedLobbyDriversDraft(
-  Array.isArray(snapshot.expectedDrivers)
-    ? snapshot.expectedDrivers.join("\n")
-    : ""
-)
+  setExpectedLobbyDrivers(restoredExpectedDrivers)
+  setExpectedLobbyDriversDraft(restoredExpectedDrivers.join("\n"))
   setManualPilotDraft({})
   setManualAutoDraft({})
   setManualDistaccoDraft({})
@@ -16511,9 +16886,88 @@ const lastCreatedMovementText = useMemo(() => {
       
       Gara 5 – Definitiva
     </label>
-  </div>
+    </div>
 </div>
 
+<div style={{ textAlign: "left", marginBottom: 24 }}>
+  <div
+    style={{
+      color: "#facc15",
+      fontWeight: 900,
+      fontSize: 14,
+      marginBottom: 12,
+    }}
+  >
+    3. RISULTATI FINALI ROUND 2
+  </div>
+
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: 16,
+      borderRadius: 12,
+      background: "#172554",
+      border: "1px solid #3b82f6",
+      color: "#ffffff",
+      fontWeight: 800,
+      cursor: "pointer",
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={unionShowFinalResults}
+      onChange={(e) => setUnionShowFinalResults(e.target.checked)}
+      style={{
+        width: 19,
+        height: 19,
+        accentColor: "#facc15",
+      }}
+    />
+    Mostra Risultati Finali
+  </label>
+</div>
+
+<div style={{ textAlign: "left", marginBottom: 24 }}>
+  <div
+    style={{
+      color: "#facc15",
+      fontWeight: 900,
+      fontSize: 14,
+      marginBottom: 12,
+    }}
+  >
+    4. STATISTICHE UNION 2026
+  </div>
+
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: 16,
+      borderRadius: 12,
+      background: "#172554",
+      border: "1px solid #3b82f6",
+      color: "#ffffff",
+      fontWeight: 800,
+      cursor: "pointer",
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={unionShowStatistics}
+      onChange={(e) => setUnionShowStatistics(e.target.checked)}
+      style={{
+        width: 19,
+        height: 19,
+        accentColor: "#facc15",
+      }}
+    />
+    Mostra Statistiche
+  </label>
+</div>
 
 <button
   type="button"
@@ -16976,7 +17430,9 @@ try {
   unionShowProvisionalForExport,
   officialRace,
   unionShowFinalists,
-  unionFinalistsSource
+  unionFinalistsSource,
+  unionShowFinalResults,
+  unionShowStatistics
 )
 }}
           style={{
@@ -17331,8 +17787,34 @@ try {
 
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
   <select
-    value={currentRace}
-    onChange={(e) => setCurrentRace(Number(e.target.value))}
+    value={unionFinalsMode ? "finals" : String(currentRace)}
+    onChange={(e) => {
+  const value = e.target.value
+  const nextFinalsMode = value === "finals"
+  const nextRace = nextFinalsMode ? currentRace : Number(value)
+
+  if (
+    nextFinalsMode === unionFinalsMode &&
+    nextRace === currentRace
+  ) return
+
+  if (
+    hasUnsavedLobbyChanges() &&
+    !window.confirm(
+      "ATTENZIONE: MODIFICHE NON SALVATE!\n\n" +
+      "Stai per cambiare gara o modalità.\n" +
+      "Le modifiche non salvate andranno perse.\n\n" +
+      "OK = PROSEGUI SENZA SALVARE\n" +
+      "ANNULLA = RIMANI QUI"
+    )
+  ) return
+
+  setUnionFinalsMode(nextFinalsMode)
+
+  if (!nextFinalsMode) {
+    setCurrentRace(nextRace)
+  }
+}}
     style={{
   padding: "8px 10px",                 // ⬅️ leggermente più compatto
   borderRadius: 10,
@@ -17359,7 +17841,10 @@ try {
       >
         {race.label}
       </option>
-    ))}
+        ))}
+    <option value="finals" style={{ background: "#11151d", color: "white" }}>
+      FINALI
+    </option>
   </select>
 </div>
   </div>
@@ -17759,7 +18244,9 @@ try {
     }}
   >
     <div style={{ fontSize: 12, opacity: 0.82, fontWeight: 900, textTransform: "uppercase" }}>
-      Lega selezionata • Gara {currentRace}
+      
+Lega selezionata • {unionFinalsMode ? "FINALI Round2 Union 2026" : `Gara ${currentRace}`}
+
     </div>
 
     <div style={{ fontSize: 12, opacity: 0.72 }}>
@@ -17780,11 +18267,15 @@ try {
     >
       {CHAMPIONSHIP_LEAGUES.map((league) => {
   const isActive = selectedLeague === league
-  const isSaved = savedLeagueStatus[league]
+    const isSaved = unionFinalsMode
+    ? !!championshipState.finals?.[league]
+    : savedLeagueStatus[league]
 
-  const leagueLobbies = UNION_LOBBIES_BY_RANK[league].filter(
-  (lobby) => !isLobbyClosedForRace(lobby, currentRace)
-)
+    const leagueLobbies = unionFinalsMode
+    ? []
+    : UNION_LOBBIES_BY_RANK[league].filter(
+        (lobby) => !isLobbyClosedForRace(lobby, currentRace)
+      )
 
   const incompleteLobbyCount = leagueLobbies.filter(
   (lobby) => isLobbyIncomplete(lobby, currentRace)
@@ -17882,7 +18373,7 @@ boxShadow:
   )
 })}
     </div>
-        <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ display: unionFinalsMode ? "none" : "grid", gap: 8 }}>
       <div
         style={{
           fontSize: 11,
@@ -17910,9 +18401,10 @@ boxShadow:
     const isIncompleteLobby = isLobbyIncomplete(lobby, currentRace)
 
     return (
-      <button
-        key={lobby}
-        onClick={() => {
+  <button
+    key={lobby}
+    disabled={unionFinalsMode}
+    onClick={() => {
   if (lobby === selectedLobby) return
 
   if (isLobbyClosedForRace(lobby, currentRace)) {
@@ -22433,24 +22925,24 @@ const unresolved =
         throw new Error("Versione JSON non supportata. Richiesta: 1.")
       }
 
-      const meta = obj.unionMeta as Record<string, unknown> | null
+            const meta = obj.unionMeta as Record<string, unknown> | null
 
       if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
         throw new Error("Mancano i dati di gara, lega e lobby.")
       }
 
-      if (Number(meta.gara) !== currentRace) {
+      if (unionFinalsMode) {
+        if (String(meta.gara).trim().toUpperCase() !== "FINALI") {
+          throw new Error("Il JSON deve essere relativo alle FINALI.")
+        }
+      } else if (Number(meta.gara) !== currentRace) {
         throw new Error("Il numero di gara non corrisponde alla selezione.")
-      }
-
-      if (String(meta.lega).trim().toUpperCase() !== selectedLeague) {
-        throw new Error("La lega non corrisponde alla selezione.")
       }
 
       const normalizeLobby = (value: unknown) =>
         String(value ?? "").trim().toUpperCase().replace(/^A0+/, "A")
 
-      if (normalizeLobby(meta.lobby) !== normalizeLobby(selectedLobby)) {
+            if (!unionFinalsMode && normalizeLobby(meta.lobby) !== normalizeLobby(selectedLobby)) {
         throw new Error("La lobby non corrisponde alla selezione.")
       }
 
@@ -23168,7 +23660,11 @@ const changed = currentValue !== originalValue
       >
         <AppHeader
   mainTitle={exportTexts.mainTitle}
-  sideLabel={`LOBBY ${selectedLobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[currentRace] || ""}`}
+  sideLabel={
+    unionFinalsMode
+      ? exportTexts.sideLabel
+      : `LOBBY ${selectedLobby} <gold>/</gold> ${UNION_PROVISIONAL_CIRCUITS[currentRace] || ""}`
+  }
   subtitle={exportTexts.subtitle}
   pngExport={true}
 />
@@ -23189,7 +23685,8 @@ const changed = currentValue !== originalValue
           unionMeta={{ ...unionMeta, gara: normalizedGaraForOutput, lega: effectiveLega }}
           prtMode={prtMode}
           unionMode={unionMode}
-          exporting={true}
+                    exporting={true}
+          hidePoints={unionFinalsMode}
           penalties={penalties}
           dgMeasureTypes={dgMeasureTypes}
           dgSpecialMeasures={dgSpecialMeasures}
