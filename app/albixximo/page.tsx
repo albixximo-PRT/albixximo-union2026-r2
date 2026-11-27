@@ -5,6 +5,7 @@ import { toPng } from "html-to-image"
 import JSZip from "jszip"
 import {
   UNION_DRIVER_NAMES_BY_RANK,
+  UNION_DRIVERS_BY_RANK,
   getUnionDriverTeamCode,
 } from "./data/unionDrivers"
 
@@ -3694,7 +3695,65 @@ const [unionFinalistsSource, setUnionFinalistsSource] =
   const [unionShowStatistics, setUnionShowStatistics] = useState(false)
   const [unionFinalistsManagerOpen, setUnionFinalistsManagerOpen] =
   useState(false)
+  const [unionStatisticsManagerOpen, setUnionStatisticsManagerOpen] =
+  useState(false)
 
+useEffect(() => {
+  if (!unionStatisticsManagerOpen) return
+
+  const previousOverflow = document.body.style.overflow
+  const previousHtmlOverflow =
+    document.documentElement.style.overflow
+
+  document.body.style.overflow = "hidden"
+  document.documentElement.style.overflow = "hidden"
+
+  return () => {
+    document.body.style.overflow = previousOverflow
+    document.documentElement.style.overflow =
+      previousHtmlOverflow
+  }
+}, [unionStatisticsManagerOpen])
+
+  const [unionStatisticsBackup, setUnionStatisticsBackup] =
+  useState<BackupFile | null>(null)
+
+
+const [unionStatisticsTeamOverrides, setUnionStatisticsTeamOverrides] =
+  useState<Record<string, string>>({
+    "H7-25 YT": "PRT",
+    "CBR_Baffokiller_": "CBR",
+    "M.Pirrello": "GTID",
+    "MMS_Babide46": "MMS",
+    "SRT Kaido": "SRT",
+    "SimoneVal8": "CBR",
+    "margotone": "PRT",
+    "A.D’Alba": "GTID",
+  })
+
+  const [unionStatisticsEditingPilot, setUnionStatisticsEditingPilot] =
+  useState<string | null>(null)
+
+const [unionStatisticsTeamDraft, setUnionStatisticsTeamDraft] =
+  useState("")
+
+  const [unionStatisticsFinalized, setUnionStatisticsFinalized] =
+  useState(false)
+
+
+const [unionStatisticsImportError, setUnionStatisticsImportError] =
+  useState("")
+
+const unionStatisticsWins = useMemo(
+  () =>
+    unionStatisticsBackup
+      ? calculateUnionTeamWins(
+          unionStatisticsBackup,
+          unionStatisticsTeamOverrides
+        )
+      : null,
+  [unionStatisticsBackup, unionStatisticsTeamOverrides]
+)
 
 const [unionFinalistsExcluded, setUnionFinalistsExcluded] =
   useState<Partial<Record<ChampionshipLeagueKey, string[]>>>({})
@@ -11884,6 +11943,17 @@ style="font-size:19px;font-weight:1000;letter-spacing:1.3px;padding:21px 38px;ma
 </button>
 ` : ""}
 
+${showFinalResultsInExport && currentRace === 5 ? `
+<button
+  type="button"
+  id="unionFinalResultsOpen"
+  class="union-provisional-btn"
+  style="font-size:19px;font-weight:1000;letter-spacing:1.3px;padding:21px 38px;margin-right:38px;color:#fff8d6;background:linear-gradient(135deg,#493000 0%,#a36b00 35%,#e5b83d 55%,#805000 100%);border:2px solid #ffdb63;border-radius:16px;text-shadow:0 2px 8px #503000;box-shadow:0 0 15px rgba(255,208,55,.65),0 0 35px rgba(255,190,20,.38),inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer;transition:all .25s ease;"
+>
+  RISULTATI FINALI ROUND 2
+</button>
+` : ""}
+
   ${showProvisionalInExport ? `
     
 <div class="union-provisional-button-wrap">
@@ -12137,6 +12207,44 @@ style="width:120px;height:135px;max-width:none;flex-shrink:0;filter:drop-shadow(
 
   <div class="race-png-tabs" id="unionFinalistsTabs"></div>
   <div id="unionFinalistsViewer"></div>
+</div>
+` : ""}
+
+${showFinalResultsInExport && currentRace === 5 ? `
+<div class="race-png-panel" id="unionFinalResultsPanel" style="display:none;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:24px 28px;margin-bottom:24px;border:1px solid rgba(255,215,0,.32);border-radius:20px;background:linear-gradient(105deg,rgba(104,78,13,.35),rgba(15,20,37,.96) 55%,rgba(53,28,77,.45));box-shadow:0 0 30px rgba(255,215,0,.10);">
+
+    <div class="union-provisional-brand">
+      <img
+        src="/union-logo.png"
+        alt="Logo UNION"
+        class="union-provisional-logo"
+        style="width:120px;height:135px;max-width:none;flex-shrink:0;filter:drop-shadow(0 0 9px rgba(255,215,0,.48)) drop-shadow(0 0 20px rgba(255,190,40,.22));"
+      />
+
+      <div class="union-provisional-heading">
+        <div class="union-provisional-kicker">
+          UNION 2026 • ROUND 2
+        </div>
+
+        <h2 style="margin:8px 0 12px;font-size:clamp(34px,3.5vw,48px);font-weight:1000;font-style:italic;letter-spacing:2px;line-height:1.2;background:linear-gradient(180deg,#ffffff 0%,#fff5ac 24%,#ffd700 48%,#e49a00 75%,#fff0a0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 7px rgba(255,215,0,.85)) drop-shadow(0 0 22px rgba(255,175,0,.55));">
+          RISULTATI FINALI ROUND 2
+        </h2>
+      </div>
+    </div>
+
+    <img
+      src="/logoapex.png"
+      alt="Logo APEX"
+      class="union-provisional-apex"
+      style="filter:drop-shadow(0 0 9px rgba(255,215,0,.38)) drop-shadow(0 0 20px rgba(255,190,40,.18));"
+    />
+  </div>
+
+  <div class="race-png-tabs" id="unionFinalResultsTabs"></div>
+  <div id="unionFinalResultsViewer"></div>
+
 </div>
 ` : ""}
 
@@ -12694,6 +12802,131 @@ unionFinalistsPanel.style.cssText =
   backButton.addEventListener("click", closeFinalists);
 }
 
+
+const unionFinalResultsOpen = document.getElementById("unionFinalResultsOpen");
+const unionFinalResultsPanel = document.getElementById("unionFinalResultsPanel");
+const unionFinalResultsTabs = document.getElementById("unionFinalResultsTabs");
+const unionFinalResultsViewer = document.getElementById("unionFinalResultsViewer");
+
+if (
+  unionFinalResultsOpen &&
+  unionFinalResultsPanel &&
+  unionFinalResultsTabs &&
+  unionFinalResultsViewer
+) {
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.textContent = "TORNA AL PORTALE";
+  backButton.className = "union-provisional-close";
+  backButton.style.cssText =
+    "display:block;width:max-content;max-width:100%;" +
+    "margin:0 0 28px auto;padding:13px 28px;" +
+    "background:#092b1c;color:#fff;border:1px solid #16834d;" +
+    "border-radius:12px;font-size:15px;font-weight:900;" +
+    "white-space:nowrap;cursor:pointer;";
+
+  unionFinalResultsPanel.insertBefore(
+    backButton,
+    unionFinalResultsPanel.firstChild
+  );
+
+  const finalResultsLeagues = [
+    { label: "STAR", file: "STAR" },
+    { label: "ELITE", file: "ELITE" },
+    { label: "PRO GOLD", file: "PRO-GOLD" },
+    { label: "PRO SILVER", file: "PRO-SILVER" },
+    { label: "PRO AMA", file: "PRO-AMA" },
+    { label: "AMA", file: "AMA" }
+  ];
+
+  
+function showFinalResultsLeague(league) {
+  const header = unionFinalResultsPanel.querySelector(
+    ".union-provisional-brand"
+  )?.parentElement;
+
+  // Nasconde intestazione, loghi, titolo e pulsanti delle leghe
+  if (header) header.style.display = "none";
+  unionFinalResultsTabs.style.display = "none";
+  backButton.style.display = "none";
+
+  unionFinalResultsViewer.innerHTML = "";
+
+  // Pulsante per tornare ai risultati finali
+  const returnButton = document.createElement("button");
+  returnButton.type = "button";
+  returnButton.textContent = "TORNA AI RISULTATI FINALI";
+  returnButton.style.cssText =
+    "display:block;width:max-content;max-width:100%;" +
+    "margin:0 0 24px auto;padding:13px 28px;" +
+    "background:#092b1c;color:#fff;border:1px solid #16834d;" +
+    "border-radius:12px;font-size:15px;font-weight:900;" +
+    "cursor:pointer;";
+
+  returnButton.addEventListener("click", function() {
+    unionFinalResultsViewer.innerHTML = "";
+    if (header) header.style.display = "";
+    unionFinalResultsTabs.style.display = "";
+    backButton.style.display = "block";
+  });
+
+  unionFinalResultsViewer.appendChild(returnButton);
+
+  // PNG della lega selezionata
+  const img = document.createElement("img");
+  img.alt = "Finale " + league.label;
+  img.src = "/Classifiche/Gare/Finali/" + league.file + ".png";
+  img.style.cssText =
+    "display:block;width:100%;max-width:1400px;height:auto;" +
+    "margin:0 auto 24px;border-radius:12px;";
+
+  img.onerror = function() {
+    img.remove();
+
+    const message = document.createElement("div");
+    message.textContent =
+      "PNG non ancora disponibile per " + league.label;
+    message.style.cssText =
+      "text-align:center;padding:50px 20px;font-size:20px;color:#fff;";
+
+    unionFinalResultsViewer.appendChild(message);
+  };
+
+  unionFinalResultsViewer.appendChild(img);
+}
+
+
+  finalResultsLeagues.forEach(function(league) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn saved preloaded";
+    btn.textContent = league.label;
+
+    btn.addEventListener("click", function() {
+      showFinalResultsLeague(league);
+    });
+
+    unionFinalResultsTabs.appendChild(btn);
+  });
+
+  unionFinalResultsOpen.addEventListener("click", function() {
+    unionFinalResultsPanel.style.cssText =
+      "display:block;position:fixed;inset:0;z-index:99999;" +
+      "width:100%;height:100vh;max-width:100vw;" +
+      "overflow-x:hidden;overflow-y:auto;box-sizing:border-box;" +
+      "margin:0;padding:32px 38px;background:#080b12;";
+
+    document.body.style.overflow = "hidden";
+    unionFinalResultsViewer.innerHTML = "";
+    unionFinalResultsTabs.style.display = "";
+    backButton.style.display = "block";
+  });
+
+  backButton.addEventListener("click", function() {
+    unionFinalResultsPanel.style.display = "none";
+    document.body.style.overflow = "";
+  });
+}
 
 
 function renderRacePngTabs() {
@@ -14916,6 +15149,267 @@ setExportMetaInPng(false)
   clearCurrentWorkbench(true)
 }
 
+async function importUnionStatisticsBackup(file: File) {
+  setUnionStatisticsImportError("")
+
+  try {
+    const text = await file.text()
+    const parsed: unknown = JSON.parse(text)
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("championshipState" in parsed) ||
+      !("savedAt" in parsed)
+    ) {
+      throw new Error("Il file non è un backup UNION valido.")
+    }
+
+    const backup = parsed as BackupFile
+    const races = backup.championshipState?.races
+
+    if (!races || typeof races !== "object") {
+      throw new Error("Archivio delle gare non presente.")
+    }
+
+    const missingRaces = [1, 2, 3, 4, 5].filter(
+      (race) => !races[race]
+    )
+
+    if (missingRaces.length > 0) {
+      throw new Error(
+        "Mancano le gare: " + missingRaces.join(", ")
+      )
+    }
+
+    setUnionStatisticsBackup(backup)
+  } catch (error) {
+    setUnionStatisticsImportError(
+      error instanceof Error
+        ? error.message
+        : "Errore durante la lettura del backup."
+    )
+  }
+}
+
+
+
+function downloadUnionStatisticsFinal(
+  backup: BackupFile,
+  manualTeamOverrides: Record<string, string>
+) {
+  const wins = calculateUnionTeamWins(
+    backup,
+    manualTeamOverrides
+  )
+
+  if (
+    wins.unresolvedPilots.length > 0 ||
+    wins.missingWins.length > 0 ||
+    wins.totalWins !== wins.lobbiesChecked
+  ) {
+    alert(
+      "Impossibile salvare: ci sono ancora vittorie non attribuite o lobby da verificare."
+    )
+    return false
+  }
+
+  const initialPilotsByTeam = calculateUnionInitialTeamDrivers()
+
+const initialDrivers = {
+  total: Array.from(initialPilotsByTeam.values()).reduce(
+    (sum, count) => sum + count,
+    0
+  ),
+  teams: initialPilotsByTeam.size,
+  byTeam: Object.fromEntries(initialPilotsByTeam),
+}
+  
+  const definitiveStatistics = {
+    schemaVersion: 1,
+    type: "UNION_2026_ROUND_2_DEFINITIVE_STATISTICS",
+    savedAt: new Date().toISOString(),
+    racesIncluded: [1, 2, 3, 4, 5],
+    sourceBackupSavedAt: backup.savedAt,
+    initialDrivers: {
+  total: Array.from(calculateUnionInitialTeamDrivers().values()).reduce(
+    (sum, count) => sum + count,
+    0
+  ),
+  teams: calculateUnionInitialTeamDrivers().size,
+  byTeam: Object.fromEntries(calculateUnionInitialTeamDrivers()),
+},
+    teamOverrides: manualTeamOverrides,
+    wins: {
+      total: wins.totalWins,
+      lobbiesChecked: wins.lobbiesChecked,
+      ranking: wins.ranking,
+    },
+  }
+
+  const blob = new Blob(
+    [JSON.stringify(definitiveStatistics, null, 2)],
+    { type: "application/json" }
+  )
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+
+  link.href = url
+  link.download = "UNION_2026_ROUND_2_STATISTICHE_DEFINITIVE.json"
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  URL.revokeObjectURL(url)
+
+  return true
+}
+
+
+function calculateUnionInitialTeamDrivers() {
+  const pilotsByTeam = new Map<string, number>()
+
+  for (const rank of UNION_RANKS) {
+    for (const driver of UNION_DRIVERS_BY_RANK[rank]) {
+      const team = driver.teamCode.trim().toUpperCase()
+      if (!team) continue
+
+      pilotsByTeam.set(team, (pilotsByTeam.get(team) || 0) + 1)
+    }
+  }
+
+  return pilotsByTeam
+}
+
+function calculateUnionTeamWins(
+  backup: BackupFile,
+  manualTeamOverrides: Record<string, string> = {}
+) {
+  const winsByTeam = new Map<string, number>()
+  const unresolvedPilots: string[] = []
+  const missingWins: string[] = []
+
+  let totalWins = 0
+  let lobbiesChecked = 0
+
+  const overrides = backup.driverTeamOverrides || {}
+  const closedLobbies = backup.championshipState.closedLobbies || {}
+
+  for (let raceNumber = 1; raceNumber <= 5; raceNumber++) {
+    const raceState = backup.championshipState.races[raceNumber]
+    if (!raceState) continue
+
+    for (const league of UNION_RANKS) {
+      const leagueLobbies = raceState[league]
+      if (!leagueLobbies) continue
+
+      for (const [lobby, snapshot] of Object.entries(leagueLobbies)) {
+        if (!snapshot) continue
+
+        // Esclude la lobby dalla gara di chiusura in poi.
+        // I risultati delle gare precedenti restano validi.
+        const closedFromRace = closedLobbies[lobby]
+
+        if (
+          typeof closedFromRace === "number" &&
+          raceNumber >= closedFromRace
+        ) {
+          continue
+        }
+
+        lobbiesChecked++
+
+        const winners = (snapshot.finalRows || []).filter(
+          (row) => row.posGara === 1
+        )
+
+        if (winners.length !== 1) {
+          missingWins.push(
+            `Gara ${raceNumber} · ${league} · ${lobby} · ${
+              winners.length === 0
+                ? "Nessun vincitore"
+                : `${winners.length} vincitori rilevati`
+            }`
+          )
+          continue
+        }
+
+        const pilot = winners[0].pilota.trim()
+
+        const overrideEntry = Object.entries(overrides).find(
+          ([name]) =>
+            normalizeDriverLookupName(name) ===
+            normalizeDriverLookupName(pilot)
+        )
+
+        const manualEntry = Object.entries(manualTeamOverrides).find(
+  ([name]) =>
+    normalizeDriverLookupName(name) ===
+    normalizeDriverLookupName(pilot)
+)
+
+let team = (
+  manualEntry?.[1] ||
+  overrideEntry?.[1] ||
+  getUnionDriverTeamCode(pilot) ||
+  ""
+).trim().toUpperCase()
+
+if (team === "TML") {
+  team = "TLM"
+}
+
+        if (!team || team === "—") {
+          unresolvedPilots.push(
+            `Gara ${raceNumber} · ${league} · ${lobby} · ${pilot}`
+          )
+          continue
+        }
+
+        winsByTeam.set(team, (winsByTeam.get(team) || 0) + 1)
+        totalWins++
+      }
+    }
+  }
+
+  const initialPilotsByTeam = calculateUnionInitialTeamDrivers()
+
+  const teamsWithoutInitialPilots = Array.from(winsByTeam.keys())
+  .filter(team => !initialPilotsByTeam.has(team))
+
+if (teamsWithoutInitialPilots.length > 0) {
+  console.warn(
+    "UNION STATISTICHE - Team senza piloti iniziali:",
+    teamsWithoutInitialPilots
+  )
+}
+
+const ranking = Array.from(winsByTeam.entries())
+  .map(([team, wins]) => {
+    const pilots = initialPilotsByTeam.get(team) || 0
+    const percentage = pilots > 0 ? (wins / pilots) * 100 : 0
+
+    return { team, wins, pilots, percentage }
+  })
+  .sort(
+    (a, b) =>
+      b.percentage - a.percentage ||
+      b.wins - a.wins ||
+      a.team.localeCompare(b.team)
+  )
+
+  return {
+    ranking,
+    totalWins,
+    lobbiesChecked,
+    unresolvedPilots,
+    missingWins,
+  }
+}
+
+
 function exportChampionshipBackup() {
   try {
     const backup: BackupFile = {
@@ -17087,8 +17581,17 @@ boxSizing: "border-box",
       >
         <option value="">Seleziona una gara</option>
         {UNION_RACE_OPTIONS.filter(
-          (race) => race.value < currentRace
-        ).map((race) => (
+  (race) =>
+    race.value < currentRace ||
+    (
+      race.value === currentRace &&
+      (
+        unionShowFinalists ||
+        unionShowFinalResults ||
+        unionShowStatistics
+      )
+    )
+).map((race) => (
           <option key={race.value} value={race.value}>
             {race.label}
           </option>
@@ -17699,6 +18202,545 @@ try {
   </div>
 )}
 
+{unionStatisticsManagerOpen && (
+    <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 99999,
+      background: "rgba(0,0,0,0.88)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+      overflow: "hidden",
+      overscrollBehavior: "contain",
+    }}
+    onWheel={(e) => e.stopPropagation()}
+  >
+    <div
+      style={{
+        width: "100%",
+maxWidth: 900,
+maxHeight: "calc(100dvh - 40px)",
+overflowY: "auto",
+overscrollBehavior: "contain",
+boxSizing: "border-box",
+flexShrink: 0,
+padding: 24,
+borderRadius: 18,
+        background: "#0f172a",
+        border: "1px solid rgba(56,189,248,0.45)",
+        color: "#ffffff",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+        }}
+      >
+        <h2 style={{ color: "#38bdf8", fontWeight: 900 }}>
+          📊 GESTIONE STATISTICHE
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => setUnionStatisticsManagerOpen(false)}
+          style={{
+            padding: "9px 15px",
+            borderRadius: 10,
+            background: "#334155",
+            color: "#ffffff",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 800,
+          }}
+        >
+          CHIUDI ✕
+        </button>
+      </div>
+
+      <p style={{ marginTop: 24, color: "#cbd5e1" }}>
+        STATISTICHE UNION 2026 — ROUND 2
+      </p>
+
+      <p style={{ color: "#94a3b8" }}>
+  Importa il backup JSON aggiornato dopo Gara 5.
+  I dati saranno utilizzati esclusivamente per le statistiche.
+</p>
+
+<div
+  onDragOver={(event) => {
+    event.preventDefault()
+    event.currentTarget.style.borderColor = "#38bdf8"
+    event.currentTarget.style.background = "rgba(56,189,248,0.18)"
+  }}
+  onDragLeave={(event) => {
+    event.preventDefault()
+    event.currentTarget.style.borderColor = "rgba(56,189,248,0.45)"
+    event.currentTarget.style.background = "rgba(56,189,248,0.06)"
+  }}
+  onDrop={async (event) => {
+    event.preventDefault()
+    event.currentTarget.style.borderColor = "rgba(56,189,248,0.45)"
+    event.currentTarget.style.background = "rgba(56,189,248,0.06)"
+
+    const file = event.dataTransfer.files?.[0]
+
+    if (file) {
+      if (!file.name.toLowerCase().endsWith(".json")) {
+        setUnionStatisticsImportError(
+          "Seleziona un file JSON valido."
+        )
+        return
+      }
+
+      await importUnionStatisticsBackup(file)
+    }
+  }}
+  style={{
+    marginTop: 20,
+    padding: "32px 20px",
+    borderRadius: 16,
+    border: "2px dashed rgba(56,189,248,0.45)",
+    background: "rgba(56,189,248,0.06)",
+    textAlign: "center",
+    transition: "background 0.2s, border-color 0.2s",
+  }}
+>
+  <div style={{ fontSize: 36, marginBottom: 12 }}>
+    📁
+  </div>
+
+  <div
+    style={{
+      color: "#38bdf8",
+      fontSize: 17,
+      fontWeight: 900,
+      marginBottom: 10,
+    }}
+  >
+    TRASCINA QUI IL BACKUP JSON
+  </div>
+
+  <p style={{ color: "#94a3b8", fontSize: 13 }}>
+    Oppure clicca qui sotto per selezionarlo
+  </p>
+
+  <label
+    style={{
+      display: "inline-block",
+      marginTop: 12,
+      padding: "11px 20px",
+      borderRadius: 10,
+      background: "rgba(56,189,248,0.15)",
+      border: "1px solid #38bdf8",
+      color: "#38bdf8",
+      fontWeight: 900,
+      cursor: "pointer",
+    }}
+  >
+    SELEZIONA FILE JSON
+
+    <input
+      type="file"
+      accept=".json,application/json"
+      style={{ display: "none" }}
+      onChange={async (event) => {
+        const file = event.target.files?.[0]
+
+        if (file) {
+          await importUnionStatisticsBackup(file)
+        }
+
+        event.target.value = ""
+      }}
+    />
+  </label>
+</div>
+
+{unionStatisticsImportError && (
+  <p style={{ marginTop: 16, color: "#f87171" }}>
+    ❌ {unionStatisticsImportError}
+  </p>
+)}
+
+{unionStatisticsBackup && (
+  <div
+    style={{
+      marginTop: 24,
+      padding: 18,
+      borderRadius: 12,
+      background: "rgba(34,197,94,0.10)",
+      border: "1px solid rgba(34,197,94,0.45)",
+    }}
+  >
+    <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  }}
+>
+  <div style={{ color: "#4ade80", fontWeight: 900 }}>
+    ✅ BACKUP IMPORTATO
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      setUnionStatisticsBackup(null)
+      setUnionStatisticsImportError("")
+    }}
+    style={{
+      padding: "8px 14px",
+      borderRadius: 10,
+      border: "1px solid rgba(248,113,113,0.6)",
+      background: "rgba(239,68,68,0.12)",
+      color: "#f87171",
+      fontSize: 12,
+      fontWeight: 900,
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+  >
+    🗑️ RIMUOVI BACKUP
+  </button>
+</div>
+
+    <p>
+      Data backup:{" "}
+      {new Date(unionStatisticsBackup.savedAt).toLocaleString("it-IT")}
+    </p>
+
+    <p>Gare rilevate: 1, 2, 3, 4, 5</p>
+
+    <p style={{ color: "#94a3b8", fontSize: 13 }}>
+      Nessun dato del campionato è stato modificato.
+    </p>
+    
+    
+{unionStatisticsWins && (
+  <div style={{ marginTop: 18, marginBottom: 18 }}>
+    <button
+      type="button"
+      disabled={
+        unionStatisticsWins.unresolvedPilots.length > 0 ||
+        unionStatisticsWins.missingWins.length > 0 ||
+        unionStatisticsWins.totalWins !==
+          unionStatisticsWins.lobbiesChecked
+      }
+      onClick={() => {
+        if (!unionStatisticsBackup) return
+
+        const saved = downloadUnionStatisticsFinal(
+          unionStatisticsBackup,
+          unionStatisticsTeamOverrides
+        )
+
+        if (saved) {
+          setUnionStatisticsFinalized(true)
+        }
+      }}
+      style={{
+        width: "100%",
+        padding: "13px 16px",
+        borderRadius: 10,
+        border: "1px solid rgba(34,197,94,0.55)",
+        background: "rgba(34,197,94,0.18)",
+        color: "#ffffff",
+        fontSize: 14,
+        fontWeight: 900,
+        cursor: "pointer",
+        opacity:
+          unionStatisticsWins.unresolvedPilots.length > 0 ||
+          unionStatisticsWins.missingWins.length > 0 ||
+          unionStatisticsWins.totalWins !==
+            unionStatisticsWins.lobbiesChecked
+            ? 0.45
+            : 1,
+      }}
+    >
+      💾 SALVA STATISTICHE DEFINITIVE
+    </button>
+
+    {unionStatisticsFinalized && (
+      <div
+        style={{
+          marginTop: 10,
+          color: "#86efac",
+          fontWeight: 800,
+          textAlign: "center",
+        }}
+      >
+        ✓ STATISTICHE DEFINITIVE — JSON GENERATO
+      </div>
+    )}
+  </div>
+)}
+
+    {unionStatisticsWins && (
+  <div
+    style={{
+      marginTop: 24,
+      paddingTop: 20,
+      borderTop: "1px solid rgba(255,255,255,0.15)",
+    }}
+  >
+    <h3
+      style={{
+        color: "#facc15",
+        fontSize: 18,
+        fontWeight: 900,
+        marginBottom: 16,
+      }}
+    >
+      🏆 VITTORIE PER TEAM
+    </h3>
+
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 16,
+        marginBottom: 18,
+        color: "#cbd5e1",
+        fontSize: 13,
+      }}
+    >
+      <span>
+        Lobby analizzate:{" "}
+        <strong>{unionStatisticsWins.lobbiesChecked}</strong>
+      </span>
+
+      <span>
+        Vittorie attribuite:{" "}
+        <strong>{unionStatisticsWins.totalWins}</strong>
+      </span>
+
+      <span>
+        Team individuati:{" "}
+        <strong>{unionStatisticsWins.ranking.length}</strong>
+      </span>
+    </div>
+
+    <div style={{ width: "100%" }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: 13,
+          color: "#ffffff",
+        }}
+      >
+        <thead>
+          <tr style={{ color: "#38bdf8" }}>
+            <th style={{ padding: 10, textAlign: "left" }}>POS.</th>
+            <th style={{ padding: 10, textAlign: "left" }}>TEAM</th>
+            <th style={{ padding: 10, textAlign: "right" }}>VITTORIE TOTALI</th>
+<th style={{ padding: 10, textAlign: "right" }}>VITTORIE / PILOTI (%)</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {unionStatisticsWins.ranking.map((item, index) => (
+            <tr
+              key={item.team}
+              style={{
+                borderTop: "1px solid rgba(255,255,255,0.10)",
+              }}
+            >
+              <td style={{ padding: 10 }}>{index + 1}°</td>
+              <td style={{ padding: 10, fontWeight: 800 }}>
+                {item.team}
+              </td>
+              <td
+                style={{
+                  padding: 10,
+                  textAlign: "right",
+                  color: "#facc15",
+                  fontWeight: 900,
+                }}
+              >
+                {item.wins}
+              </td>
+              <td
+  style={{
+    padding: 10,
+    textAlign: "right",
+    color: "#38bdf8",
+    fontWeight: 900,
+  }}
+>
+  {item.pilots > 0 ? `${item.percentage.toFixed(2)}%` : "—"}
+</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    {unionStatisticsWins.missingWins.length > 0 && (
+  <div
+    style={{
+      marginTop: 16,
+      padding: 14,
+      borderRadius: 10,
+      background: "rgba(251,191,36,0.08)",
+      border: "1px solid rgba(251,191,36,0.35)",
+      color: "#fcd34d",
+      fontSize: 12,
+    }}
+  >
+    <div style={{ fontWeight: 900, marginBottom: 8 }}>
+      ⚠️ LOBBY SENZA VINCITORE UNIVOCO (
+      {unionStatisticsWins.missingWins.length})
+    </div>
+
+    {unionStatisticsWins.missingWins.map((item, index) => (
+      <div key={index} style={{ padding: "3px 0" }}>
+        {item}
+      </div>
+    ))}
+  </div>
+)}
+    
+    {unionStatisticsWins.unresolvedPilots.length > 0 && (
+      <div
+        style={{
+          marginTop: 16,
+          color: "#fca5a5",
+          fontSize: 12,
+        }}
+      >
+        <strong>
+          ⚠️ Vincitori senza Team riconosciuto:
+        </strong>
+
+        
+{Array.from(
+  new Set(
+    unionStatisticsWins.unresolvedPilots.map((entry) =>
+      entry.split(" · ").slice(3).join(" · ").trim()
+    )
+  )
+).map((pilot) => (
+  <div
+    key={pilot}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 12,
+      padding: "10px 0",
+      borderBottom: "1px solid rgba(255,255,255,0.10)",
+    }}
+  >
+    <span style={{ color: "#ffffff", fontWeight: 700 }}>
+      {pilot}
+    </span>
+
+    
+<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+  <input
+    type="text"
+    maxLength={8}
+    placeholder="TEAM"
+    value={
+      unionStatisticsEditingPilot === pilot
+        ? unionStatisticsTeamDraft
+        : ""
+    }
+    onFocus={() => {
+      if (unionStatisticsEditingPilot !== pilot) {
+        setUnionStatisticsEditingPilot(pilot)
+        setUnionStatisticsTeamDraft("")
+      }
+    }}
+    onChange={(event) => {
+      setUnionStatisticsEditingPilot(pilot)
+      setUnionStatisticsTeamDraft(event.target.value.toUpperCase())
+    }}
+    onKeyDown={(event) => {
+      if (event.key === "Enter") {
+        const team = unionStatisticsTeamDraft.trim().toUpperCase()
+        if (!team) return
+
+        setUnionStatisticsTeamOverrides((previous) => ({
+          ...previous,
+          [pilot]: team,
+        }))
+        setUnionStatisticsEditingPilot(null)
+        setUnionStatisticsTeamDraft("")
+      }
+
+      if (event.key === "Escape") {
+        setUnionStatisticsEditingPilot(null)
+        setUnionStatisticsTeamDraft("")
+        event.currentTarget.blur()
+      }
+    }}
+    style={{
+      width: 75,
+      padding: "7px 9px",
+      borderRadius: 6,
+      border: "1px solid rgba(255,215,0,0.45)",
+      background: "rgba(0,0,0,0.35)",
+      color: "#ffffff",
+      fontWeight: 900,
+      textAlign: "center",
+      outline: "none",
+    }}
+  />
+
+  <button
+    type="button"
+    onClick={() => {
+      if (unionStatisticsEditingPilot !== pilot) return
+
+      const team = unionStatisticsTeamDraft.trim().toUpperCase()
+      if (!team) return
+
+      setUnionStatisticsTeamOverrides((previous) => ({
+        ...previous,
+        [pilot]: team,
+      }))
+      setUnionStatisticsEditingPilot(null)
+      setUnionStatisticsTeamDraft("")
+    }}
+    style={{
+      width: 32,
+      height: 32,
+      borderRadius: 6,
+      border: "1px solid rgba(34,197,94,0.45)",
+      background: "rgba(34,197,94,0.16)",
+      color: "#ffffff",
+      cursor: "pointer",
+      fontWeight: 900,
+    }}
+    title="Conferma Team"
+  >
+    ✓
+  </button>
+</div>
+
+  </div>
+))}
+
+      </div>
+    )}
+  </div>
+)}
+  </div>
+)}
+    </div>
+  </div>
+)}
       
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
   <div ref={appHeaderExportRef}>
@@ -17710,6 +18752,7 @@ try {
   style={{
     display: "flex",
     justifyContent: "flex-end",
+    gap: 12,
     marginTop: 12,
     marginBottom: 4,
   }}
@@ -17731,8 +18774,25 @@ try {
   >
     🏁 GESTIONE FINALISTI
   </button>
-</div>
 
+<button
+  type="button"
+  onClick={() => setUnionStatisticsManagerOpen(true)}
+  style={{
+    padding: "11px 18px",
+    borderRadius: 12,
+    border: "1px solid rgba(56,189,248,0.6)",
+    background: "rgba(56,189,248,0.12)",
+    color: "#38bdf8",
+    fontSize: 13,
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    cursor: "pointer",
+  }}
+>
+  📊 GESTIONE STATISTICHE
+</button>
+</div>
 
         <div
           style={{
