@@ -17582,7 +17582,9 @@ boxSizing: "border-box",
         <option value="">Seleziona una gara</option>
         {UNION_RACE_OPTIONS.filter(
   (race) =>
-    race.value < currentRace ||
+    
+race.value <= currentRace ||
+
     (
       race.value === currentRace &&
       (
