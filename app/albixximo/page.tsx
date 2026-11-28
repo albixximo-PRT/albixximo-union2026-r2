@@ -91,6 +91,7 @@ type DgSpecialMeasure =
   | "NEXT_RACE_GRID_MINUS_5"
   | "NEXT_QUALIFYING_DSQ"
   | "CURRENT_RACE_DSQ"
+  | "UNAUTHORIZED_STICKERS"
 
 type DgSpecialMeasureMap =
   Record<string, DgSpecialMeasure>
@@ -2551,9 +2552,11 @@ function renderPrtPenaltyCell({
       ? "-5 POSIZIONI IN GRIGLIA PROSSIMA GARA"
       : specialMeasure === "NEXT_QUALIFYING_DSQ"
         ? "SQUALIFICA DALLA PROSSIMA QUALIFICA"
-        : specialMeasure === "CURRENT_RACE_DSQ"
+                : specialMeasure === "CURRENT_RACE_DSQ"
           ? "SQUALIFICA DALLA GARA"
-          : ""
+          : specialMeasure === "UNAUTHORIZED_STICKERS"
+            ? "UTILIZZO ADESIVI NON AUTORIZZATI"
+            : ""
 
   const isDsqRow =
     (row.tempoTotaleGara || "").trim().toUpperCase() === "DSQ"
@@ -2738,6 +2741,12 @@ function renderPrtPenaltyCell({
     <br />
     DALLA GARA
   </>
+) : specialMeasure === "UNAUTHORIZED_STICKERS" ? (
+  <>
+    UTILIZZO ADESIVI
+    <br />
+    NON AUTORIZZATI
+  </>
 ) : (
   <>
     -5 POSIZIONI IN GRIGLIA
@@ -2895,11 +2904,17 @@ whiteSpace: "nowrap",
               <br />
               PROSSIMA QUALIFICA
             </>
-          ) : specialMeasure === "CURRENT_RACE_DSQ" ? (
+                    ) : specialMeasure === "CURRENT_RACE_DSQ" ? (
             <>
               SQUALIFICA
               <br />
               DALLA GARA
+            </>
+          ) : specialMeasure === "UNAUTHORIZED_STICKERS" ? (
+            <>
+              UTILIZZO ADESIVI
+              <br />
+              NON AUTORIZZATI
             </>
           ) : (
             <>
@@ -8408,6 +8423,44 @@ for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
 }
 
 driver.totalPoints -= unfoundedClaimsCount * 5
+
+// UTILIZZO ADESIVI NON AUTORIZZATI:
+// -3 punti sulla classifica assoluta per ogni segnalazione
+let unauthorizedStickersCount = 0
+
+for (let raceNumber = 1; raceNumber <= currentRace; raceNumber++) {
+  const raceState = championshipState.races[raceNumber]
+  if (!raceState) continue
+
+  const normalizedDriver =
+    normalizeDriverNameForChampionship(driver.pilota)
+
+  for (const league of CHAMPIONSHIP_LEAGUES) {
+    const lobbyState = raceState[league]
+    if (!lobbyState) continue
+
+    for (const snapshot of Object.values(lobbyState)) {
+      if (!snapshot) continue
+
+      const hasUnauthorizedStickers = (snapshot.finalRows || []).some((row) => {
+        const key = getPrtRowStableKey(row.sourcePosGara)
+
+        return (
+          normalizeDriverNameForChampionship(row.pilota) === normalizedDriver &&
+          (snapshot.dgMeasureTypes?.[key] === "S" ||
+            snapshot.dgMeasureTypes?.[key] === "P_S") &&
+          snapshot.dgSpecialMeasures?.[key] === "UNAUTHORIZED_STICKERS"
+        )
+      })
+
+      if (hasUnauthorizedStickers) {
+        unauthorizedStickersCount += 1
+      }
+    }
+  }
+}
+
+driver.totalPoints -= unauthorizedStickersCount * 3
 }
 // Frecce storiche promo/retro: solo grafica, non modifica punti
 for (const movementRound of [1, 2, 3, 4, 5]) {
@@ -20611,8 +20664,9 @@ background: isIncompleteLobby
          if (
   value === "NEXT_RACE_DSQ" ||
   value === "NEXT_RACE_GRID_MINUS_5" ||
-  value === "NEXT_QUALIFYING_DSQ" ||
-  value === "CURRENT_RACE_DSQ"
+    value === "NEXT_QUALIFYING_DSQ" ||
+  value === "CURRENT_RACE_DSQ" ||
+  value === "UNAUTHORIZED_STICKERS"
 ) {
   next[key] = value
 } else {
@@ -20650,6 +20704,9 @@ background: isIncompleteLobby
 </option>
 <option value="CURRENT_RACE_DSQ">
   SQUALIFICA DALLA GARA
+</option>
+<option value="UNAUTHORIZED_STICKERS">
+  UTILIZZO ADESIVI NON AUTORIZZATI
 </option>
     </select>
   )}
