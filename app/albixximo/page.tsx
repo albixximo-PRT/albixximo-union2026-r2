@@ -12866,7 +12866,7 @@ backButton.style.cssText =
     
 unionFinalistsPanel.style.cssText =
   "display:block;position:fixed;inset:0;z-index:99999;" +
-  "width:100%;height:100vh;max-width:100vw;" +
+  "width:100%;height:100vh;height:100dvh;max-width:100vw;" +
   "overflow-x:hidden;overflow-y:auto;box-sizing:border-box;" +
   "margin:0;padding:32px 38px;background:#080b12;";
 
