@@ -12707,7 +12707,17 @@ teamCell.appendChild(teamPill);
 
 if (Number(driver.originalPosition) > 14) {
   const replacementPill = document.createElement("span");
-  replacementPill.textContent = "REPLACEMENT";
+    const portraitMobile = window.matchMedia(
+    "(pointer: coarse) and (orientation: portrait)"
+  );
+
+  const updateReplacementPill = function() {
+    replacementPill.textContent =
+      portraitMobile.matches ? "R" : "REPLACEMENT";
+  };
+
+  updateReplacementPill();
+  portraitMobile.addEventListener("change", updateReplacementPill);
   replacementPill.title =
     "Posizione originale: " + driver.originalPosition + "°";
 
