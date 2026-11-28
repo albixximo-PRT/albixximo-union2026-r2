@@ -12716,8 +12716,15 @@ if (Number(driver.originalPosition) > 14) {
       portraitMobile.matches ? "R" : "REPLACEMENT";
   };
 
-  updateReplacementPill();
-  portraitMobile.addEventListener("change", updateReplacementPill);
+    updateReplacementPill();
+
+  const updateReplacementPosition = function() {
+    replacementPill.style.right =
+      portraitMobile.matches ? "-4px" : "7px";
+  };
+
+    portraitMobile.addEventListener("change", updateReplacementPill);
+  portraitMobile.addEventListener("change", updateReplacementPosition);
   replacementPill.title =
     "Posizione originale: " + driver.originalPosition + "°";
 
@@ -12732,6 +12739,7 @@ if (Number(driver.originalPosition) > 14) {
     "color:#38bdf8;font-size:9px;font-weight:900;" +
     "letter-spacing:.3px;white-space:nowrap;";
 
+    updateReplacementPosition();
   teamCell.appendChild(replacementPill);
 }
 
