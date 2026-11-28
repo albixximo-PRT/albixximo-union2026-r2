@@ -12600,7 +12600,7 @@ function renderUnionFinalists() {
 
     
 const labels = ["POS", "TEAM", "PILOTA", "AUTO", "", "PUNTI"];
-const widths = ["7%", "9%", "19%", "23%", "33%", "9%"];
+const widths = ["7%", "12%", "19%", "20%", "33%", "9%"];
 
 
     labels.forEach(function(label, index) {
@@ -12702,7 +12702,28 @@ teamPill.style.cssText =
   "color:#ffe7a0;font-size:12px;font-weight:900;" +
   "letter-spacing:.5px;white-space:nowrap;";
 
+teamCell.style.position = "relative";
 teamCell.appendChild(teamPill);
+
+if (Number(driver.originalPosition) > 14) {
+  const replacementPill = document.createElement("span");
+  replacementPill.textContent = "REPLACEMENT";
+  replacementPill.title =
+    "Posizione originale: " + driver.originalPosition + "°";
+
+  replacementPill.style.cssText =
+    "position:absolute;right:7px;top:50%;" +
+    "transform:translateY(-50%);" +
+    "display:inline-flex;align-items:center;justify-content:center;" +
+    "padding:4px 6px;border-radius:6px;" +
+    "background:rgba(56,189,248,.10);" +
+    "border:1px solid rgba(56,189,248,.65);" +
+    "box-shadow:0 0 10px rgba(56,189,248,.20);" +
+    "color:#38bdf8;font-size:9px;font-weight:900;" +
+    "letter-spacing:.3px;white-space:nowrap;";
+
+  teamCell.appendChild(replacementPill);
+}
 
       const pilotCell = makeCell();
       pilotCell.textContent = driver.pilota;
